@@ -1,21 +1,73 @@
 use crate::capture::driver::{CaptureConfig, CapturedFrameKind};
-use crate::capture::{IMAGE_HEIGHT, IMAGE_WIDTH};
 use crate::components::{
     Controlled, InfantryChassis, InfantryGimbal, InfantryLaunchOffset, SubscribeAutoAim,
 };
 use crate::config::SimulationConfig;
 use crate::systems::projectile_launch;
 use crate::talos::capture::{
-    TalosCaptureContext, TalosCapturePlugin, TalosFrameStamp, advance_talos_frame_stamp,
-    publish_talos_pose_system,
+    TalosCaptureContext, TalosCapturePlugin, TalosFrameStamp, TalosImageSink,
+    advance_talos_frame_stamp, publish_talos_pose_system,
 };
+use crate::talos::tcp_image::{TcpImageSender, TcpImageSenderConfig, mark_file_image_transport};
 use bevy::ecs::system::RunSystemOnce;
 use bevy::image::BevyDefault;
 use bevy::prelude::*;
 use bevy::render::render_resource::TextureFormat;
+use std::net::SocketAddr;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 use talos_ipc::*;
+
+const TALOS_WIDTH_ENV: &str = "DAEDALUS_TALOS_WIDTH";
+const TALOS_HEIGHT_ENV: &str = "DAEDALUS_TALOS_HEIGHT";
+const TALOS_IMAGE_TRANSPORT_ENV: &str = "DAEDALUS_TALOS_IMAGE_TRANSPORT";
+const TALOS_TCP_BIND_ENV: &str = "DAEDALUS_TALOS_TCP_BIND";
+const TALOS_TCP_WRITE_TIMEOUT_ENV: &str = "DAEDALUS_TALOS_TCP_WRITE_TIMEOUT_MS";
+const DEFAULT_TALOS_TCP_BIND: &str = "0.0.0.0:5602";
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum TalosImageTransport {
+    #[default]
+    File,
+    Tcp,
+}
+
+fn talos_image_transport_from_env() -> TalosImageTransport {
+    match std::env::var(TALOS_IMAGE_TRANSPORT_ENV) {
+        Ok(value) if value.trim().eq_ignore_ascii_case("tcp") => TalosImageTransport::Tcp,
+        Ok(value) if value.trim().eq_ignore_ascii_case("file") => TalosImageTransport::File,
+        Ok(value) => {
+            warn!("Ignoring invalid {TALOS_IMAGE_TRANSPORT_ENV}={value:?}; using file");
+            TalosImageTransport::File
+        }
+        Err(_) => TalosImageTransport::File,
+    }
+}
+
+fn talos_tcp_bind_from_env() -> SocketAddr {
+    let fallback = DEFAULT_TALOS_TCP_BIND.parse().unwrap();
+    std::env::var(TALOS_TCP_BIND_ENV)
+        .ok()
+        .and_then(|value| value.trim().parse().ok())
+        .unwrap_or(fallback)
+}
+
+fn talos_tcp_write_timeout_from_env() -> Option<Duration> {
+    std::env::var(TALOS_TCP_WRITE_TIMEOUT_ENV)
+        .ok()
+        .and_then(|value| value.trim().parse::<u64>().ok())
+        .filter(|milliseconds| (100..=2000).contains(milliseconds))
+        .map(Duration::from_millis)
+}
+
+fn talos_dimension_from_env(key: &str, maximum: u32) -> u32 {
+    std::env::var(key)
+        .ok()
+        .and_then(|value| value.trim().parse::<u32>().ok())
+        .filter(|dimension| (1..=maximum).contains(dimension))
+        .unwrap_or(maximum)
+}
 
 #[derive(Resource)]
 pub struct ShmSubscriberRes(pub Arc<Mutex<ShmSubscriber>>);
@@ -28,19 +80,28 @@ pub struct TalosPluginConfig {
     pub height: u32,
     pub fov_y: f32,
     pub texture_format: TextureFormat,
+    pub image_transport: TalosImageTransport,
+    pub tcp_bind_addr: SocketAddr,
+    pub tcp_write_timeout_override: Option<Duration>,
 }
 
 impl Default for TalosPluginConfig {
     fn default() -> Self {
         let config = SimulationConfig::default();
         Self {
-            width: IMAGE_WIDTH,
-            height: IMAGE_HEIGHT,
+            width: talos_dimension_from_env(TALOS_WIDTH_ENV, talos_ipc::IMAGE_WIDTH),
+            height: talos_dimension_from_env(TALOS_HEIGHT_ENV, talos_ipc::IMAGE_HEIGHT),
             fov_y: config.camera.fov.to_radians(),
             texture_format: TextureFormat::Rgba8UnormSrgb,
+            image_transport: talos_image_transport_from_env(),
+            tcp_bind_addr: talos_tcp_bind_from_env(),
+            tcp_write_timeout_override: talos_tcp_write_timeout_from_env(),
         }
     }
 }
+
+#[derive(Resource)]
+struct TcpImageSenderResource(TcpImageSender);
 
 #[derive(Default)]
 pub struct TalosPlugin {
@@ -60,18 +121,54 @@ impl Plugin for TalosPlugin {
             }
         };
 
+        let producer_epoch = publisher.producer_epoch();
+        let (image_sink, frame_kind, texture_format, tcp_sender) = match self.config.image_transport
+        {
+            TalosImageTransport::File => {
+                mark_file_image_transport();
+                (
+                    TalosImageSink::File,
+                    CapturedFrameKind::Rgb8,
+                    self.config.texture_format,
+                    None,
+                )
+            }
+            TalosImageTransport::Tcp => {
+                let mut config =
+                    TcpImageSenderConfig::new(self.config.tcp_bind_addr, producer_epoch);
+                if let Some(timeout) = self.config.tcp_write_timeout_override {
+                    config.write_timeout = timeout;
+                }
+                let sender = match TcpImageSender::bind(config) {
+                    Ok(sender) => sender,
+                    Err(error) => {
+                        error!("Cannot bind Talos TCP image transport: {error}; capture disabled");
+                        return;
+                    }
+                };
+                let sink = TalosImageSink::Tcp(sender.publisher());
+                (
+                    sink,
+                    CapturedFrameKind::Rgba8,
+                    TextureFormat::Rgba8UnormSrgb,
+                    Some(sender),
+                )
+            }
+        };
+
         let publisher = Arc::new(Mutex::new(publisher));
 
         let capture_config = CaptureConfig {
             width: self.config.width,
             height: self.config.height,
-            texture_format: self.config.texture_format,
-            frame_kind: CapturedFrameKind::Rgb8,
+            texture_format,
+            frame_kind,
         };
 
         let capture_context = TalosCaptureContext {
             publisher: publisher.clone(),
             fov_y: self.config.fov_y,
+            image_sink,
         };
 
         app.init_resource::<TalosFrameStamp>();
@@ -80,6 +177,9 @@ impl Plugin for TalosPlugin {
             config: capture_config,
             context: capture_context,
         });
+        if let Some(sender) = tcp_sender {
+            app.insert_resource(TcpImageSenderResource(sender));
+        }
 
         match ShmSubscriber::connect() {
             Ok(subscriber) => {

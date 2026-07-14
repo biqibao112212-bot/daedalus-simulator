@@ -6,6 +6,7 @@ use bevy::world_serialization::{WorldInstance, WorldInstanceReady};
 use bevy_inspector_egui::bevy_egui::{EguiGlobalSettings, PrimaryEguiContext};
 use std::collections::HashMap;
 
+use crate::capture::{AimCaptureTargetCandidate, CaptureSceneProfile, mark_aim_capture_target};
 use crate::components::{
     ActiveSlapper, Controlled, DartLaunch, GameLayer, GroundRoot, Infantry, InfantryChassis,
     InfantryGimbal, InfantryLaunchOffset, InfantryViewOffset, MainCamera, PreciousCollision,
@@ -29,6 +30,8 @@ pub fn setup(
     config: Res<SimulationConfig>,
     egui_global_settings: Option<ResMut<EguiGlobalSettings>>,
 ) {
+    let capture_scene_profile = CaptureSceneProfile::from_env();
+    commands.insert_resource(capture_scene_profile);
     if let Some(mut egui_global_settings) = egui_global_settings {
         egui_global_settings.auto_create_primary_context = false;
     }
@@ -92,12 +95,15 @@ pub fn setup(
             .with_translation(Vec3::new(2.0, 0.5, 2.0)),
     ));
 
-    commands.spawn((
+    let mut outpost = commands.spawn((
         RigidBody::Static,
         WorldAssetRoot(asset_server.load(GltfAssetLabel::Scene(0).from_asset("OUTPOST.glb"))),
         Transform::IDENTITY,
         ScanOutpost,
     ));
+    if capture_scene_profile.is_aim() {
+        outpost.insert(AimCaptureTargetCandidate);
+    }
 
     commands.spawn((
         WorldAssetRoot(asset_server.load(GltfAssetLabel::Scene(0).from_asset("TECH_CORE.glb"))),
@@ -149,13 +155,15 @@ pub fn setup(
         Infantry::new(Team::Red, INFANTRY_THREE_CONFIG),
         Controlled,
     ));
-
-    commands.spawn((
+    let mut infantry_vehicle = commands.spawn((
         WorldAssetRoot(asset_server.load(GltfAssetLabel::Scene(0).from_asset("vehicle.glb"))),
         Transform::from_xyz(1.0, 1.0, 1.0),
         Infantry::new(Team::Blue, INFANTRY_THREE_CONFIG),
         SlapperInfantry,
     ));
+    if capture_scene_profile.is_aim() {
+        infantry_vehicle.insert(AimCaptureTargetCandidate);
+    }
 
     commands.spawn((
         WorldAssetRoot(asset_server.load(GltfAssetLabel::Scene(0).from_asset("HERO.glb"))),
@@ -164,7 +172,6 @@ pub fn setup(
         SlapperInfantry,
         ActiveSlapper,
     ));
-
     let mut main_camera = commands.spawn((
         Camera3d::default(),
         Camera {
@@ -334,7 +341,12 @@ pub fn setup_collision(
     children: Query<&Children>,
     name: Query<&Name, With<Children>>,
     root_query: Query<(Entity, &PreciousCollision)>,
+    capture_targets: Query<(), With<AimCaptureTargetCandidate>>,
 ) {
+    if capture_targets.contains(events.entity) {
+        let root = events.entity;
+        mark_aim_capture_target(&mut commands, root, children.iter_descendants(root));
+    }
     let Ok((_, PreciousCollision(map))) = root_query.get(events.entity) else {
         return;
     };

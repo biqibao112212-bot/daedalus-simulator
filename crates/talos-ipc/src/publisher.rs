@@ -17,13 +17,14 @@ impl ShmPublisher {
 
         unsafe {
             let meta = meta_region.as_mut::<ShmMetaRegion>();
+            let producer_epoch = Self::now_ns().max(1);
 
             // 初始化 header
             meta.header = ShmHeader {
                 magic: SHM_MAGIC,
                 version: SHM_VERSION,
-                created_ns: Self::now_ns(),
-                heartbeat_ns: Self::now_ns(),
+                created_ns: producer_epoch,
+                heartbeat_ns: producer_epoch,
                 image_width: IMAGE_WIDTH,
                 image_height: IMAGE_HEIGHT,
                 _pad: [0; 32],
@@ -43,6 +44,13 @@ impl ShmPublisher {
             image_pool,
             current_buffer_id: 0,
         })
+    }
+
+    /// Stable identity for this publisher lifetime.
+    pub fn producer_epoch(&self) -> u64 {
+        unsafe { self.meta_region.as_ref::<ShmMetaRegion>() }
+            .header
+            .created_ns
     }
 
     pub fn publish_image(&mut self, data: &[u8], seq: u64, timestamp_ns: u64) {

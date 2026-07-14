@@ -1,7 +1,7 @@
 use std::sync::atomic::AtomicU8;
 
-pub const IMAGE_WIDTH: u32 = 1440;
-pub const IMAGE_HEIGHT: u32 = 1080;
+pub const IMAGE_WIDTH: u32 = 1280;
+pub const IMAGE_HEIGHT: u32 = 720;
 
 pub const CACHE_LINE_SIZE: usize = 64;
 pub const SHM_MAGIC: u32 = 0x54414C05;

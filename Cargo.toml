@@ -3,7 +3,7 @@ members = [".", "crates/*"]
 resolver = "2"
 
 [workspace.dependencies]
-bevy = { version = "0.19", features = ["dynamic_linking", "jpeg"] }
+bevy = { version = "0.19", features = ["jpeg"] }
 avian3d = "0.7"
 bevy-inspector-egui = "0.37"
 memmap2 = { version = "0" }
