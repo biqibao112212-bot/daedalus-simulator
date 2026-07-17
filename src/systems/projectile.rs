@@ -8,8 +8,12 @@ use crate::components::{
     ProjectileSetting,
 };
 use crate::config::SimulationConfig;
-use crate::robomaster::prelude::Projectile;
+use crate::robomaster::prelude::{Armor, ArmorRoot, Projectile};
 use crate::statistic::ProjectileStatistics;
+use crate::telemetry::{
+    PendingAutoAimShotContext, ProjectileImpactRecorded, ProjectileKinematics, ProjectileTelemetry,
+    ProjectileTrace, ShotSource, nearest_armor_target, nearest_outpost_armor_target,
+};
 
 pub fn setup_projectile(
     mut commands: Commands,
@@ -37,6 +41,8 @@ pub fn projectile_launch(
     time: Res<Time>,
     mut cooldown: ResMut<ProjectileCooldown>,
     mut stats: ResMut<ProjectileStatistics>,
+    mut telemetry: ResMut<ProjectileTelemetry>,
+    pending_auto_aim: Option<Res<PendingAutoAimShotContext>>,
     config: Res<SimulationConfig>,
     _asset_server: Res<AssetServer>,
     mut commands: Commands,
@@ -53,11 +59,18 @@ pub fn projectile_launch(
 ) {
     cooldown.tick(time.delta());
     if !cooldown.is_finished() {
+        if pending_auto_aim.is_some() {
+            commands.remove_resource::<PendingAutoAimShotContext>();
+        }
         return;
     }
     cooldown.reset();
 
-    stats.increase_launch();
+    let auto_aim = pending_auto_aim.as_deref().copied();
+    if auto_aim.is_some() {
+        commands.remove_resource::<PendingAutoAimShotContext>();
+    }
+
     let direction = (gimbal.0.rotation() * launch_offset.rotation)
         .mul_vec3(Vec3::Y)
         .normalize_or_zero();
@@ -65,6 +78,27 @@ pub fn projectile_launch(
         return;
     }
     let vel = infantry.1.0 + direction * config.projectile.speed;
+    let position = infantry.0.translation + (gimbal.0.rotation() * launch_offset.translation);
+    let (gimbal_yaw, gimbal_pitch, _) = gimbal.0.rotation().to_euler(EulerRot::YXZ);
+    stats.increase_launch();
+    let trace = ProjectileTrace {
+        id: telemetry.next_projectile_id(),
+        source: if auto_aim.is_some() {
+            ShotSource::AutoAim
+        } else {
+            ShotSource::Manual
+        },
+        target_mode: std::env::var("DAEDALUS_AUTO_AIM_MODE").unwrap_or_else(|_| "armor".into()),
+        launch_index: stats.launch_count,
+        launched_at_s: time.elapsed_secs_f64(),
+        position_m: position,
+        velocity_mps: vel,
+        direction,
+        gimbal_yaw_deg: gimbal_yaw.to_degrees(),
+        gimbal_pitch_deg: gimbal_pitch.to_degrees(),
+        auto_aim,
+    };
+    telemetry.write_launch(&trace);
     commands.spawn((
         RigidBody::Dynamic,
         Collider::sphere(config.projectile.diameter / 2.0),
@@ -77,15 +111,15 @@ pub fn projectile_launch(
         MeshMaterial3d(setting.1.clone()),
         LinearVelocity(vel),
         AngularVelocity(infantry.2.0),
-        Transform::IDENTITY.with_translation(
-            infantry.0.translation + (gimbal.0.rotation() * launch_offset.translation),
-        ),
+        Transform::IDENTITY.with_translation(position),
         ProjectileLifetime(Timer::from_seconds(
             config.projectile.lifetime,
             TimerMode::Once,
         )),
         Projectile,
+        trace,
     ));
+    info!("Projectile launched; total launches={}", stats.launch_count);
 }
 
 pub fn projectile_aerodynamics(
@@ -128,6 +162,7 @@ pub fn dart_launch(
     setting: Res<DartSetting>,
     launchers: Query<&GlobalTransform, With<DartLaunch>>,
 ) {
+    info!("Dart launch requested");
     const DART_FORWARD: Vec3 = Vec3::Y;
     const DART_MODEL_FORWARD: Vec3 = Vec3::NEG_Y;
     const DART_SPEED_MPS: f32 = 17.0;
@@ -137,6 +172,7 @@ pub fn dart_launch(
     const DART_SPAWN_OFFSET_M: f32 = 0.00;
 
     let Ok(launcher) = launchers.single() else {
+        info!("Dart launch skipped: expected exactly one launcher");
         return;
     };
 
@@ -182,17 +218,62 @@ pub fn dart_launch(
         Projectile,
         DartProjectile,
     ));
+    info!("Dart launched; total launches={}", stats.launch_count);
 }
 
 pub fn cleanup_projectiles(
     time: Res<Time>,
     mut commands: Commands,
-    mut projectiles: Query<(Entity, &mut ProjectileLifetime)>,
+    telemetry: Res<ProjectileTelemetry>,
+    mut projectiles: Query<(
+        Entity,
+        &mut ProjectileLifetime,
+        Option<&Transform>,
+        Option<&LinearVelocity>,
+        Option<&ProjectileTrace>,
+        Option<&ProjectileImpactRecorded>,
+    )>,
+    armors: Query<(Entity, &Armor, &GlobalTransform), With<ArmorRoot>>,
 ) {
-    for (entity, mut lifetime) in &mut projectiles {
+    for (entity, mut lifetime, transform, velocity, trace, impact_recorded) in &mut projectiles {
         lifetime.tick(time.delta());
         if lifetime.is_finished() {
+            if let Some(trace) = trace
+                && impact_recorded.is_none()
+            {
+                let projectile = ProjectileKinematics::from_components(transform, velocity);
+                let nearest = nearest_armor_target(projectile.position_m, &armors);
+                let nearest_outpost = nearest_outpost_armor_target(projectile.position_m, &armors);
+                telemetry.write_expired(trace, projectile, nearest, nearest_outpost);
+            }
             commands.entity(entity).despawn();
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn dart_launch_spawns_dart_projectile() {
+        let mut app = App::new();
+        app.insert_resource(SimulationConfig::default())
+            .insert_resource(ProjectileStatistics::default())
+            .insert_resource(DartSetting(Handle::<WorldAsset>::default()))
+            .add_systems(Update, dart_launch);
+
+        app.world_mut()
+            .spawn((DartLaunch, GlobalTransform::IDENTITY));
+        app.update();
+
+        let mut dart_query = app
+            .world_mut()
+            .query_filtered::<Entity, With<DartProjectile>>();
+        assert_eq!(dart_query.iter(app.world()).count(), 1);
+        assert_eq!(
+            app.world().resource::<ProjectileStatistics>().launch_count,
+            1
+        );
     }
 }

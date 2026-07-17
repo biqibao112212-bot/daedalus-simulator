@@ -1,4 +1,5 @@
 /target
+/target-integrated-talos
 *.stp
 .DS_Store
 assets_old

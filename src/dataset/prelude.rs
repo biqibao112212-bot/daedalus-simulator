@@ -3,13 +3,16 @@ use crate::capture::driver::{
     CaptureConfig, CapturedFrame, CapturedFrameKind, GpuCaptureHandler, SnapshotAsync, SnapshotSync,
 };
 use crate::dataset::occlusion::{DEPTH_EPSILON_M, DepthSample, entity_fully_visible_in_depth};
-use crate::dataset::writer::{ArmorColor, ArmorEntry, DatasetWriter};
+use crate::dataset::writer::{ArmorColor, ArmorEntry, BuffPoseClass, BuffPoseEntry, DatasetWriter};
 use crate::robomaster::prelude::{
-    Armor, ArmorLabel, ArmorParts, ArmorRoot, ArmorType, MarkerData, Side, Team, VertexData,
+    Activation, Armor, ArmorLabel, ArmorParts, ArmorRoot, ArmorType, MarkerData, PowerRune,
+    PowerRuneMechanism, RuneVisualIndex, Side, Team, VertexData,
 };
+use bevy::camera::primitives::Aabb;
 use bevy::ecs::world::DeferredWorld;
 use bevy::prelude::*;
 use bevy::render::{Extract, RenderApp, RenderSystems};
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 pub const DATASET_DEPTH_NEAR: f32 = 0.1;
@@ -36,9 +39,24 @@ struct PendingArmorEntry {
 }
 
 #[derive(Debug, Clone)]
+struct PendingRuneEntry {
+    class_id: BuffPoseClass,
+    bbox_px: Vec4,
+    keypoints_px: [Vec2; 5],
+}
+
+#[derive(Debug, Clone)]
+struct PendingRuneProjection {
+    class_id: BuffPoseClass,
+    r_center_px: Vec2,
+    points_px: Vec<Vec2>,
+}
+
+#[derive(Debug, Clone)]
 struct PendingFrame {
     frame_name: String,
     armors: Vec<PendingArmorEntry>,
+    runes: Vec<PendingRuneEntry>,
     rgb_reserved: bool,
     depth_reserved: bool,
     rgb: Option<(u32, u32, Vec<u8>)>,
@@ -57,9 +75,11 @@ impl Data {
 pub struct DatasetPlugin;
 impl Plugin for DatasetPlugin {
     fn build(&self, app: &mut App) {
+        let dataset_dir =
+            std::env::var("DAEDALUS_DATASET_DIR").unwrap_or_else(|_| "dataset".to_string());
         app.sub_app_mut(RenderApp)
             .insert_resource(DatasetHandle(Arc::new(Mutex::new(
-                DatasetWriter::new("dataset").unwrap(),
+                DatasetWriter::new(&dataset_dir).unwrap(),
             ))))
             .insert_resource(Data::default())
             .insert_resource(Cooldown(Mutex::new(Timer::from_seconds(
@@ -275,15 +295,42 @@ fn finalize_pending_frame(
                 .map(|(x, y)| Vec2::new(x as f32 / rgb_width as f32, y as f32 / rgb_height as f32)),
         })
         .collect::<Vec<_>>();
+    let visible_runes = pending
+        .runes
+        .into_iter()
+        .map(|entry| BuffPoseEntry {
+            class_id: entry.class_id,
+            bbox: Vec4::new(
+                entry.bbox_px.x / rgb_width as f32,
+                entry.bbox_px.y / rgb_height as f32,
+                entry.bbox_px.z / rgb_width as f32,
+                entry.bbox_px.w / rgb_height as f32,
+            ),
+            keypoints: entry
+                .keypoints_px
+                .map(|point| Vec2::new(point.x / rgb_width as f32, point.y / rgb_height as f32)),
+        })
+        .collect::<Vec<_>>();
 
     let mut writer = writer.lock().unwrap();
-    writer.write_color_entry(
-        pending.frame_name.as_str(),
-        rgb_height,
-        rgb_width,
-        rgb_data.as_slice(),
-        visible_entries.as_slice(),
-    )?;
+    if !visible_entries.is_empty() {
+        writer.write_color_entry(
+            pending.frame_name.as_str(),
+            rgb_height,
+            rgb_width,
+            rgb_data.as_slice(),
+            visible_entries.as_slice(),
+        )?;
+    }
+    if !visible_runes.is_empty() {
+        writer.write_buff_pose_entry(
+            pending.frame_name.as_str(),
+            rgb_height,
+            rgb_width,
+            rgb_data.as_slice(),
+            visible_runes.as_slice(),
+        )?;
+    }
     writer.write_depth_entry(
         pending.frame_name.as_str(),
         depth_width,
@@ -294,8 +341,62 @@ fn finalize_pending_frame(
     )
 }
 
+fn buff_class_for_rune(team: Team, activation: Activation) -> BuffPoseClass {
+    match (team, activation) {
+        (Team::Red, Activation::Deactivated) => BuffPoseClass::RedUnlit,
+        (Team::Red, Activation::Activating) => BuffPoseClass::RedPending,
+        (Team::Red, Activation::Activated | Activation::Completed) => BuffPoseClass::RedActivated,
+        (Team::Blue, Activation::Deactivated) => BuffPoseClass::BlueUnlit,
+        (Team::Blue, Activation::Activating) => BuffPoseClass::BluePending,
+        (Team::Blue, Activation::Activated | Activation::Completed) => BuffPoseClass::BlueActivated,
+    }
+}
+
+fn bbox_from_screen_points(points: &[Vec2]) -> Option<Vec4> {
+    if points.len() < 4 {
+        return None;
+    }
+
+    let mut min = Vec2::splat(f32::INFINITY);
+    let mut max = Vec2::splat(f32::NEG_INFINITY);
+    for point in points {
+        min = min.min(*point);
+        max = max.max(*point);
+    }
+
+    let size = max - min;
+    (size.x >= 2.0 && size.y >= 2.0).then_some(Vec4::new(
+        min.x + size.x * 0.5,
+        min.y + size.y * 0.5,
+        size.x,
+        size.y,
+    ))
+}
+
+fn keypoints_from_bbox(bbox: Vec4, r_center_px: Vec2) -> [Vec2; 5] {
+    let half = Vec2::new(bbox.z * 0.5, bbox.w * 0.5);
+    let center = Vec2::new(bbox.x, bbox.y);
+    [
+        center + Vec2::new(-half.x, -half.y),
+        center + Vec2::new(half.x, -half.y),
+        center + Vec2::new(half.x, half.y),
+        center + Vec2::new(-half.x, half.y),
+        r_center_px,
+    ]
+}
+
 pub(crate) fn capture(
     root_data: Extract<Query<(Entity, &Armor, &ArmorRoot, &ArmorParts)>>,
+    rune_roots: Extract<Query<(Entity, &PowerRune, &PowerRuneMechanism, &GlobalTransform)>>,
+    rune_targets: Extract<
+        Query<(
+            &RuneVisualIndex,
+            &GlobalTransform,
+            &Aabb,
+            Option<&Visibility>,
+            Option<&InheritedVisibility>,
+        )>,
+    >,
     vertex_data: Extract<Query<(&GlobalTransform, &VertexData)>>,
     marker_data: Extract<Query<(&GlobalTransform, &MarkerData)>>,
     camera: Extract<Single<(&Projection, &GlobalTransform), With<CaptureCamera>>>,
@@ -365,7 +466,105 @@ pub(crate) fn capture(
         });
     }
 
-    if armors.is_empty() {
+    let mut rune_projections: HashMap<(Entity, usize), PendingRuneProjection> = HashMap::new();
+    let dataset_debug = std::env::var_os("DAEDALUS_DATASET_DEBUG").is_some();
+    let mut rune_target_candidates = 0usize;
+    let mut rune_visible_candidates = 0usize;
+    let mut rune_mesh_candidates = 0usize;
+    let mut rune_projected_candidates = 0usize;
+    for (rune_index, target_transform, aabb, visibility, inherited_visibility) in
+        rune_targets.iter()
+    {
+        rune_target_candidates += 1;
+        if matches!(visibility, Some(Visibility::Hidden))
+            || matches!(inherited_visibility, Some(inherited) if !inherited.get())
+        {
+            continue;
+        }
+        rune_visible_candidates += 1;
+        let Ok((_rune_entity, power_rune, mechanism, rune_transform)) =
+            rune_roots.get(rune_index.rune)
+        else {
+            continue;
+        };
+        if !mechanism.state().is_activating() {
+            continue;
+        }
+        let target_states = mechanism.state().target_states();
+        let Some(&activation) = target_states.get(rune_index.target) else {
+            continue;
+        };
+        let Some((r_x, r_y)) = world_to_screen(
+            rune_transform.translation(),
+            camera_global_transform,
+            projection,
+            &config,
+        ) else {
+            continue;
+        };
+        rune_mesh_candidates += 1;
+
+        let mut points_px = Vec::new();
+        let center: Vec3 = aabb.center.into();
+        let half_extents: Vec3 = aabb.half_extents.into();
+        let corners = [
+            Vec3::new(-half_extents.x, -half_extents.y, -half_extents.z),
+            Vec3::new(half_extents.x, -half_extents.y, -half_extents.z),
+            Vec3::new(-half_extents.x, half_extents.y, -half_extents.z),
+            Vec3::new(half_extents.x, half_extents.y, -half_extents.z),
+            Vec3::new(-half_extents.x, -half_extents.y, half_extents.z),
+            Vec3::new(half_extents.x, -half_extents.y, half_extents.z),
+            Vec3::new(-half_extents.x, half_extents.y, half_extents.z),
+            Vec3::new(half_extents.x, half_extents.y, half_extents.z),
+        ];
+        for corner in corners {
+            let world = target_transform.transform_point(center + corner);
+            let Some((x, y)) = world_to_screen(world, camera_global_transform, projection, &config)
+            else {
+                continue;
+            };
+            points_px.push(Vec2::new(x as f32, y as f32));
+        }
+        if points_px.len() < 4 {
+            continue;
+        }
+        rune_projected_candidates += 1;
+
+        let entry = rune_projections
+            .entry((rune_index.rune, rune_index.target))
+            .or_insert_with(|| PendingRuneProjection {
+                class_id: buff_class_for_rune(power_rune.team(), activation),
+                r_center_px: Vec2::new(r_x as f32, r_y as f32),
+                points_px: Vec::new(),
+            });
+        entry.points_px.extend(points_px);
+    }
+
+    let runes = rune_projections
+        .into_values()
+        .filter_map(|projection| {
+            let bbox_px = bbox_from_screen_points(projection.points_px.as_slice())?;
+            Some(PendingRuneEntry {
+                class_id: projection.class_id,
+                bbox_px,
+                keypoints_px: keypoints_from_bbox(bbox_px, projection.r_center_px),
+            })
+        })
+        .collect::<Vec<_>>();
+
+    if dataset_debug {
+        info!(
+            "dataset capture: armors={} rune_targets={} visible={} meshes={} projected={} rune_labels={}",
+            armors.len(),
+            rune_target_candidates,
+            rune_visible_candidates,
+            rune_mesh_candidates,
+            rune_projected_candidates,
+            runes.len()
+        );
+    }
+
+    if armors.is_empty() && runes.is_empty() {
         return;
     }
 
@@ -373,6 +572,7 @@ pub(crate) fn capture(
     queue.queue().lock().unwrap().push(PendingFrame {
         frame_name,
         armors,
+        runes,
         rgb_reserved: false,
         depth_reserved: false,
         rgb: None,

@@ -75,6 +75,90 @@ impl MechanismState {
         Self::Activating(ActivationRun::new(mode, rng))
     }
 
+    pub fn forced_activating(mode: RuneMode, active_targets: &[usize]) -> Self {
+        Self::forced_activation_state(mode, active_targets, &[])
+    }
+
+    pub fn forced_activated(mode: RuneMode) -> Self {
+        Self::Activated {
+            mode,
+            remaining: f32::MAX,
+        }
+    }
+
+    pub fn forced_activation_state(
+        mode: RuneMode,
+        pending_targets: &[usize],
+        activated_targets: &[usize],
+    ) -> Self {
+        let mut targets = [Activation::Deactivated; RUNE_TARGET_COUNT];
+        for target in activated_targets
+            .iter()
+            .copied()
+            .filter(|target| *target < RUNE_TARGET_COUNT)
+        {
+            targets[target] = Activation::Activated;
+        }
+
+        let pending_limit = match mode {
+            RuneMode::Small => 1,
+            RuneMode::Large => 2,
+        };
+        let mut pending_count = 0usize;
+        for target in pending_targets
+            .iter()
+            .copied()
+            .filter(|target| *target < RUNE_TARGET_COUNT)
+        {
+            if targets[target] == Activation::Activated || pending_count >= pending_limit {
+                continue;
+            }
+            targets[target] = Activation::Activating;
+            pending_count += 1;
+        }
+        if targets
+            .iter()
+            .all(|activation| *activation != Activation::Activating)
+        {
+            if let Some(target) = targets
+                .iter()
+                .enumerate()
+                .find_map(|(idx, activation)| (*activation != Activation::Activated).then_some(idx))
+            {
+                targets[target] = Activation::Activating;
+                pending_count = 1;
+            }
+        }
+
+        Self::Activating(ActivationRun {
+            global_remaining: f32::MAX,
+            targets,
+            round: match mode {
+                RuneMode::Small => ActivationRound::Small(SmallRound {
+                    primary_remaining: f32::MAX,
+                }),
+                RuneMode::Large => ActivationRound::Large(LargeRun {
+                    completed_groups: targets
+                        .iter()
+                        .filter(|activation| **activation == Activation::Activated)
+                        .count(),
+                    phase: if pending_count <= 1 {
+                        LargePhase::Secondary {
+                            secondary_remaining: f32::MAX,
+                            target: targets.iter().enumerate().find_map(|(idx, activation)| {
+                                (*activation == Activation::Activating).then_some(idx)
+                            }),
+                        }
+                    } else {
+                        LargePhase::Primary {
+                            primary_remaining: f32::MAX,
+                        }
+                    },
+                }),
+            },
+        })
+    }
+
     pub fn mode(&self) -> RuneMode {
         match self {
             Self::Inactive { mode, .. }
@@ -485,8 +569,19 @@ mod tests {
         state
             .target_states()
             .iter()
-            .filter(|activation| **activation == Activation::Activated)
+            .filter(|activation| {
+                matches!(activation, Activation::Activated | Activation::Completed)
+            })
             .count()
+    }
+
+    fn activated_indices(state: &MechanismState) -> Vec<usize> {
+        state
+            .target_states()
+            .iter()
+            .enumerate()
+            .filter_map(|(idx, activation)| (*activation == Activation::Activated).then_some(idx))
+            .collect()
     }
 
     #[test]
@@ -499,6 +594,36 @@ mod tests {
         assert_eq!(state.hit(active[0], &mut rng), RuneHitOutcome::PrimaryHit);
         assert_eq!(activated_count(&state), 1);
         assert_eq!(active_indices(&state).len(), 1);
+    }
+
+    #[test]
+    fn forced_small_rune_lights_requested_target() {
+        let state = MechanismState::forced_activating(RuneMode::Small, &[3]);
+
+        assert_eq!(active_indices(&state), vec![3]);
+    }
+
+    #[test]
+    fn forced_large_rune_lights_two_requested_targets() {
+        let state = MechanismState::forced_activating(RuneMode::Large, &[1, 4]);
+
+        assert_eq!(active_indices(&state), vec![1, 4]);
+    }
+
+    #[test]
+    fn forced_rune_can_hold_pending_and_activated_targets() {
+        let state = MechanismState::forced_activation_state(RuneMode::Large, &[2], &[0, 4]);
+
+        assert_eq!(active_indices(&state), vec![2]);
+        assert_eq!(activated_indices(&state), vec![0, 4]);
+        assert_eq!(state.large_progress(), Some(2));
+    }
+
+    #[test]
+    fn forced_activated_lights_all_targets() {
+        let state = MechanismState::forced_activated(RuneMode::Large);
+
+        assert_eq!(activated_count(&state), RUNE_TARGET_COUNT);
     }
 
     #[test]

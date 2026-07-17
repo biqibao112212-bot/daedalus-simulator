@@ -8,6 +8,8 @@ use crate::components::{
 };
 use crate::config::SimulationConfig;
 
+pub(crate) const ROBOT_CAMERA_FORWARD_CLEARANCE: f32 = 0.2;
+
 pub fn following_controls(mut mode: ResMut<CameraMode>, keyboard: Res<ButtonInput<KeyCode>>) {
     if keyboard.just_pressed(KeyCode::F3) {
         mode.0 = match mode.0 {
@@ -22,7 +24,7 @@ pub fn update_camera_follow(
     camera_query: Single<(&mut Transform, &MainCamera), Without<Controlled>>,
     infantry: Single<&Transform, (With<Infantry>, With<Controlled>)>,
     gimbal: Single<&Transform, (With<Controlled>, With<InfantryGimbal>)>,
-    view_offset: Single<&Transform, (With<Controlled>, With<InfantryViewOffset>)>,
+    _view_offset: Single<&Transform, (With<Controlled>, With<InfantryViewOffset>)>,
     launch_offset: Single<&Transform, (With<Controlled>, With<InfantryLaunchOffset>)>,
     mode: Res<CameraMode>,
 ) {
@@ -31,13 +33,16 @@ pub fn update_camera_follow(
 
     match mode.0 {
         FollowingType::Robot => {
-            let view_offset_transform = view_offset.into_inner();
+            let launch_offset_transform = launch_offset.into_inner();
             let gimbal_world_rotation = infantry.rotation * gimbal_transform.rotation;
-            let view_offset_world = gimbal_world_rotation * view_offset_transform.translation;
+            let camera_local = launch_offset_transform.translation
+                + launch_offset_transform.rotation.mul_vec3(Vec3::Y)
+                    * ROBOT_CAMERA_FORWARD_CLEARANCE;
+            let camera_world = gimbal_world_rotation * camera_local;
 
-            camera_transform.translation = infantry.translation + view_offset_world;
+            camera_transform.translation = infantry.translation + camera_world;
             camera_transform.rotation = gimbal_world_rotation
-                * launch_offset.rotation
+                * launch_offset_transform.rotation
                 * Quat::from_euler(EulerRot::ZYX, 0.0, 0.0, PI / 2.0)
         }
         FollowingType::ThirdPerson => {

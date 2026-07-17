@@ -2,9 +2,10 @@ use crate::query;
 use crate::robomaster::prelude::{ArmorLabel, ArmorSpec, MarkerData, Team, extract_markers};
 use crate::util::entity_query::HierarchyQuery;
 use avian3d::prelude::{
-    ColliderConstructor, ColliderConstructorHierarchy, CollisionLayers, TrimeshFlags,
+    Collider, ColliderConstructor, ColliderConstructorHierarchy, CollisionLayers, TrimeshFlags,
 };
 use bevy::app::App;
+use bevy::asset::RenderAssetUsages;
 use bevy::ecs::system::SystemParam;
 use bevy::ecs::system::lifetimeless::Read;
 use bevy::mesh::VertexAttributeValues;
@@ -13,6 +14,8 @@ use bevy::prelude::{
     Plugin, Query, Res, Update, Vec3, Visibility, With, info,
 };
 use std::sync::atomic::{AtomicUsize, Ordering};
+
+const ARMOR_HIT_COLLIDER_LINEAR_SCALE: f32 = 0.5;
 
 #[derive(Component, Debug)]
 pub struct ScanArmor {
@@ -209,12 +212,23 @@ impl ArmorConstructor<'_, '_> {
                 .get(armor_entity)
                 .copied()
                 .unwrap_or_default();
-            self.commands.entity(armor_entity).insert(
-                ColliderConstructorHierarchy::new(ColliderConstructor::TrimeshFromMeshWithConfig(
-                    TrimeshFlags::MERGE_DUPLICATE_VERTICES,
-                ))
-                .with_default_layers(collision_layers),
-            );
+            let hit_collider = self
+                .get_mesh(armor_entity)
+                .and_then(build_scaled_armor_hit_collider);
+            if let Some(hit_collider) = hit_collider {
+                self.commands
+                    .entity(armor_entity)
+                    .insert((hit_collider, collision_layers));
+            } else {
+                self.commands.entity(armor_entity).insert(
+                    ColliderConstructorHierarchy::new(
+                        ColliderConstructor::TrimeshFromMeshWithConfig(
+                            TrimeshFlags::MERGE_DUPLICATE_VERTICES,
+                        ),
+                    )
+                    .with_default_layers(collision_layers),
+                );
+            }
         }
         {
             let children = self.children;
@@ -319,6 +333,53 @@ impl ArmorConstructor<'_, '_> {
         ));
         Some(ar)
     }
+}
+
+fn build_scaled_armor_hit_collider(mesh: &Mesh) -> Option<Collider> {
+    let VertexAttributeValues::Float32x3(positions) = mesh.attribute(Mesh::ATTRIBUTE_POSITION)?
+    else {
+        return None;
+    };
+    if positions.is_empty() {
+        return None;
+    }
+
+    let mut min = Vec3::splat(f32::INFINITY);
+    let mut max = Vec3::splat(f32::NEG_INFINITY);
+    for &position in positions {
+        let position = Vec3::from(position);
+        min = min.min(position);
+        max = max.max(position);
+    }
+    let center = (min + max) * 0.5;
+
+    let scaled_positions: Vec<[f32; 3]> = positions
+        .iter()
+        .map(|&position| {
+            let position = Vec3::from(position);
+            (center + scale_armor_hit_offset(position - center, max - min)).to_array()
+        })
+        .collect();
+
+    let scaled_mesh = Mesh::new(mesh.primitive_topology(), RenderAssetUsages::default())
+        .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, scaled_positions)
+        .with_inserted_indices(mesh.indices()?.clone());
+
+    Collider::trimesh_from_mesh_with_config(&scaled_mesh, TrimeshFlags::MERGE_DUPLICATE_VERTICES)
+}
+
+fn scale_armor_hit_offset(mut offset: Vec3, extents: Vec3) -> Vec3 {
+    if extents.x <= extents.y && extents.x <= extents.z {
+        offset.y *= ARMOR_HIT_COLLIDER_LINEAR_SCALE;
+        offset.z *= ARMOR_HIT_COLLIDER_LINEAR_SCALE;
+    } else if extents.y <= extents.x && extents.y <= extents.z {
+        offset.x *= ARMOR_HIT_COLLIDER_LINEAR_SCALE;
+        offset.z *= ARMOR_HIT_COLLIDER_LINEAR_SCALE;
+    } else {
+        offset.x *= ARMOR_HIT_COLLIDER_LINEAR_SCALE;
+        offset.y *= ARMOR_HIT_COLLIDER_LINEAR_SCALE;
+    }
+    offset
 }
 
 /// 从Mesh中提取所有顶点

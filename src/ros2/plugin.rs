@@ -14,6 +14,7 @@ use crate::ros2::topic::*;
 use crate::systems::projectile_launch;
 use crate::util::entity_query::HierarchyQuery;
 use bevy::ecs::system::RunSystemOnce;
+use bevy::image::BevyDefault;
 use bevy::prelude::*;
 use bevy::render::render_resource::TextureFormat;
 use r2r::ClockType::SystemTime;
@@ -171,6 +172,17 @@ fn capture_rune(
             map
         },
     );
+    let armor_tf_frames = armor
+        .iter()
+        .filter_map(|(entity, _transform, armor)| {
+            let name = format!("armor_{:?}", armor.id.as_usize())
+                .to_string()
+                .to_lowercase();
+            let center_entity = qq.of(entity).suffix("CENTER").any().one()?;
+            let (_, center_transform) = center.get(center_entity).ok()?;
+            Some((name, center_transform.compute_transform()))
+        })
+        .collect::<Vec<_>>();
 
     debug!(
         "[ROS2] MUZZLE pos: [{:.4}, {:.4}, {:.4}]",
@@ -210,11 +222,7 @@ fn capture_rune(
                     pub name as (tf.translation, tf.rotation);
                 }
             }
-            for (entity, _transform, armor) in armor {
-                let name = format!("armor_{:?}", armor.id.as_usize())
-                    .to_string()
-                    .to_lowercase();
-                let tf = center.get(qq.of(entity).suffix("CENTER").any().one().unwrap()).unwrap().1.compute_transform();
+            for (name, tf) in armor_tf_frames {
                 pub name as (tf.translation, tf.rotation);
             }
         }
@@ -222,11 +230,13 @@ fn capture_rune(
 
     let stamp = Clock::to_builtin_time(&res_unwrap!(clock).get_now().unwrap());
     for (entity, tf, armor) in armor {
-        let mut tff = center
-            .get(qq.of(entity).suffix("CENTER").any().one().unwrap())
-            .unwrap()
-            .1
-            .compute_transform();
+        let Some(center_entity) = qq.of(entity).suffix("CENTER").any().one() else {
+            continue;
+        };
+        let Ok((_, center_transform)) = center.get(center_entity) else {
+            continue;
+        };
+        let mut tff = center_transform.compute_transform();
         tff.rotation = tf.rotation() * Quat::from_euler(EulerRot::ZYX, 0.0, 0.0, -PI / 2.0);
         let tf = transform(tff);
         marker_pub.publish(Marker {
@@ -282,6 +292,7 @@ fn capture_rune(
 
 fn process_subscription(
     time: Res<Time>,
+    keyboard: Res<ButtonInput<KeyCode>>,
     mut commands: Commands,
     gimbal_cmd: ResMut<TopicSubscriber<GimbalCmdTopic>>,
     mut fire_rate_limiter: ResMut<FireRateLimiter>,
@@ -300,28 +311,81 @@ fn process_subscription(
 ) {
     let (mut gimbal_transform, mut gimbal_data) = gimbal.into_inner();
     fire_rate_limiter.tick(time.delta());
+    let space_pressed = keyboard.pressed(KeyCode::Space);
     loop {
         let Ok(Some(cmd)) = gimbal_cmd.try_recv() else {
             return;
         };
         if cmd.distance == -1.0 {
-            return;
+            continue;
         }
-        if cmd.fire_advice {
+        if should_launch_from_ros_cmd(&cmd, space_pressed) {
             if fire_rate_limiter.allow() {
                 commands.queue(|w: &mut World| {
                     w.run_system_once(projectile_launch).unwrap();
                 });
             }
         }
+        if !should_apply_ros_aim_cmd(&cmd, space_pressed) {
+            continue;
+        }
         let yaw_f32 = (cmd.yaw as f32).to_radians();
         let pitch_f32 = (cmd.pitch as f32 - 90.0).to_radians();
         gimbal_data.local_yaw = yaw_f32;
         gimbal_data.pitch = pitch_f32;
-        let expected_rotation = Quat::from_euler(EulerRot::YXZ, yaw_f32, pitch_f32, 0.0);
-        let current_rotation = muzzle_offset.0.rotation();
-        let delta = expected_rotation * current_rotation.inverse();
-        gimbal_transform.rotation = delta * gimbal_transform.rotation;
+        gimbal_transform.rotation = Quat::from_euler(EulerRot::YXZ, yaw_f32, pitch_f32, 0.0);
+    }
+}
+
+fn should_launch_from_ros_cmd(
+    cmd: &r2r::rm_interfaces::msg::GimbalCmd,
+    fire_pressed: bool,
+) -> bool {
+    fire_pressed && cmd.distance != -1.0 && cmd.fire_advice
+}
+
+fn should_apply_ros_aim_cmd(cmd: &r2r::rm_interfaces::msg::GimbalCmd, lock_pressed: bool) -> bool {
+    lock_pressed && cmd.distance != -1.0
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn ros_fire_advice_requires_space_authorization() {
+        let mut cmd = r2r::rm_interfaces::msg::GimbalCmd::default();
+        cmd.distance = 2.0;
+        cmd.fire_advice = true;
+
+        assert!(!should_launch_from_ros_cmd(&cmd, false));
+        assert!(should_launch_from_ros_cmd(&cmd, true));
+    }
+
+    #[test]
+    fn ros_no_target_command_never_launches() {
+        let mut cmd = r2r::rm_interfaces::msg::GimbalCmd::default();
+        cmd.distance = -1.0;
+        cmd.fire_advice = true;
+
+        assert!(!should_launch_from_ros_cmd(&cmd, true));
+    }
+
+    #[test]
+    fn ros_aim_requires_space_authorization() {
+        let mut cmd = r2r::rm_interfaces::msg::GimbalCmd::default();
+        cmd.distance = 2.0;
+
+        assert!(!should_apply_ros_aim_cmd(&cmd, false));
+        assert!(should_apply_ros_aim_cmd(&cmd, true));
+    }
+
+    #[test]
+    fn ros_no_target_aim_is_not_applied() {
+        let mut cmd = r2r::rm_interfaces::msg::GimbalCmd::default();
+        cmd.distance = -1.0;
+
+        assert!(!should_apply_ros_aim_cmd(&cmd, true));
     }
 }
 

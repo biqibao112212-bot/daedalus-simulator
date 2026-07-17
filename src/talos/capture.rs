@@ -1,6 +1,6 @@
 use crate::capture::{
     CameraFov, CaptureBundle, CaptureCamera, CaptureDepthPrepassEnabled, CaptureSource,
-    ImageHandle, compute_camera_intrinsics,
+    ExposureWallTimestamp, ImageHandle, compute_camera_intrinsics,
     driver::{
         CaptureConfig, CapturedFrame, CapturedFrameKind, GpuCaptureHandler, SnapshotAsync,
         SnapshotSync,
@@ -21,8 +21,24 @@ use std::sync::{Arc, Mutex};
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 use talos_ipc::*;
 
-static FRAME_SEQ: AtomicU64 = AtomicU64::new(0);
+static FRAME_SEQ: AtomicU64 = AtomicU64::new(1);
+static TALOS_PUBLISHED_FRAMES: AtomicU64 = AtomicU64::new(0);
+static TALOS_PUBLISH_LOCK_DROPS: AtomicU64 = AtomicU64::new(0);
+const TALOS_RGB_ONLY_ENV: &str = "DAEDALUS_TALOS_RGB_ONLY";
 const TALOS_CAPTURE_MAX_HZ_ENV: &str = "DAEDALUS_TALOS_CAPTURE_MAX_HZ";
+
+fn env_flag_enabled(value: &str) -> bool {
+    matches!(
+        value.trim().to_ascii_lowercase().as_str(),
+        "1" | "true" | "yes" | "on"
+    )
+}
+
+fn talos_rgb_only_capture_enabled() -> bool {
+    std::env::var(TALOS_RGB_ONLY_ENV)
+        .map(|value| env_flag_enabled(&value))
+        .unwrap_or(false)
+}
 
 fn capture_max_hz_from_value(value: Option<&str>) -> Option<f64> {
     value
@@ -50,6 +66,7 @@ impl TalosCaptureCadenceState {
         let Some(period_s) = self.period_s else {
             return true;
         };
+
         if !self.initialized || !now_s.is_finite() || now_s < self.last_now_s {
             self.initialized = true;
             self.last_now_s = now_s;
@@ -57,10 +74,16 @@ impl TalosCaptureCadenceState {
             return true;
         }
         self.last_now_s = now_s;
+
+        // A small scale-relative tolerance avoids losing an exact boundary to
+        // floating-point representation without creating a second admission.
         let tolerance_s = f64::EPSILON * now_s.abs().max(1.0) * 8.0;
         if now_s + tolerance_s < self.next_due_s {
             return false;
         }
+
+        // Preserve the original phase when one or more source periods were
+        // missed. This deliberately admits at most this one current tick.
         let periods_elapsed = ((now_s - self.next_due_s) / period_s).floor().max(0.0) + 1.0;
         self.next_due_s += periods_elapsed * period_s;
         true
@@ -77,6 +100,9 @@ impl TalosCaptureCadence {
     fn from_env() -> Self {
         let max_hz =
             capture_max_hz_from_value(std::env::var(TALOS_CAPTURE_MAX_HZ_ENV).ok().as_deref());
+        if let Some(max_hz) = max_hz {
+            info!("Talos source capture cadence limited to {max_hz:.3} Hz");
+        }
         Self {
             started: Instant::now(),
             state: TalosCaptureCadenceState::new(max_hz),
@@ -105,15 +131,39 @@ fn update_talos_capture_cadence(
     }
 }
 
-#[derive(Resource, Debug, Clone, Copy, Default)]
+fn talos_frame_dimensions_valid(width: u32, height: u32) -> bool {
+    width > 0 && height > 0 && width <= IMAGE_WIDTH && height <= IMAGE_HEIGHT
+}
+
+#[derive(Resource, Debug, Clone, Copy)]
 pub struct TalosFrameStamp {
     pub frame_seq: u64,
     pub timestamp_ns: u64,
 }
 
-pub fn advance_talos_frame_stamp(mut stamp: ResMut<TalosFrameStamp>) {
+impl Default for TalosFrameStamp {
+    fn default() -> Self {
+        Self {
+            frame_seq: FRAME_SEQ.fetch_add(1, Ordering::Relaxed),
+            timestamp_ns: now_ns().max(1),
+        }
+    }
+}
+
+pub fn advance_talos_frame_stamp(
+    mut stamp: ResMut<TalosFrameStamp>,
+    exposure_stamp: Res<ExposureWallTimestamp>,
+) {
     stamp.frame_seq = FRAME_SEQ.fetch_add(1, Ordering::Relaxed);
-    stamp.timestamp_ns = now_ns();
+    stamp.timestamp_ns = exposure_stamp.timestamp_ns.max(1);
+}
+
+pub fn talos_published_frames() -> u64 {
+    TALOS_PUBLISHED_FRAMES.load(Ordering::Relaxed)
+}
+
+pub fn talos_publish_lock_drops() -> u64 {
+    TALOS_PUBLISH_LOCK_DROPS.load(Ordering::Relaxed)
 }
 
 /// Extracted pose data from MainApp to RenderApp for synchronized publishing
@@ -157,13 +207,15 @@ impl SnapshotSync for TalosSnapshotSync {
         world: &mut DeferredWorld,
         _config: &CaptureConfig,
     ) -> Box<dyn SnapshotAsync> {
+        let sink = match self.sink {
+            TalosImageSink::File => {
+                TalosSnapshotSink::File(world.resource::<TalosCaptureContextShared>().0.clone())
+            }
+            TalosImageSink::Tcp(publisher) => TalosSnapshotSink::Tcp(publisher),
+        };
+
         Box::new(TalosSnapshot {
-            sink: match self.sink {
-                TalosImageSink::File => {
-                    TalosSnapshotSink::File(world.resource::<TalosCaptureContextShared>().0.clone())
-                }
-                TalosImageSink::Tcp(publisher) => TalosSnapshotSink::Tcp(publisher),
-            },
+            sink,
             frame_seq: self.frame_seq,
             timestamp_ns: self.timestamp_ns,
         })
@@ -183,6 +235,14 @@ enum TalosSnapshotSink {
 
 impl SnapshotAsync for TalosSnapshot {
     fn captured(&mut self, frame: CapturedFrame<'_>) {
+        if !talos_frame_dimensions_valid(frame.width, frame.height) {
+            warn!(
+                "image resolution out of range: maximum {}x{}, got {}x{}",
+                IMAGE_WIDTH, IMAGE_HEIGHT, frame.width, frame.height
+            );
+            return;
+        }
+
         let expected_size = match &self.sink {
             TalosSnapshotSink::File(_) if frame.kind == CapturedFrameKind::Rgb8 => {
                 (frame.width * frame.height * 3) as usize
@@ -201,31 +261,33 @@ impl SnapshotAsync for TalosSnapshot {
             return;
         }
 
-        if frame.width != IMAGE_WIDTH || frame.height != IMAGE_HEIGHT {
-            warn!(
-                "image reesolution mismatched: expected {}x{}, got {}x{}",
-                IMAGE_WIDTH, IMAGE_HEIGHT, frame.width, frame.height
-            );
-            return;
-        }
-
         match &self.sink {
-            TalosSnapshotSink::File(ctx) => {
-                if let Ok(mut publisher) = ctx.try_lock() {
-                    publisher.publish_image(frame.data, self.frame_seq, self.timestamp_ns);
+            TalosSnapshotSink::File(ctx) => match ctx.try_lock() {
+                Ok(mut publisher) => {
+                    publisher.publish_sized_image(
+                        frame.data,
+                        frame.width,
+                        frame.height,
+                        self.frame_seq,
+                        self.timestamp_ns,
+                    );
+                    TALOS_PUBLISHED_FRAMES.fetch_add(1, Ordering::Relaxed);
                 }
-            }
-            TalosSnapshotSink::Tcp(publisher) => {
-                if let Err(error) = publisher.submit_rgba32(
-                    frame.width,
-                    frame.height,
-                    self.frame_seq,
-                    self.timestamp_ns,
-                    frame.data,
-                ) {
-                    warn!("rejecting invalid Talos TCP image: {error}");
+                Err(_) => {
+                    TALOS_PUBLISH_LOCK_DROPS.fetch_add(1, Ordering::Relaxed);
                 }
-            }
+            },
+            TalosSnapshotSink::Tcp(publisher) => match publisher.submit_rgba32(
+                frame.width,
+                frame.height,
+                self.frame_seq,
+                self.timestamp_ns,
+                frame.data,
+            ) {
+                Ok(SubmitOutcome::Accepted | SubmitOutcome::Replaced | SubmitOutcome::Rejected) => {
+                }
+                Err(error) => warn!("rejecting invalid Talos TCP image: {error}"),
+            },
         }
     }
 
@@ -242,6 +304,14 @@ impl SnapshotAsync for TalosSnapshot {
         let TalosSnapshotSink::Tcp(publisher) = &self.sink else {
             return Err(data);
         };
+        if !talos_frame_dimensions_valid(width, height) {
+            return Err(data);
+        }
+        let expected_size = (width * height * 4) as usize;
+        if data.len() != expected_size {
+            return Err(data);
+        }
+
         match publisher.submit_rgba32_owned(width, height, self.frame_seq, self.timestamp_ns, data)
         {
             Ok(SubmitOutcome::Accepted | SubmitOutcome::Replaced | SubmitOutcome::Rejected) => {
@@ -261,8 +331,20 @@ pub(crate) enum TalosImageSink {
     Tcp(TcpImagePublisher),
 }
 
+impl TalosImageSink {
+    fn is_tcp(&self) -> bool {
+        matches!(self, Self::Tcp(_))
+    }
+}
+
 struct TalosSnapshotCreator {
     sink: TalosImageSink,
+}
+
+impl TalosSnapshotCreator {
+    fn new(sink: TalosImageSink) -> Self {
+        Self { sink }
+    }
 }
 
 impl GpuCaptureHandler for TalosSnapshotCreator {
@@ -319,7 +401,7 @@ pub fn publish_talos_pose_system(
     context: Option<Res<TalosCaptureContext>>,
     frame_stamp: Res<TalosFrameStamp>,
     camera: Query<&GlobalTransform, With<CaptureSource>>,
-    gimbal: Query<&GlobalTransform, (With<Controlled>, With<InfantryGimbal>)>,
+    gimbal: Query<(&GlobalTransform, &InfantryGimbal), With<Controlled>>,
     muzzle_offset: Query<
         (&GlobalTransform, &Transform),
         (With<InfantryLaunchOffset>, With<Controlled>),
@@ -333,7 +415,7 @@ pub fn publish_talos_pose_system(
     let Ok(cam_transform) = camera.single() else {
         return;
     };
-    let Ok(gimbal_transform) = gimbal.single() else {
+    let Ok((gimbal_transform, gimbal_data)) = gimbal.single() else {
         return;
     };
     let Ok((muzzle_global, muzzle_local)) = muzzle_offset.single() else {
@@ -360,31 +442,53 @@ pub fn publish_talos_pose_system(
         publisher.publish_runtime_state(RuntimeState {
             timestamp_ns: frame_stamp.timestamp_ns,
             following: u8::from(following.load(Ordering::Acquire)),
-            _pad: [0; 55],
+            _pad1: [0; 3],
+            gimbal_yaw_rad: gimbal_data.local_yaw,
+            gimbal_pitch_rad: gimbal_data.pitch,
+            _pad: [0; 44],
         });
     }
 }
 
 impl Plugin for TalosCapturePlugin {
     fn build(&self, app: &mut App) {
-        let tcp = matches!(self.context.image_sink, TalosImageSink::Tcp(_));
-        app.insert_resource(CaptureDepthPrepassEnabled(!tcp));
+        // Dataset-compatible color+depth remains the default. Benchmarks can explicitly opt into
+        // the lower-overhead RGB-only path with DAEDALUS_TALOS_RGB_ONLY=1. The explicit TCP
+        // performance path is always native RGBA color-only and does not reserve dataset frames.
+        let tcp = self.context.image_sink.is_tcp();
+        let rgb_only = tcp || talos_rgb_only_capture_enabled();
+        app.insert_resource(CaptureDepthPrepassEnabled(!rgb_only));
         let capture = if tcp {
+            info!("Talos TCP native RGBA capture enabled; depth/dataset capture disabled");
             CaptureBundle::color(
                 app,
                 self.config.clone(),
-                vec![cadence_gated_handler(TalosSnapshotCreator {
-                    sink: self.context.image_sink.clone(),
-                })],
+                vec![cadence_gated_handler(TalosSnapshotCreator::new(
+                    self.context.image_sink.clone(),
+                ))],
+            )
+        } else if rgb_only {
+            info!(
+                "Talos RGB-only capture enabled via {TALOS_RGB_ONLY_ENV}; depth capture disabled"
+            );
+            CaptureBundle::color(
+                app,
+                self.config.clone(),
+                vec![
+                    cadence_gated_handler(TalosSnapshotCreator::new(
+                        self.context.image_sink.clone(),
+                    )),
+                    cadence_gated_handler(DatasetSnapshotCreator::default()),
+                ],
             )
         } else {
             CaptureBundle::color_and_depth(
                 app,
                 self.config.clone(),
                 vec![
-                    cadence_gated_handler(TalosSnapshotCreator {
-                        sink: self.context.image_sink.clone(),
-                    }),
+                    cadence_gated_handler(TalosSnapshotCreator::new(
+                        self.context.image_sink.clone(),
+                    )),
                     cadence_gated_handler(DatasetSnapshotCreator::default()),
                 ],
                 vec![cadence_gated_handler(DatasetSnapshotCreator::depth())],
@@ -437,20 +541,285 @@ impl Plugin for TalosCapturePlugin {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::{
+        CapturedFrame, CapturedFrameKind, ExtractedPoseData, SnapshotAsync, SnapshotSync,
+        TalosCaptureCadenceState, TalosFrameStamp, TalosImageSink, TalosSnapshot,
+        TalosSnapshotCreator, TalosSnapshotSink, TalosSnapshotSync, cadence_gated_handler,
+        capture_max_hz_from_value, env_flag_enabled, prepare_extracted_pose,
+        talos_frame_dimensions_valid,
+    };
+    use crate::capture::driver::GpuCaptureHandler;
+    use crate::talos::tcp_image::{HEADER_BYTES, TcpImageSender, TcpImageSenderConfig};
+    use bevy::prelude::World;
+    use std::io::Read;
+    use std::net::{SocketAddr, TcpStream};
+    use std::time::{Duration, Instant};
+    use talos_ipc::{IMAGE_HEIGHT, IMAGE_WIDTH};
+
+    #[test]
+    fn talos_rgb_only_env_accepts_explicit_truthy_values() {
+        for value in ["1", "true", "TRUE", " yes ", "On"] {
+            assert!(env_flag_enabled(value), "expected {value:?} to be truthy");
+        }
+    }
+
+    #[test]
+    fn talos_rgb_only_env_rejects_non_truthy_values() {
+        for value in ["", "0", "false", "no", "off", "rgb"] {
+            assert!(!env_flag_enabled(value), "expected {value:?} to be false");
+        }
+    }
+
+    #[test]
+    fn capture_cadence_unset_and_invalid_values_are_always_active() {
+        for value in [
+            None,
+            Some(""),
+            Some("0"),
+            Some("-1"),
+            Some("NaN"),
+            Some("inf"),
+            Some("bad"),
+        ] {
+            let mut state = TalosCaptureCadenceState::new(capture_max_hz_from_value(value));
+            for now_s in [0.0, 0.001, 1.0, 10.0] {
+                assert!(
+                    state.should_capture(now_s),
+                    "expected {value:?} to remain active"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn capture_cadence_admits_180_hz_for_ten_seconds_without_catch_up_bursts() {
+        let mut state = TalosCaptureCadenceState::new(Some(180.0));
+        let mut admissions = 0_u64;
+        for tick in 0..=10_000_u64 {
+            let now_s = tick as f64 / 1_000.0;
+            if state.should_capture(now_s) {
+                admissions += 1;
+                assert!(
+                    !state.should_capture(now_s),
+                    "a main tick admitted more than one capture at {now_s}"
+                );
+            }
+        }
+
+        let interval_rate_hz = admissions.saturating_sub(1) as f64 / 10.0;
+        assert!(
+            (179.5..=180.5).contains(&interval_rate_hz),
+            "unexpected admission rate {interval_rate_hz} Hz ({admissions} endpoints)"
+        );
+    }
+
+    #[test]
+    fn capture_cadence_preserves_phase_across_missed_periods() {
+        let mut state = TalosCaptureCadenceState::new(Some(180.0));
+        assert!(state.should_capture(0.0));
+        assert!(state.should_capture(1.0));
+        assert!(!state.should_capture(1.0));
+        assert!(!state.should_capture(1.005));
+        assert!(state.should_capture(1.006));
+        assert!(!state.should_capture(1.006));
+    }
+
+    #[test]
+    fn inactive_extraction_invalidates_snapshot_while_active_preserves_identity() {
+        let stamp = TalosFrameStamp {
+            frame_seq: 42,
+            timestamp_ns: 123_456,
+        };
+        let mut extracted = ExtractedPoseData {
+            frame_seq: 7,
+            timestamp_ns: 8,
+            valid: true,
+        };
+
+        assert!(!prepare_extracted_pose(&mut extracted, &stamp, false));
+        assert_eq!(extracted.frame_seq, stamp.frame_seq);
+        assert_eq!(extracted.timestamp_ns, stamp.timestamp_ns);
+        assert!(!extracted.valid);
+
+        let mut world = World::new();
+        world.insert_resource(extracted.clone());
+        let creator = cadence_gated_handler(TalosSnapshotCreator::new(TalosImageSink::File));
+        assert!(creator.captured(&world).is_none());
+
+        assert!(prepare_extracted_pose(&mut extracted, &stamp, true));
+        extracted.valid = true;
+        world.insert_resource(extracted);
+        assert!(creator.captured(&world).is_some());
+    }
+
+    #[test]
+    fn talos_sized_frame_dimensions_accept_smaller_frames_within_fixed_maximum() {
+        assert!(talos_frame_dimensions_valid(640, 360));
+        assert!(talos_frame_dimensions_valid(IMAGE_WIDTH, IMAGE_HEIGHT));
+        assert!(!talos_frame_dimensions_valid(0, 360));
+        assert!(!talos_frame_dimensions_valid(640, 0));
+        assert!(!talos_frame_dimensions_valid(IMAGE_WIDTH + 1, 360));
+        assert!(!talos_frame_dimensions_valid(640, IMAGE_HEIGHT + 1));
+    }
+
+    #[test]
+    fn talos_frame_identity_is_nonzero_before_the_first_capture() {
+        let stamp = TalosFrameStamp::default();
+        assert_ne!(stamp.frame_seq, 0);
+        assert_ne!(stamp.timestamp_ns, 0);
+    }
+
+    #[test]
+    fn only_tcp_sync_snapshot_opts_into_the_premap_owned_rgba_path() {
+        let sender = TcpImageSender::bind(TcpImageSenderConfig::new(
+            SocketAddr::from(([127, 0, 0, 1], 0)),
+            0x0102_0304_0506_0708,
+        ))
+        .unwrap();
+        let tcp = TalosSnapshotSync {
+            frame_seq: 1,
+            timestamp_ns: 2,
+            sink: TalosImageSink::Tcp(sender.publisher()),
+        };
+        let file = TalosSnapshotSync {
+            frame_seq: 1,
+            timestamp_ns: 2,
+            sink: TalosImageSink::File,
+        };
+
+        assert!(tcp.accepts_owned_rgba());
+        assert!(!file.accepts_owned_rgba());
+    }
+
+    #[test]
+    fn tcp_capture_preserves_epoch_sequence_timestamp_dimensions_and_rgba_bytes() {
+        let epoch = 0x0102_0304_0506_0708;
+        let sender = TcpImageSender::bind(TcpImageSenderConfig::new(
+            SocketAddr::from(([127, 0, 0, 1], 0)),
+            epoch,
+        ))
+        .unwrap();
+        let mut client = TcpStream::connect(sender.local_addr()).unwrap();
+        client
+            .set_read_timeout(Some(Duration::from_secs(2)))
+            .unwrap();
+        let deadline = Instant::now() + Duration::from_secs(2);
+        while sender.counters().connect_total == 0 && Instant::now() < deadline {
+            std::thread::sleep(Duration::from_millis(5));
+        }
+        assert_eq!(sender.counters().connect_total, 1);
+
+        let mut snapshot = TalosSnapshot {
+            sink: TalosSnapshotSink::Tcp(sender.publisher()),
+            frame_seq: 42,
+            timestamp_ns: 123_456_789,
+        };
+        snapshot.captured(CapturedFrame {
+            kind: CapturedFrameKind::Rgba8,
+            width: 2,
+            height: 1,
+            data: &[1, 2, 3, 4, 5, 6, 7, 8],
+        });
+
+        let mut wire = vec![0; HEADER_BYTES + 8];
+        client.read_exact(&mut wire).unwrap();
+        assert_eq!(u16::from_be_bytes(wire[8..10].try_into().unwrap()), 2);
+        assert_eq!(u32::from_be_bytes(wire[12..16].try_into().unwrap()), 2);
+        assert_eq!(u32::from_be_bytes(wire[16..20].try_into().unwrap()), 1);
+        assert_eq!(u64::from_be_bytes(wire[24..32].try_into().unwrap()), epoch);
+        assert_eq!(u64::from_be_bytes(wire[32..40].try_into().unwrap()), 42);
+        assert_eq!(
+            u64::from_be_bytes(wire[40..48].try_into().unwrap()),
+            123_456_789
+        );
+        assert_eq!(&wire[HEADER_BYTES..], &[1, 2, 3, 4, 5, 6, 7, 8]);
+    }
+
+    #[test]
+    fn tcp_snapshot_explicitly_accepts_owned_rgba_and_preserves_wire_identity() {
+        let epoch = 0x1112_1314_1516_1718;
+        let sender = TcpImageSender::bind(TcpImageSenderConfig::new(
+            SocketAddr::from(([127, 0, 0, 1], 0)),
+            epoch,
+        ))
+        .unwrap();
+        let mut client = TcpStream::connect(sender.local_addr()).unwrap();
+        client
+            .set_read_timeout(Some(Duration::from_secs(2)))
+            .unwrap();
+        let deadline = Instant::now() + Duration::from_secs(2);
+        while sender.counters().connect_total == 0 && Instant::now() < deadline {
+            std::thread::sleep(Duration::from_millis(5));
+        }
+        assert_eq!(sender.counters().connect_total, 1);
+
+        let mut snapshot = TalosSnapshot {
+            sink: TalosSnapshotSink::Tcp(sender.publisher()),
+            frame_seq: 77,
+            timestamp_ns: 987_654_321,
+        };
+        assert!(snapshot.accepts_owned_rgba());
+        snapshot
+            .captured_owned_rgba(2, 1, vec![8, 7, 6, 5, 4, 3, 2, 1])
+            .unwrap();
+
+        let mut wire = vec![0; HEADER_BYTES + 8];
+        client.read_exact(&mut wire).unwrap();
+        assert_eq!(u16::from_be_bytes(wire[8..10].try_into().unwrap()), 2);
+        assert_eq!(u32::from_be_bytes(wire[12..16].try_into().unwrap()), 2);
+        assert_eq!(u32::from_be_bytes(wire[16..20].try_into().unwrap()), 1);
+        assert_eq!(u64::from_be_bytes(wire[24..32].try_into().unwrap()), epoch);
+        assert_eq!(u64::from_be_bytes(wire[32..40].try_into().unwrap()), 77);
+        assert_eq!(
+            u64::from_be_bytes(wire[40..48].try_into().unwrap()),
+            987_654_321
+        );
+        assert_eq!(&wire[HEADER_BYTES..], &[8, 7, 6, 5, 4, 3, 2, 1]);
+        assert_eq!(sender.counters().owned_submit_total, 1);
+        assert_eq!(sender.counters().borrowed_submit_total, 0);
+    }
+
+    #[test]
+    fn invalid_owned_tcp_snapshot_returns_the_original_vec_for_driver_fallback() {
+        let sender = TcpImageSender::bind(TcpImageSenderConfig::new(
+            SocketAddr::from(([127, 0, 0, 1], 0)),
+            0x2122_2324_2526_2728,
+        ))
+        .unwrap();
+        let mut snapshot = TalosSnapshot {
+            sink: TalosSnapshotSink::Tcp(sender.publisher()),
+            frame_seq: 88,
+            timestamp_ns: 123,
+        };
+        let data = vec![1, 2, 3, 4];
+        let pointer = data.as_ptr() as usize;
+
+        let returned = snapshot.captured_owned_rgba(2, 1, data).unwrap_err();
+
+        assert_eq!(returned.as_ptr() as usize, pointer);
+        assert_eq!(returned, [1, 2, 3, 4]);
+        assert_eq!(sender.counters().owned_submit_total, 0);
+        assert_eq!(sender.counters().borrowed_submit_total, 0);
+    }
+}
+
 /// Extract pose data from MainApp to RenderApp
 fn extract_pose_data(
     mut pose_data: ResMut<ExtractedPoseData>,
     frame_stamp: Extract<Res<TalosFrameStamp>>,
+    capture_active: Extract<Res<TalosCaptureActive>>,
     camera: Extract<Query<&GlobalTransform, With<CaptureSource>>>,
     gimbal: Extract<Query<&GlobalTransform, (With<Controlled>, With<InfantryGimbal>)>>,
     muzzle_offset: Extract<
         Query<(&GlobalTransform, &Transform), (With<InfantryLaunchOffset>, With<Controlled>)>,
     >,
     chassis_obs: Extract<Res<ChassisObservationFrame>>,
-    capture_active: Extract<Res<TalosCaptureActive>>,
 ) {
-    pose_data.frame_seq = frame_stamp.frame_seq;
-    pose_data.timestamp_ns = frame_stamp.timestamp_ns;
+    if !prepare_extracted_pose(&mut pose_data, &frame_stamp, capture_active.0) {
+        return;
+    }
 
     let Ok(cam_transform) = camera.single() else {
         pose_data.valid = false;
@@ -474,29 +843,18 @@ fn extract_pose_data(
         pose_data.frame_seq,
         pose_data.timestamp_ns,
     );
-    pose_data.valid = capture_active.0;
+    pose_data.valid = true;
 }
 
-#[cfg(test)]
-mod cadence_tests {
-    use super::*;
-
-    #[test]
-    fn unlimited_invalid_and_rate_limited_modes_are_fail_safe() {
-        assert_eq!(capture_max_hz_from_value(None), None);
-        assert_eq!(capture_max_hz_from_value(Some("invalid")), None);
-        assert_eq!(capture_max_hz_from_value(Some("180")), Some(180.0));
-    }
-
-    #[test]
-    fn cadence_preserves_phase_without_catch_up_bursts() {
-        let mut state = TalosCaptureCadenceState::new(Some(180.0));
-        assert!(state.should_capture(0.0));
-        assert!(!state.should_capture(0.001));
-        assert!(state.should_capture(1.0 / 180.0));
-        assert!(state.should_capture(1.0));
-        assert!(!state.should_capture(1.0));
-    }
+fn prepare_extracted_pose(
+    pose_data: &mut ExtractedPoseData,
+    frame_stamp: &TalosFrameStamp,
+    capture_active: bool,
+) -> bool {
+    pose_data.frame_seq = frame_stamp.frame_seq;
+    pose_data.timestamp_ns = frame_stamp.timestamp_ns;
+    pose_data.valid = false;
+    capture_active
 }
 
 fn captured_pose_data(

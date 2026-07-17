@@ -1,3 +1,4 @@
+use crate::capture::{AimCaptureTargetCandidate, mark_aim_capture_target};
 use crate::robomaster::power_rune::collision::RuneIndex;
 use crate::robomaster::power_rune::common::{RUNE_TARGET_COUNT, RuneMode};
 use crate::robomaster::power_rune::rotation::PowerRuneRotation;
@@ -17,6 +18,12 @@ use std::collections::HashMap;
 #[derive(Component)]
 pub struct PowerRuneRoot;
 
+#[derive(Component, Debug, Copy, Clone)]
+pub struct RuneVisualIndex {
+    pub target: usize,
+    pub rune: Entity,
+}
+
 fn build_targets(
     face_index: usize,
     face_entity: Entity,
@@ -28,18 +35,16 @@ fn build_targets(
     for target_idx in 1..=5 {
         let prefix = format!("FACE_{}_TARGET_{}", face_index, target_idx);
 
-        let padding_segments = creator.create_controller(
-            drain_entities_by(name_map, |name| {
-                name.starts_with(&format!("{}_PADDING", prefix))
-            }),
-            material!(on = { completed }),
-        );
-        let progress_segments = creator.create_controller(
-            drain_entities_by(name_map, |name| {
-                name.starts_with(&format!("{}_LEGGING_PROGRESSING", prefix))
-            }),
-            visibility!(activating),
-        );
+        let padding_entities = drain_entities_by(name_map, |name| {
+            name.starts_with(&format!("{}_PADDING", prefix))
+        });
+        let padding_segments =
+            creator.create_controller(padding_entities.clone(), material!(on = { completed }));
+        let progress_entities = drain_entities_by(name_map, |name| {
+            name.starts_with(&format!("{}_LEGGING_PROGRESSING", prefix))
+        });
+        let progress_segments =
+            creator.create_controller(progress_entities.clone(), visibility!(activating));
 
         let ad = format!("{}_ACTIVATED", prefix);
         let at = format!("{}_ACTIVE", prefix);
@@ -56,10 +61,11 @@ fn build_targets(
         let completed = name_map.remove(completed);
 
         let logical_index = targets.len();
-        for entity in [deactivated, activating, activated, completed]
+        let target_entities: Vec<Entity> = [deactivated, activating, activated, completed]
             .into_iter()
             .flatten()
-        {
+            .collect();
+        for entity in target_entities.iter().copied() {
             insert_all_child(&mut param.commands, entity, &param.children, || {
                 (
                     RuneIndex {
@@ -71,19 +77,32 @@ fn build_targets(
             });
         }
 
+        let mut visual_entities = target_entities;
+        visual_entities.extend(padding_entities.iter().copied());
+        visual_entities.extend(progress_entities.iter().copied());
+
         let mut legging_segments: [Controller; 3] = [
             Controller::new_combined(vec![]),
             Controller::new_combined(vec![]),
             Controller::new_combined(vec![]),
         ];
         for legging_idx in 1..=3 {
-            legging_segments[legging_idx - 1] = creator.create_controller(
-                drain_entities_by(name_map, |name| {
-                    name.starts_with(&format!("{}_LEGGING_{}", prefix, legging_idx))
-                        && !name.contains("PROGRESSING")
-                }),
-                material!(on = {activated, completed}),
-            )
+            let legging_entities = drain_entities_by(name_map, |name| {
+                name.starts_with(&format!("{}_LEGGING_{}", prefix, legging_idx))
+                    && !name.contains("PROGRESSING")
+            });
+            visual_entities.extend(legging_entities.iter().copied());
+            legging_segments[legging_idx - 1] =
+                creator.create_controller(legging_entities, material!(on = {activated, completed}))
+        }
+
+        for entity in visual_entities {
+            insert_all_child(&mut param.commands, entity, &param.children, || {
+                RuneVisualIndex {
+                    target: logical_index,
+                    rune: face_entity,
+                }
+            });
         }
 
         targets.push(RuneVisual::new(
@@ -102,6 +121,7 @@ struct PowerRuneParam<'w, 's> {
     scene_spawner: Res<'w, WorldInstanceSpawner>,
 
     power_query: Query<'w, 's, (), With<PowerRuneRoot>>,
+    capture_targets: Query<'w, 's, (), With<AimCaptureTargetCandidate>>,
     names: Query<'w, 's, &'static Name>,
     children: Query<'w, 's, &'static Children>,
 }
@@ -113,6 +133,14 @@ fn setup_power_rune(
 ) {
     if !param.power_query.contains(events.entity) {
         return;
+    }
+
+    if param.capture_targets.contains(events.entity) {
+        let descendants: Vec<_> = param
+            .scene_spawner
+            .iter_instance_entities(events.instance_id)
+            .collect();
+        mark_aim_capture_target(&mut param.commands, events.entity, descendants);
     }
 
     let names = param.names;
@@ -149,11 +177,7 @@ fn setup_power_rune(
     let red_clockwise = rand::thread_rng().gen_bool(0.5);
 
     for (index, face_entity) in faces {
-        let mode = if index & 2 > 0 {
-            RuneMode::Large
-        } else {
-            RuneMode::Small
-        };
+        let mode = RuneMode::Small;
 
         let deactivated = name_map.remove(format!("FACE_{}_R_UNPOWERED", index).as_str());
         let activated = name_map.remove(format!("FACE_{}_R_POWERED", index).as_str());

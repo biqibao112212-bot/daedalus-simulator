@@ -21,6 +21,9 @@ pub fn uav_launch(
     mut timer: Local<Option<Timer>>,
     keyboard: Res<ButtonInput<KeyCode>>,
 ) {
+    if keyboard.just_pressed(KeyCode::KeyP) {
+        info!("UAV launch requested");
+    }
     let mut timer = timer.get_or_insert(Timer::from_seconds(1.0, TimerMode::Once));
     timer.tick(time.delta());
     if !timer.is_finished() {
@@ -35,5 +38,6 @@ pub fn uav_launch(
                 infantry.0.translation + (gimbal.0.rotation() * launch_offset.translation),
             ),
         ));
+        info!("UAV spawned");
     }
 }

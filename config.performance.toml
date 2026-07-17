@@ -1,0 +1,109 @@
+# Reproducible high-throughput simulator configuration.
+# Select it without changing the interactive default:
+#   $env:DAEDALUS_CONFIG = "config.performance.toml"
+
+[window]
+present_mode = "immediate"
+
+[debug]
+egui = false
+inspector = false
+diagnostics = false
+
+[preview]
+# The visible window is intentionally disabled. The off-screen Talos camera
+# still renders and captures RGB frames.
+enabled = false
+max_hz = 0.0
+
+[render]
+shadows = false
+main_camera_fxaa = false
+illuminance = 500.0
+
+[capture.color]
+width = 1280
+height = 720
+
+[capture.depth]
+width = 1280
+height = 720
+near = 0.1
+far = 80.0
+
+[arena_boundary]
+enabled = true
+half_width = 14.0
+half_depth = 7.5
+height = 4.0
+thickness = 0.5
+
+[livox_ros]
+enabled = false
+frame_id = "camera_link"
+publish_freq = 10.0
+points_per_second = 400000
+line_num = 20
+tag_default = 0
+intensity_default = 1000.0
+
+[network_bridge]
+enabled = false
+bind = "0.0.0.0:5601"
+
+[auto_aim]
+# This preserves the in-process auto-aim subscription path without launching a
+# WSL/TensorRT process during a renderer benchmark.
+enabled_on_start = true
+managed_bridge_enabled = false
+command_transport = "udp"
+bridge_mode = "armor"
+wsl_distro = "Ubuntu-OSTEP"
+workspace_dir = "../.."
+talos_ipc_dir = "talos-ipc"
+bridge_workdir = "aim_sim_bridge"
+
+[physics]
+# Control/fixed-update cadence: 250 Hz. Keep one inner substep for the
+# measured high-throughput profile; higher values trade throughput for solver
+# accuracy and must be measured separately.
+fixed_hz = 250.0
+substep_count = 1
+post_update = false
+tick_divisor = 1
+
+[vehicle]
+rotation_speed = 7.42
+gimbal_rotation_speed = 3.0
+gimbal_pitch_limit = 0.785
+max_speed = 6.0
+linear_acceleration = 6.0
+acceleration_exponent = 2.5
+
+[mecanum]
+wheel_radius_m = 0.076
+half_wheelbase_m = 0.18
+half_trackwidth_m = 0.15
+
+[projectile]
+lifetime = 5.0
+speed = 25.0
+cooldown = 0.05
+diameter = 0.017
+mass = 0.0032
+friction = 1.1
+linear_damping = 0.0
+uav_vel = 5.0
+uav_size = 0.5
+
+[projectile.aerodynamics]
+enabled = false
+air_density = 1.225
+drag_coefficient = 0.22516
+wind = [0.0, 0.0, 0.0]
+
+[camera]
+fov = 45.0
+free_move_speed = 8.0
+follow_offset = [0.0, 3.0, 2.0]
+mouse_sensitivity = 0.003

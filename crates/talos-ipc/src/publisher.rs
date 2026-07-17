@@ -1,7 +1,7 @@
 use crate::layout::*;
 use crate::shm::{ShmError, ShmRegion};
 use crate::triple_buffer::TripleBufferProducer;
-use std::sync::atomic::Ordering;
+use std::sync::atomic::{Ordering, fence};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub struct ShmPublisher {
@@ -46,23 +46,36 @@ impl ShmPublisher {
         })
     }
 
-    /// Stable identity for this publisher lifetime.
+    /// Returns the exact producer epoch stored in the Talos v3 metadata header.
     pub fn producer_epoch(&self) -> u64 {
+        // The mapped region has the exact `ShmMetaRegion` size and is initialized in `create`.
         unsafe { self.meta_region.as_ref::<ShmMetaRegion>() }
             .header
             .created_ns
     }
 
     pub fn publish_image(&mut self, data: &[u8], seq: u64, timestamp_ns: u64) {
-        assert_eq!(data.len(), IMAGE_SIZE, "Image size mismatch");
+        self.publish_sized_image(data, IMAGE_WIDTH, IMAGE_HEIGHT, seq, timestamp_ns);
+    }
+
+    /// Publishes a tightly packed RGB24 image inside an unchanged maximum-size Talos v3 slot.
+    pub fn publish_sized_image(
+        &mut self,
+        data: &[u8],
+        width: u32,
+        height: u32,
+        seq: u64,
+        timestamp_ns: u64,
+    ) {
+        let payload_size = validate_sized_image(data, width, height);
 
         let buffer_id = self.current_buffer_id;
         self.current_buffer_id = (self.current_buffer_id + 1) % 3;
 
         unsafe {
             let pool_ptr = self.image_pool.as_ptr();
-            let dst = pool_ptr.add(buffer_id as usize * IMAGE_SIZE);
-            std::ptr::copy_nonoverlapping(data.as_ptr(), dst, IMAGE_SIZE);
+            let dst = pool_ptr.add(image_slot_offset(buffer_id));
+            std::ptr::copy_nonoverlapping(data.as_ptr(), dst, payload_size);
         }
 
         unsafe {
@@ -74,12 +87,7 @@ impl ShmPublisher {
             );
 
             let slot = producer.borrow_mut();
-            slot.seq = seq;
-            slot.timestamp_ns = timestamp_ns;
-            slot.width = IMAGE_WIDTH;
-            slot.height = IMAGE_HEIGHT;
-            slot.buffer_id = buffer_id;
-            slot.format = 0;
+            *slot = sized_image_meta(seq, timestamp_ns, width, height, buffer_id);
             producer.publish();
         }
     }
@@ -145,10 +153,28 @@ impl ShmPublisher {
         }
     }
 
-    pub fn publish_ground_truth(&mut self, batch: &GroundTruthBatch) {
+    pub fn publish_ground_truth(
+        &mut self,
+        batch: &GroundTruthBatch,
+        exposure_state: &ExposureState,
+    ) {
         unsafe {
             let meta = self.meta_region.as_mut::<ShmMetaRegion>();
+            // Preserve the v5 latest-value view for diagnostics and old internal
+            // callers while exact exposure scoring consumes the v6 history.
             meta.ground_truth = *batch;
+            let publication = meta
+                .ground_truth_history
+                .next_publication
+                .fetch_add(1, Ordering::Relaxed)
+                .wrapping_add(1);
+            let index = publication.wrapping_sub(1) as usize % GROUND_TRUTH_HISTORY_SLOTS;
+            publish_ground_truth_slot(
+                &mut meta.ground_truth_history.slots[index],
+                batch,
+                exposure_state,
+                publication,
+            );
         }
     }
 
@@ -187,6 +213,69 @@ impl ShmPublisher {
     }
 }
 
+fn publish_ground_truth_slot(
+    slot: &mut GroundTruthHistorySlot,
+    batch: &GroundTruthBatch,
+    exposure_state: &ExposureState,
+    publication: u64,
+) {
+    let stable = publication.wrapping_mul(2);
+    slot.commit_seq
+        .store(stable.wrapping_sub(1), Ordering::SeqCst);
+    fence(Ordering::SeqCst);
+    slot.ground_truth = *batch;
+    slot.exposure_state = *exposure_state;
+    fence(Ordering::Release);
+    slot.commit_seq.store(stable, Ordering::Release);
+}
+
+fn checked_image_payload_size(width: u32, height: u32) -> Option<usize> {
+    if width == 0 || height == 0 || width > IMAGE_WIDTH || height > IMAGE_HEIGHT {
+        return None;
+    }
+
+    (width as usize)
+        .checked_mul(height as usize)?
+        .checked_mul(IMAGE_CHANNELS as usize)
+}
+
+fn validate_sized_image(data: &[u8], width: u32, height: u32) -> usize {
+    let payload_size = checked_image_payload_size(width, height).unwrap_or_else(|| {
+        panic!(
+            "Image dimensions out of range: {width}x{height}, maximum is {IMAGE_WIDTH}x{IMAGE_HEIGHT}"
+        )
+    });
+    assert_eq!(
+        data.len(),
+        payload_size,
+        "Image payload size mismatch for {width}x{height} RGB24"
+    );
+    payload_size
+}
+
+fn image_slot_offset(buffer_id: u8) -> usize {
+    assert!(buffer_id < 3, "Image buffer id out of range: {buffer_id}");
+    buffer_id as usize * IMAGE_SIZE
+}
+
+fn sized_image_meta(
+    seq: u64,
+    timestamp_ns: u64,
+    width: u32,
+    height: u32,
+    buffer_id: u8,
+) -> ImageMeta {
+    ImageMeta {
+        seq,
+        timestamp_ns,
+        width,
+        height,
+        buffer_id,
+        format: 0,
+        _pad: [0; 6],
+    }
+}
+
 fn aux_f32_to_bytes(aux_f32: [f32; 4]) -> [u8; 16] {
     let mut bytes = [0u8; 16];
     for (i, value) in aux_f32.iter().enumerate() {
@@ -221,5 +310,71 @@ impl TripleBufferInit for GimbalTripleBuffer {
         self.state.store(1, Ordering::Relaxed);
         self.write_idx = 0;
         self.read_idx = 2;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn sized_image_payload_accepts_fixed_maximum_and_smaller_frames() {
+        assert_eq!(
+            checked_image_payload_size(IMAGE_WIDTH, IMAGE_HEIGHT),
+            Some(IMAGE_SIZE)
+        );
+        assert_eq!(checked_image_payload_size(640, 360), Some(640 * 360 * 3));
+        assert_eq!(
+            validate_sized_image(&vec![0; 640 * 360 * 3], 640, 360),
+            640 * 360 * 3
+        );
+    }
+
+    #[test]
+    fn sized_image_payload_rejects_out_of_bounds_dimensions() {
+        assert_eq!(checked_image_payload_size(0, 360), None);
+        assert_eq!(checked_image_payload_size(640, 0), None);
+        assert_eq!(checked_image_payload_size(IMAGE_WIDTH + 1, 360), None);
+        assert_eq!(checked_image_payload_size(640, IMAGE_HEIGHT + 1), None);
+    }
+
+    #[test]
+    #[should_panic(expected = "Image payload size mismatch")]
+    fn sized_image_payload_requires_exact_data_length() {
+        validate_sized_image(&[0; 3], 2, 2);
+    }
+
+    #[test]
+    fn sized_image_meta_uses_actual_dimensions_and_fixed_slot_stride() {
+        let meta = sized_image_meta(42, 123, 640, 360, 2);
+        assert_eq!(meta.seq, 42);
+        assert_eq!(meta.timestamp_ns, 123);
+        assert_eq!(meta.width, 640);
+        assert_eq!(meta.height, 360);
+        assert_eq!(meta.buffer_id, 2);
+        assert_eq!(image_slot_offset(0), 0);
+        assert_eq!(image_slot_offset(1), IMAGE_SIZE);
+        assert_eq!(image_slot_offset(2), 2 * IMAGE_SIZE);
+    }
+
+    #[test]
+    fn ground_truth_slot_commit_is_even_and_bundles_one_exposure() {
+        let mut slot = GroundTruthHistorySlot::default();
+        let mut batch = GroundTruthBatch::default();
+        batch.frame_seq = 77;
+        batch.timestamp_ns = 9001;
+        let mut exposure = ExposureState::default();
+        exposure.frame_seq = batch.frame_seq;
+        exposure.timestamp_ns = batch.timestamp_ns;
+
+        publish_ground_truth_slot(&mut slot, &batch, &exposure, 5);
+
+        assert_eq!(slot.commit_seq.load(Ordering::Acquire), 10);
+        assert_eq!(slot.ground_truth.frame_seq, 77);
+        assert_eq!(slot.exposure_state.frame_seq, 77);
+        assert_eq!(
+            slot.ground_truth.timestamp_ns,
+            slot.exposure_state.timestamp_ns
+        );
     }
 }

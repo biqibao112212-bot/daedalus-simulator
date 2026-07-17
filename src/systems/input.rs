@@ -1,9 +1,10 @@
+use bevy::input::mouse::MouseMotion;
 use bevy::prelude::*;
 use std::sync::atomic::Ordering;
 
 use crate::components::{
-    ActiveSlapper, Controlled, Infantry, InfantryChassis, InfantryGimbal, SlapperInfantry,
-    SubscribeAutoAim,
+    ActiveSlapper, CameraMode, Controlled, FollowingType, Infantry, InfantryChassis,
+    InfantryGimbal, SlapperInfantry, SubscribeAutoAim,
 };
 use crate::config::SimulationConfig;
 use crate::robomaster::vehicle::movement::VehicleDynamic;
@@ -173,15 +174,19 @@ pub fn gimbal_controls(
     time: Res<Time>,
     keyboard: Res<ButtonInput<KeyCode>>,
     config: Res<SimulationConfig>,
-    // enabled: Res<SubscribeAutoAim>,
+    auto_aim: Res<SubscribeAutoAim>,
     gimbal: Single<
         (&mut Transform, &mut InfantryGimbal),
         (With<Controlled>, Without<InfantryChassis>),
     >,
 ) {
-    //if enabled.load(Ordering::Acquire) {
-    //    return;
-    //}
+    // Auto aim is the sole owner of the controlled gimbal transform while it
+    // is enabled. Re-reading/re-writing the transform from the manual system
+    // in the same Update schedule can race the external command system and
+    // produce an alternate Euler branch at the pitch limit.
+    if auto_aim.load(Ordering::Acquire) {
+        return;
+    }
 
     let dt = time.delta_secs();
     let (mut gimbal_transform, mut gimbal_data) = gimbal.into_inner();
@@ -203,6 +208,58 @@ pub fn gimbal_controls(
         Quat::from_euler(EulerRot::YXZ, gimbal_data.local_yaw, gimbal_data.pitch, 0.0);
 
     gimbal_transform.rotation = gimbal_rotation;
+}
+
+fn apply_gimbal_mouse_delta(
+    gimbal_transform: &mut Transform,
+    gimbal_data: &mut InfantryGimbal,
+    mouse_delta: Vec2,
+    sensitivity: f32,
+    pitch_limit: f32,
+) {
+    (gimbal_data.local_yaw, gimbal_data.pitch, _) =
+        gimbal_transform.rotation.to_euler(EulerRot::YXZ);
+
+    gimbal_data.local_yaw -= mouse_delta.x * sensitivity;
+    gimbal_data.pitch =
+        (gimbal_data.pitch - mouse_delta.y * sensitivity).clamp(-pitch_limit, pitch_limit);
+
+    gimbal_transform.rotation =
+        Quat::from_euler(EulerRot::YXZ, gimbal_data.local_yaw, gimbal_data.pitch, 0.0);
+}
+
+pub fn mouse_gimbal_controls(
+    mode: Res<CameraMode>,
+    mut mouse_motion_events: MessageReader<MouseMotion>,
+    mouse: Res<ButtonInput<MouseButton>>,
+    config: Res<SimulationConfig>,
+    auto_aim: Res<SubscribeAutoAim>,
+    gimbal: Single<
+        (&mut Transform, &mut InfantryGimbal),
+        (With<Controlled>, Without<InfantryChassis>),
+    >,
+) {
+    let mut mouse_delta = Vec2::ZERO;
+    for event in mouse_motion_events.read() {
+        mouse_delta += event.delta;
+    }
+
+    if auto_aim.load(Ordering::Acquire)
+        || mode.0 == FollowingType::Free
+        || !mouse.pressed(MouseButton::Right)
+        || mouse_delta == Vec2::ZERO
+    {
+        return;
+    }
+
+    let (mut gimbal_transform, mut gimbal_data) = gimbal.into_inner();
+    apply_gimbal_mouse_delta(
+        &mut gimbal_transform,
+        &mut gimbal_data,
+        mouse_delta,
+        config.camera.mouse_sensitivity,
+        config.vehicle.gimbal_pitch_limit,
+    );
 }
 
 pub fn remote_gimbal_controls(
@@ -304,5 +361,22 @@ mod tests {
         }
 
         assert!(chassis.yaw_velocity.abs() < 1e-2);
+    }
+
+    #[test]
+    fn mouse_delta_rotates_gimbal_and_clamps_pitch() {
+        let mut transform = Transform::default();
+        let mut gimbal = InfantryGimbal::default();
+
+        apply_gimbal_mouse_delta(
+            &mut transform,
+            &mut gimbal,
+            Vec2::new(10.0, 1000.0),
+            0.003,
+            0.5,
+        );
+
+        assert!(gimbal.local_yaw < 0.0);
+        assert_eq!(gimbal.pitch, -0.5);
     }
 }

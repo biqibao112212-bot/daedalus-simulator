@@ -3,6 +3,7 @@
 //! 使用内存映射文件替代 POSIX 共享内存，纯 Rust 实现。
 
 use memmap2::MmapMut;
+use std::env;
 use std::fs::OpenOptions;
 use std::io::{self, Write};
 use std::path::PathBuf;
@@ -36,7 +37,10 @@ impl From<io::Error> for ShmError {
 fn shm_path(name: &str) -> PathBuf {
     // 使用 /tmp 目录，移除开头的 '/'
     let clean_name = name.trim_start_matches('/');
-    PathBuf::from("/tmp").join(clean_name)
+    env::var_os("TALOS_IPC_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from("/tmp"))
+        .join(clean_name)
 }
 
 /// RAII 封装的共享内存区域
@@ -53,6 +57,9 @@ impl ShmRegion {
     /// 创建新的共享内存区域 (生产者)
     pub fn create(name: &str, size: usize) -> Result<Self, ShmError> {
         let path = shm_path(name);
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
 
         // 创建或覆盖文件
         let mut file = OpenOptions::new()

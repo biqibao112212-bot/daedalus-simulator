@@ -1,8 +1,10 @@
 mod exporter;
 mod frame_data;
+mod projectile;
 
 pub use exporter::*;
 pub use frame_data::*;
+pub use projectile::*;
 
 use bevy::prelude::*;
 

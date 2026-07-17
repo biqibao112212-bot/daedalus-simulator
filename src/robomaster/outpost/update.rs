@@ -50,8 +50,30 @@ impl OutpostRotator {
     }
 }
 
-#[derive(Resource, Debug, Copy, Clone, PartialEq, Eq, Hash, Default)]
+#[derive(Resource, Debug, Copy, Clone, PartialEq, Eq, Hash)]
 struct OutpostRotationMode(RotationMode);
+
+impl Default for OutpostRotationMode {
+    fn default() -> Self {
+        Self(rotation_mode_from_env())
+    }
+}
+
+fn rotation_mode_from_env() -> RotationMode {
+    std::env::var("DAEDALUS_OUTPOST_ROTATION_MODE")
+        .ok()
+        .and_then(|mode| rotation_mode_from_str(&mode))
+        .unwrap_or_default()
+}
+
+fn rotation_mode_from_str(mode: &str) -> Option<RotationMode> {
+    match mode.trim().to_ascii_lowercase().as_str() {
+        "forward" | "normal" => Some(RotationMode::Forward),
+        "stopped" | "stop" | "static" | "off" => Some(RotationMode::Stopped),
+        "reverse" | "backward" => Some(RotationMode::Reverse),
+        _ => None,
+    }
+}
 
 fn debug_cycle_outpost_rotation(
     keyboard: Res<ButtonInput<KeyCode>>,
@@ -87,5 +109,31 @@ impl bevy::app::Plugin for OutpostUpdatePlugin {
             Update,
             (debug_cycle_outpost_rotation, outpost_rotation_system).chain(),
         );
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_outpost_rotation_modes() {
+        assert_eq!(
+            rotation_mode_from_str("forward"),
+            Some(RotationMode::Forward)
+        );
+        assert_eq!(
+            rotation_mode_from_str("stopped"),
+            Some(RotationMode::Stopped)
+        );
+        assert_eq!(
+            rotation_mode_from_str("static"),
+            Some(RotationMode::Stopped)
+        );
+        assert_eq!(
+            rotation_mode_from_str("reverse"),
+            Some(RotationMode::Reverse)
+        );
+        assert_eq!(rotation_mode_from_str("unknown"), None);
     }
 }
