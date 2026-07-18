@@ -1,0 +1,104 @@
+{
+  "schema": "daedalus-performance-baseline-v1",
+  "measured_at": "2026-07-18T17:40:19+08:00",
+  "timezone": "Asia/Shanghai",
+  "baseline": {
+    "image_format": "rgb24",
+    "width": 1440,
+    "height": 1080,
+    "physics_hz": 250,
+    "capture_max_hz": 200,
+    "render_backend": "dx12",
+    "image_transport": "tcp"
+  },
+  "artifacts": {
+    "simulator_version": "1.0.0",
+    "simulator_tag": "simulator-v1.0.0",
+    "simulator_source_commit": "5ce9369e83a289edd8c5969c1dfd7ae784fccb94",
+    "simulator_binary_sha256": "5E20FA25356E50F6ADBC2E904A208D007396ED5B86DA9737AFB2EDE7BC8BAB6B",
+    "release_manifest_sha256": "60E47FE6C12A6ABD0EFD25D2113F142B2DD08CE1FDABA690165CF12C3EF10B78",
+    "release_manifest_file_count": 76,
+    "autoaim_commit": "946f90fa52eae577c5bca9b1d202127d10242e9a",
+    "armor_engine_bytes": 6962108,
+    "armor_engine_sha256": "BF3DB6F2F9A6D71371E1D82CC9F03467EC9B3BD71E0549689E410469E2B839D4"
+  },
+  "environment": {
+    "computer": "LENOVO 83DF",
+    "os": "Windows 11 Pro 10.0.26200 build 26200",
+    "power_plan": "Codex Gaming Stability Test",
+    "cpu": "Intel Core i9-14900HX, 24 cores, 32 logical processors",
+    "memory_bytes": 34070192128,
+    "gpu": "NVIDIA GeForce RTX 4060 Laptop GPU",
+    "gpu_memory_mib": 8188,
+    "nvidia_driver": "572.70",
+    "gcc": "11.4.0",
+    "cmake": "3.22.1",
+    "cuda": "12.8.93",
+    "tensorrt": "10.9.0.34-1+cuda12.8",
+    "idle_gpu_10_samples": {
+      "utilization_pct_range": [29, 33],
+      "memory_mib_range": [2584, 2597],
+      "power_w_range": [9.90, 10.05]
+    }
+  },
+  "method": {
+    "pure_simulator": {
+      "warmup_s": 8,
+      "sample_window_s": 20,
+      "sample_period_s": 1
+    },
+    "joint_autoaim": {
+      "ready_gate": "processed_frames >= 100",
+      "warmup_s": 15,
+      "sample_window_s": 30,
+      "sample_period_s": 1
+    },
+    "aggregation": "mean, minimum, lower median, maximum over one-second telemetry snapshots"
+  },
+  "results": {
+    "simulator_headless_no_tcp_consumer": {
+      "main_update_hz": {"mean": 177.199, "min": 138.399, "median": 180.070, "max": 191.365},
+      "physics_step_hz": {"mean": 250.022, "min": 249.174, "median": 249.914, "max": 250.871},
+      "capture_copy_submit_hz": {"mean": 160.009, "min": 138.399, "median": 160.366, "max": 169.763},
+      "preview_present_hz": {"mean": 0.0, "min": 0.0, "median": 0.0, "max": 0.0},
+      "gpu_utilization_pct": {"mean": 36.1, "min": 27, "median": 37, "max": 44},
+      "capture_queue_drop_total": 0,
+      "capture_fast_map_error_total": 0,
+      "tcp_connected": false
+    },
+    "simulator_visible_repeat_no_tcp_consumer": {
+      "main_update_hz": {"mean": 158.298, "min": 144.915, "median": 158.751, "max": 169.771},
+      "physics_step_hz": {"mean": 250.009, "min": 249.497, "median": 249.932, "max": 250.456},
+      "capture_copy_submit_hz": {"mean": 153.015, "min": 142.917, "median": 152.501, "max": 159.539},
+      "preview_present_hz": {"mean": 60.010, "min": 59.562, "median": 59.827, "max": 60.983},
+      "gpu_utilization_pct": {"mean": 37.8, "min": 31, "median": 38, "max": 43},
+      "capture_queue_drop_total": 0,
+      "capture_fast_map_error_total": 0,
+      "tcp_connected": false
+    },
+    "simulator_visible_first_run_anomaly": {
+      "main_update_hz": {"mean": 153.376, "min": 7.073, "median": 162.680, "max": 173.799},
+      "capture_copy_submit_hz": {"mean": 146.964, "min": 4.420, "median": 158.569, "max": 163.811},
+      "preview_present_hz": {"mean": 56.716, "min": 6.189, "median": 59.820, "max": 60.880},
+      "note": "One one-second stall was retained as an anomaly; the immediate repeat is the stable visible baseline."
+    },
+    "simulator_headless_plus_autoaim_b_tensorrt": {
+      "simulator_main_update_hz": {"mean": 121.565, "min": 106.648, "median": 122.913, "max": 135.964},
+      "physics_step_hz": {"mean": 249.963, "min": 249.365, "median": 249.859, "max": 250.821},
+      "capture_copy_submit_hz": {"mean": 121.333, "min": 106.648, "median": 121.921, "max": 133.979},
+      "tcp_image_sent_hz": {"mean": 121.366, "min": 106.648, "median": 121.921, "max": 133.979},
+      "completed_vision_rolling_hz": {"mean": 121.233, "min": 106, "median": 122, "max": 132},
+      "pipeline_latency_mean_ms": {"mean": 6.032, "min": 5.847, "median": 6.015, "max": 6.169},
+      "gpu_utilization_pct": {"mean": 36.833, "min": 31, "median": 37, "max": 41},
+      "gpu_power_w": {"mean": 29.785, "min": 25.30, "median": 28.09, "max": 34.20},
+      "processed_frames": 6133,
+      "completed_vision_results": 6122,
+      "tcp_sent_total": 6123,
+      "capture_queue_drop_total": 0,
+      "capture_fast_map_error_total": 0,
+      "ground_truth_exposure_match": true,
+      "backend": "vivsionn_trt",
+      "udp_command_enabled": true
+    }
+  }
+}

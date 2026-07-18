@@ -11,8 +11,8 @@
 - Windows/WSL 的 1440×1080 默认图像数据面确定为 TCP；元数据、真值和控制仍使用 SDK IPC。
 - Release 纯模拟器及 B+TensorRT 联合性能已实测，详见 `SIMULATOR_PERFORMANCE.md`。
 - 模拟器已拆为独立 Git 仓库，具备版本文件、发布契约、SDK 安装、哈希清单和 ZIP 打包脚本。
-- 正式 Release `1.0.0` 已生成并完成 67 项 SHA256 全量校验；发布目录和 ZIP 均位于工作区 `releases/daedalus-simulator/`。
-- Release 包已完成纯模拟器启动冒烟验证；精确性能沿用已验证基线，本轮不重测（测试时外部游戏进程持续占用约 99% GPU）。
+- 正式 Release `1.0.0` 已生成并完成 76 项 SHA256 全量校验；发布目录和 ZIP 均位于工作区 `releases/daedalus-simulator/`。
+- 2026-07-18 已在无游戏、保留桌面后台的环境重新实测：高性能纯模拟器主更新/采集均值 177.199/160.009 Hz，可视复测 158.298/153.015 Hz，高性能 + 自瞄 B/TensorRT 完整视觉均值 121.233 Hz；精确环境、范围、异常样本和哈希见 `SIMULATOR_PERFORMANCE.md` 与 `benchmarks/1.0.0/performance-2026-07-18.json`。
 - SDK 已由协议头升级为可安装 C++17 静态客户端库，覆盖元数据映射/稳定读取、TCP 图像、UDP 云台和带 ACK 的场景控制。
 - 场景控制 v1 已接入场景切换/reset、1/3 号靶车运动和打符状态；高性能配置默认保持 UDP 云台命令入口可用。
 

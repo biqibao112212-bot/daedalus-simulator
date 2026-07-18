@@ -1,61 +1,135 @@
-# Daedalus Simulator 1.0.0 构建、运行与性能
+# Daedalus Simulator 1.0.0 构建、运行与性能基线
 
-适用仓库/分支：`daedalus-simulator/main`
-工作目录：`D:\仿真\repos\daedalus-simulator`
-SDK：`DaedalusSimSdk 1.0.0`，`SHM v7`
-固定基线：RGB24 `1440×1080`、物理 250 Hz、Release
+- 适用仓库/分支：`daedalus-simulator/main`
+- 本机固定目录：`D:\仿真\repos\daedalus-simulator`
+- 正式 Release：`D:\仿真\releases\daedalus-simulator\1.0.0`
+- 公共 SDK：`DaedalusSimSdk 1.0.0`，`SHM v7 ABI r1`
 
-## 构建
+本文是模拟器性能配置和公开基线的权威文档。机器可读结果见
+[`benchmarks/1.0.0/performance-2026-07-18.json`](benchmarks/1.0.0/performance-2026-07-18.json)。
+
+## 固定基线
+
+- 图像：RGB24，`1440×1080`，单帧 4,665,600 字节；
+- 物理：250 Hz，单 substep；
+- 高性能采集上限：200 Hz；
+- Windows 渲染后端：DX12，高性能 GPU；
+- Windows/WSL 图像数据面：TCP 5602，latest-only；
+- 元数据、曝光位姿和真值：SDK IPC；
+- 云台命令：UDP 5601；场景控制：UDP 5603；
+- 只使用 Release 构建测性能，禁止用 Debug 帧率代替。
+
+200 Hz 是配置上限，不是承诺帧率。实际吞吐由渲染、GPU readback、TCP、消费者推理和机器后台负载共同决定。
+
+## 构建和正式打包
 
 ```powershell
 Set-Location D:\仿真\repos\daedalus-simulator
 cargo build --release --features talos
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-release.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\package-release.ps1
 ```
 
-开发构建程序：`D:\仿真\repos\daedalus-simulator\target\release\daedalus.exe`。正式运行使用 `D:\仿真\releases\daedalus-simulator\<version>`；禁止用 Debug 帧率代表性能。
+开发构建位于 `target\release\daedalus.exe`。日常运行和消费者验证必须使用
+`D:\仿真\releases\daedalus-simulator\<version>`；SDK 与 Release 规则见 `RELEASE.md`。
 
-SDK 和正式打包方法见 `RELEASE.md`。
+## 两种运行模式
 
-## 默认高性能模式
-
-该模式关闭可见预览，但离屏 Talos 相机仍会渲染并发布图像；窗口黑屏不等于没有采集。
+### 默认：高性能模式
 
 ```powershell
-$env:BEVY_ASSET_ROOT='D:\仿真\repos\daedalus-simulator'
-$env:WGPU_BACKEND='dx12'
-$env:WGPU_POWER_PREF='high'
-$env:DAEDALUS_CONFIG='config.performance.toml'
-$env:DAEDALUS_PERF_DISABLE_UI='1'
-$env:DAEDALUS_TALOS_RGB_ONLY='1'
-$env:DAEDALUS_TALOS_CAPTURE_MAX_HZ='200'
-$env:DAEDALUS_TALOS_IMAGE_TRANSPORT='tcp'
-$env:DAEDALUS_AUTO_AIM_ON_START='1'
-Set-Location D:\仿真\repos\daedalus-simulator
-.\target\release\daedalus.exe
+Set-Location D:\仿真\releases\daedalus-simulator\1.0.0
+powershell -NoProfile -ExecutionPolicy Bypass -File .\start-simulator.ps1
 ```
 
-只有单进程/同系统兼容调试才把图像传输改为 `file`。B 分支跨 Windows/WSL 必须使用 `tcp`。
+该模式设置 `DAEDALUS_PERF_DISABLE_UI=1`，关闭可见预览，但离屏 Talos 相机仍持续渲染、readback 并向消费者发布图像。窗口隐藏或没有可见画面不代表没有图像采集；判断采集是否正常应读取 `capture_copy_submit_hz`、`capture_processing_complete_total` 和消费者输入计数。
 
-## 可视验收模式
-
-在上述配置基础上删除 `DAEDALUS_PERF_DISABLE_UI`，并设置：
+### 可视验收模式
 
 ```powershell
-$env:DAEDALUS_PREVIEW_ENABLED='1'
-$env:DAEDALUS_PREVIEW_MAX_HZ='60'
+Set-Location D:\仿真\releases\daedalus-simulator\1.0.0
+powershell -NoProfile -ExecutionPolicy Bypass -File .\start-simulator.ps1 -Visible
 ```
 
-可视模式只用于确认画面、相机和场景，不作为最高吞吐基线。
+该模式启用最高 60 Hz 的可见预览，只用于人工检查画面、相机和场景。默认采集仍是离屏 1440×1080 图像，不应把 `preview_present_hz` 当成采集帧率。
 
-## 2026-07-18 实测
+## 自瞄 B + TensorRT
 
-硬件/后端：RTX 4060 Laptop GPU、DX12；样本均为当前 Release、1440×1080。
+从消费者仓库启动：
 
-| 模式 | 模拟器 FPS | RGB 输出 | 物理 | B 完整视觉结果 | 平均流水线延迟 |
+```powershell
+Set-Location D:\仿真\repos\aim-stack
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\run-autoaim-b.ps1
+```
+
+启动器会同时启动正式模拟器 Release 和 WSL 自瞄 B。TensorRT 属于消费者推理后端，不由模拟器自动加载；启动器默认设置 `AIM_SIM_WITH_VIVSIONN_TRT=ON`，使用 `D:\仿真\models\engines\armor.engine`。首次运行或缓存清理后会自动按正式 SDK 重建桥接器。
+
+## 2026-07-18 当前实测
+
+### 被测版本和环境
+
+| 项目 | 值 |
+| --- | --- |
+| 模拟器 Release | `1.0.0` / tag `simulator-v1.0.0` / source `5ce9369e83a289edd8c5969c1dfd7ae784fccb94` |
+| 模拟器二进制 SHA256 | `5E20FA25356E50F6ADBC2E904A208D007396ED5B86DA9737AFB2EDE7BC8BAB6B` |
+| 自瞄消费者提交 | `946f90fa52eae577c5bca9b1d202127d10242e9a` |
+| 装甲模型 | FP16 TensorRT，输入 `1×3×640×640` |
+| 模型 SHA256 | `BF3DB6F2F9A6D71371E1D82CC9F03467EC9B3BD71E0549689E410469E2B839D4` |
+| CPU / 内存 | Intel Core i9-14900HX，24C/32T；32 GiB |
+| GPU | NVIDIA GeForce RTX 4060 Laptop GPU，8188 MiB，驱动 572.70 |
+| 系统 / 电源计划 | Windows 11 Pro build 26200；`Codex Gaming Stability Test` |
+| 渲染 / 推理工具链 | DX12；GCC 11.4；CMake 3.22.1；CUDA 12.8；TensorRT 10.9.0.34 |
+
+测试前没有游戏、模拟器或自瞄进程。保留用户桌面程序时，10 次空载 GPU 采样为 29%–33%、显存 2584–2597 MiB、功耗 9.90–10.05 W，因此本结果不是“绝对净空机器最佳值”，而是该后台状态下的可复现工作基线。
+
+### 测量口径
+
+- 纯模拟器：预热 8 秒，之后每秒读取一次 `DAEDALUS_STATS_JSON`，连续 20 秒；
+- 联合模式：桥接器已处理 100 帧后再预热 15 秒，之后连续采样 30 秒；
+- 表中主值为采样窗口均值，括号内为中位数；范围为每秒统计的最小值到最大值；
+- `main_update_hz` 是模拟器主更新频率，旧字段 `render_fps` 只是它的兼容别名；
+- `capture_copy_submit_hz` 是离屏图像 GPU copy 提交率；
+- `tcp_image_sent_hz` 是有 TCP 消费者时的实际图像发送率；
+- `completed_vision_rolling_hz` 是自瞄完整视觉结果滚动频率；
+- 联合模式的 `pipeline_latency_mean_ms` 是运行至该采样点的累计流水线均值，不是 P99。
+
+### 稳定结果
+
+| 模式 | 主更新 Hz | 离屏采集提交 Hz | TCP 图像 Hz | 物理 Hz | 可见预览 Hz | B 完整视觉 Hz | 流水线均值 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 高性能，纯模拟器，无 TCP 消费者 | 177.199 (180.070) | 160.009 (160.366) | 不适用 | 250.022 (249.914) | 0 | 未运行 | 不适用 |
+| 可视验收，纯模拟器，复测 | 158.298 (158.751) | 153.015 (152.501) | 不适用 | 250.009 (249.932) | 60.010 (59.827) | 未运行 | 不适用 |
+| 高性能，模拟器 + 自瞄 B/TensorRT | 121.565 (122.913) | 121.333 (121.921) | 121.366 (121.921) | 249.963 (249.859) | 0 | 121.233 (122.000) | 6.032 ms |
+
+每秒统计范围：
+
+| 模式 | 主更新 | 采集/TCP | 完整视觉 | GPU 利用率 | GPU 功耗 |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| 纯模拟器，文件图像兼容模式 | 199.79 | 186.80 Hz | 249.74 Hz | 未运行 | 不适用 |
-| B + TensorRT，TCP 图像模式 | 140.81 | 137.81 Hz | 249.65 Hz | 139.41 Hz | 7.84 ms |
+| 高性能纯模拟器 | 138.399–191.365 Hz | 138.399–169.763 Hz | 不适用 | 27%–44% | 14.96–19.17 W |
+| 可视验收复测 | 144.915–169.771 Hz | 142.917–159.539 Hz | 不适用 | 31%–43% | 15.13–17.97 W |
+| 高性能 + 自瞄 B | 106.648–135.964 Hz | TCP 106.648–133.979 Hz | 106–132 Hz | 31%–41% | 25.30–34.20 W |
 
-B 联合实测共处理 4003 帧，滚动完整视觉结果约 137 Hz，最新源图到完成约 28.62 ms；模拟器采集队列丢帧 0、GPU map 错误 0。测试结束时主动停止消费者产生一次 TCP connection reset，这是测试终止行为，不是运行中故障。
+联合运行最终计数：自瞄处理 6133 帧、完成 6122 个视觉结果；模拟器发送 6123 帧；曝光真值严格匹配；采集队列丢帧 0；GPU map 错误 0。桥接器后端日志为 `vivsionn_trt`，UDP 云台输出保持启用。
 
-文件图像跨 Windows/WSL 的长测只有约 0.49 个有效输入/秒，原因是 4.67 MB 图像读取期间生产者更新三缓冲槽；因此它已被明确排除出 B 默认配置。
+第一轮可视测试中出现过一次 7.073 Hz 的单秒停顿，使该轮主更新均值降到 153.376 Hz；立即复测后 20 秒范围稳定为 144.915–169.771 Hz。机器可读文件同时保留第一轮和复测摘要，不隐藏异常样本。
+
+### 历史结果为什么不同
+
+旧实验曾得到纯模拟器约 199.79 Hz，以及 B + TensorRT 约 140.81/139.41 Hz。它们使用了不同的文件/TCP组合、统计窗口或后台负载，只保留为历史最佳参考，不能替代上表当前基线。尤其 Windows/WSL 不得使用文件三缓冲图像模式：旧长测只有约 0.49 个有效输入/秒，因此自瞄 B 固定使用 TCP。
+
+## 复现检查表
+
+1. 两个仓库都必须为文档记录的提交或其明确后继，并保持 `git status --short` 为空；
+2. 校验 Release 二进制与模型 SHA256；
+3. 使用 1440×1080、DX12、Release、TCP、250 Hz 和 200 Hz capture cap；
+4. 记录电源计划，并在启动前用 `nvidia-smi` 连续采样空载 GPU；
+5. 设置统计输出后启动：
+
+```powershell
+$env:DAEDALUS_STATS_JSON='D:\仿真\runtime\perf\simulator.json'
+$env:DAEDALUS_P1_TIMING='1'
+```
+
+6. 不得用可见预览帧率、主更新兼容别名或“配置上限 200 Hz”冒充实际图像吞吐；
+7. 联合测试必须同时报告模拟器 TCP 发送、自瞄完整视觉结果、流水线延迟、丢帧和曝光匹配；
+8. 原始日志可在结论固化后删除，受 Git 跟踪的 JSON 摘要和本文是长期证据。
