@@ -1,12 +1,16 @@
 [CmdletBinding()]
 param(
-    [string]$OutputRoot = 'D:\仿真\releases\daedalus-simulator',
+    [string]$OutputRoot,
     [switch]$Force,
     [switch]$SkipBuild
 )
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
+if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
+    $workspace = Split-Path -Parent (Split-Path -Parent $root)
+    $OutputRoot = Join-Path $workspace 'releases\daedalus-simulator'
+}
 $dirty = @(git -C $root status --porcelain)
 if ($dirty.Count -ne 0) {
     throw 'Release packaging requires a clean committed worktree.'
@@ -49,8 +53,9 @@ $rootWsl = (& wsl.exe -d Ubuntu-OSTEP -- wslpath -a -u $rootForWsl).Trim()
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 $entries = Get-ChildItem -LiteralPath $target -Recurse -File | ForEach-Object {
+    $relative = $_.FullName.Substring($target.Length).TrimStart('\').Replace('\','/')
     [pscustomobject]@{
-        path = [IO.Path]::GetRelativePath($target, $_.FullName).Replace('\','/')
+        path = $relative
         bytes = $_.Length
         sha256 = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash
     }

@@ -1,11 +1,15 @@
 [CmdletBinding()]
 param(
     [switch]$Visible,
-    [string]$IpcDir = 'D:\仿真\runtime\talos-ipc'
+    [string]$IpcDir
 )
 
 $ErrorActionPreference = 'Stop'
 $root = $PSScriptRoot
+if ([string]::IsNullOrWhiteSpace($IpcDir)) {
+    $workspace = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $root))
+    $IpcDir = Join-Path $workspace 'runtime\talos-ipc'
+}
 $binary = Join-Path $root 'bin\daedalus.exe'
 if (-not (Test-Path -LiteralPath $binary)) {
     throw "Simulator executable is missing: $binary"

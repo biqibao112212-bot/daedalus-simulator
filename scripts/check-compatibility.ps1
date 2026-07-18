@@ -3,8 +3,8 @@ param([string]$ConsumerLock)
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
-$release = Get-Content -LiteralPath (Join-Path $root 'release\release.json') -Raw | ConvertFrom-Json
-$contract = Get-Content -LiteralPath (Join-Path $root 'sdk\contract.json') -Raw | ConvertFrom-Json
+$release = Get-Content -LiteralPath (Join-Path $root 'release\release.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+$contract = Get-Content -LiteralPath (Join-Path $root 'sdk\contract.json') -Raw -Encoding UTF8 | ConvertFrom-Json
 
 if ($release.sdk_version -ne $contract.sdk_version -or
     $release.shm_version -ne $contract.shm_version -or
@@ -14,7 +14,7 @@ if ($release.sdk_version -ne $contract.sdk_version -or
 }
 
 if (-not [string]::IsNullOrWhiteSpace($ConsumerLock)) {
-    $lock = Get-Content -LiteralPath $ConsumerLock -Raw | ConvertFrom-Json
+    $lock = Get-Content -LiteralPath $ConsumerLock -Raw -Encoding UTF8 | ConvertFrom-Json
     if ($lock.simulator.version -ne $release.version -or
         $lock.simulator.sdk_version -ne $release.sdk_version -or
         $lock.simulator.shm_version -ne $release.shm_version -or
