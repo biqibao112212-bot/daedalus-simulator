@@ -163,6 +163,34 @@ fn apply_power_rune_control(
     applied
 }
 
+pub(crate) fn apply_scene_control_power_rune_state(
+    active_mode: Option<RuneMode>,
+    pending_targets: &[usize],
+    activated_targets: &[usize],
+    control: &mut ManualPowerRuneControlState,
+    runes: &mut Query<(&mut PowerRune, &mut PowerRuneMechanism)>,
+) -> bool {
+    let mut applied = false;
+    for (mut rune, mut mechanism) in runes.iter_mut() {
+        if let Some(mode) = active_mode {
+            rune.set_mode(mode);
+            *mechanism.state_mut() = if activated_targets.len() == RUNE_TARGET_COUNT {
+                MechanismState::forced_activated(mode)
+            } else {
+                MechanismState::forced_activation_state(mode, pending_targets, activated_targets)
+            };
+        } else {
+            *mechanism.state_mut() = held_inactive_state(rune.mode());
+        }
+        applied = true;
+    }
+    if applied {
+        control.override_enabled = true;
+        control.active_mode = active_mode;
+    }
+    applied
+}
+
 fn initial_power_rune_control_from_env(
     mut applied: ResMut<InitialPowerRuneControlApplied>,
     mut control: ResMut<ManualPowerRuneControlState>,

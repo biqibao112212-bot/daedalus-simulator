@@ -9,6 +9,7 @@ pub const SHM_MAGIC: u32 = 0x54414C05;
 // geometry. Readers must reject earlier layouts and obtain ABI declarations
 // from the simulator-owned SDK package.
 pub const SHM_VERSION: u32 = 7;
+pub const SDK_ABI_REVISION: u32 = 1;
 
 pub const IMAGE_CHANNELS: u32 = 3;
 pub const IMAGE_SIZE: usize = (IMAGE_WIDTH * IMAGE_HEIGHT * IMAGE_CHANNELS) as usize;
@@ -159,7 +160,9 @@ pub struct ShmHeader {
     pub heartbeat_ns: u64,
     pub image_width: u32,
     pub image_height: u32,
-    pub _pad: [u8; 32],
+    pub meta_size: u32,
+    pub sdk_abi_revision: u32,
+    pub _pad: [u8; 24],
 }
 const _: () = assert!(size_of::<ShmHeader>() == 64);
 
@@ -429,6 +432,7 @@ pub struct ShmMetaRegion {
     pub ground_truth_history: GroundTruthHistory,
 }
 const _: () = assert!(size_of::<ShmMetaRegion>() == 76992);
+pub const SHM_META_SIZE: u32 = size_of::<ShmMetaRegion>() as u32;
 const _: () = assert!(std::mem::offset_of!(ShmMetaRegion, camera_info) == 1728);
 const _: () = assert!(std::mem::offset_of!(ShmMetaRegion, chassis_observation) == 1856);
 const _: () = assert!(std::mem::offset_of!(ShmMetaRegion, ground_truth) == 1984);
@@ -492,7 +496,9 @@ impl Default for ShmHeader {
             heartbeat_ns: 0,
             image_width: IMAGE_WIDTH,
             image_height: IMAGE_HEIGHT,
-            _pad: [0; 32],
+            meta_size: SHM_META_SIZE,
+            sdk_abi_revision: SDK_ABI_REVISION,
+            _pad: [0; 24],
         }
     }
 }

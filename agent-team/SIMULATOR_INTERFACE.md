@@ -35,6 +35,10 @@ target_link_libraries(my_consumer PRIVATE DaedalusSimSdk::DaedalusSimSdk)
 - `GimbalCommand`：自瞄/打符共用的云台与发射命令出口。
 - `tcp_image_v1.hpp`：TCP 图像帧头、像素格式、大小校验和编解码。
 - `endpoints_v1.hpp`：IPC 文件名、环境变量和默认网络端口。
+- `talos_metadata_reader.hpp`：元数据文件映射与稳定快照读取。
+- `tcp_image_client.hpp`：可重连的 latest-only TCP 图像客户端。
+- `udp_gimbal_client.hpp`：无键盘依赖的实时云台/发射命令客户端。
+- `scene_control_client.hpp`：带会话、命令号、应用帧和错误码的场景控制客户端。
 
 消费者打开 IPC 后必须调用 `isCompatible`；不兼容时立即失败，不得猜测布局。所有跨流关联必须同时校验生产者 epoch、`frame_seq` 和 `timestamp_ns`，不得用相邻帧代替缺失曝光。
 
@@ -43,3 +47,4 @@ target_link_libraries(my_consumer PRIVATE DaedalusSimSdk::DaedalusSimSdk)
 - 元数据、真值、运行状态、命令：文件支持的 SDK IPC，目录由 `TALOS_IPC_DIR` 明确指定。
 - 图像性能模式：`DAEDALUS_TALOS_IMAGE_TRANSPORT=tcp`，默认监听 `0.0.0.0:5602`；消费者使用 latest-only TCP 接收器。
 - 文件图像模式：只作兼容与同系统调试。1440×1080 跨 Windows/WSL 会因读取期间槽位更新而大量拒帧，不得作为默认配置。
+- 场景控制：`5603/udp`，协议 `daedalus.scene-control/1`；详细操作见 `SCENARIO_CONTROL.md`。

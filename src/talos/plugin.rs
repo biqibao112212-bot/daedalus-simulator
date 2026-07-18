@@ -318,7 +318,6 @@ impl Plugin for TalosPlugin {
 fn process_subscription(
     context: Option<Res<ShmSubscriberRes>>,
     config: Res<SimulationConfig>,
-    keyboard: Res<ButtonInput<KeyCode>>,
     mut commands: Commands,
     gimbal: Single<
         (&mut Transform, &mut InfantryGimbal),
@@ -352,8 +351,7 @@ fn process_subscription(
     }
     let yaw_f32 = (cmd.yaw_deg).to_radians();
     let pitch_f32 = (-cmd.pitch_deg - 90.0).to_radians();
-    let space_pressed = keyboard.pressed(KeyCode::Space);
-    if should_launch_from_talos_cmd(&cmd, space_pressed) {
+    if should_launch_from_talos_cmd(&cmd) {
         commands.insert_resource(PendingAutoAimShotContext {
             yaw_deg: Some(cmd.yaw_deg),
             pitch_deg: Some(cmd.pitch_deg),
@@ -367,7 +365,7 @@ fn process_subscription(
             w.run_system_once(projectile_launch).unwrap();
         });
     }
-    if !should_apply_talos_aim_cmd(&cmd, space_pressed) {
+    if !should_apply_talos_aim_cmd(&cmd) {
         return;
     }
     let (mut gimbal_transform, mut gimbal_data) = gimbal.into_inner();
@@ -402,12 +400,12 @@ pub fn recv_gimbal_cmd(subscriber: &ShmSubscriberRes) -> Option<GimbalCmd> {
     subscriber.0.lock().ok()?.recv_gimbal_cmd()
 }
 
-fn should_launch_from_talos_cmd(cmd: &GimbalCmd, fire_pressed: bool) -> bool {
-    fire_pressed && cmd.distance_m != -1.0 && cmd.fire_advice == 1
+fn should_launch_from_talos_cmd(cmd: &GimbalCmd) -> bool {
+    cmd.distance_m != -1.0 && cmd.fire_advice == 1
 }
 
-fn should_apply_talos_aim_cmd(cmd: &GimbalCmd, lock_pressed: bool) -> bool {
-    lock_pressed && cmd.distance_m != -1.0
+fn should_apply_talos_aim_cmd(cmd: &GimbalCmd) -> bool {
+    cmd.distance_m != -1.0
 }
 
 #[cfg(test)]
@@ -472,15 +470,14 @@ mod tests {
     }
 
     #[test]
-    fn talos_fire_advice_requires_space_authorization() {
+    fn talos_fire_advice_is_headless_capable() {
         let cmd = GimbalCmd {
             distance_m: 2.0,
             fire_advice: 1,
             ..Default::default()
         };
 
-        assert!(!should_launch_from_talos_cmd(&cmd, false));
-        assert!(should_launch_from_talos_cmd(&cmd, true));
+        assert!(should_launch_from_talos_cmd(&cmd));
     }
 
     #[test]
@@ -491,18 +488,17 @@ mod tests {
             ..Default::default()
         };
 
-        assert!(!should_launch_from_talos_cmd(&cmd, true));
+        assert!(!should_launch_from_talos_cmd(&cmd));
     }
 
     #[test]
-    fn talos_aim_requires_space_authorization() {
+    fn talos_aim_is_headless_capable() {
         let cmd = GimbalCmd {
             distance_m: 2.0,
             ..Default::default()
         };
 
-        assert!(!should_apply_talos_aim_cmd(&cmd, false));
-        assert!(should_apply_talos_aim_cmd(&cmd, true));
+        assert!(should_apply_talos_aim_cmd(&cmd));
     }
 
     #[test]
@@ -512,7 +508,7 @@ mod tests {
             ..Default::default()
         };
 
-        assert!(!should_apply_talos_aim_cmd(&cmd, true));
+        assert!(!should_apply_talos_aim_cmd(&cmd));
     }
 }
 

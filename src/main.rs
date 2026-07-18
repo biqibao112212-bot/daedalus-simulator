@@ -8,6 +8,7 @@ mod handler;
 mod integrated_auto_aim;
 mod network_bridge;
 mod robomaster;
+mod scene_control;
 mod setup;
 mod statistic;
 mod systems;
@@ -45,6 +46,9 @@ use crate::integrated_auto_aim::IntegratedAutoAimPlugin;
 use crate::integrated_auto_aim::configure_integrated_auto_aim_environment;
 use crate::network_bridge::NetworkBridgePlugin;
 use crate::robomaster::prelude::RoboMasterPlugins;
+use crate::scene_control::{
+    SceneControlPlugin, complete_scene_control_commands, receive_scene_control_commands,
+};
 use crate::setup::{
     AutoAimSceneState, apply_auto_aim_scene_mode_request, initial_auto_aim_scene_mode, setup,
     setup_collision, setup_dart_launch, setup_ground, setup_vehicle,
@@ -434,6 +438,7 @@ fn main() {
         .add_plugins(DatasetPlugin)
         .add_plugins(ConfigPlugin)
         .add_plugins(NetworkBridgePlugin)
+        .add_plugins(SceneControlPlugin)
         .init_resource::<CameraMode>()
         .init_resource::<ProjectileStatistics>()
         .init_resource::<ProjectileTelemetry>()
@@ -498,12 +503,14 @@ fn main() {
                     scene_mode_keyboard_shortcuts,
                     handle_scene_mode_button_interactions,
                     toggle_shooting_range_control_window,
+                    receive_scene_control_commands,
                 )
                     .in_set(GameplaySystems::Input),
                 // GameLogic phase
                 (
                     update_frequency_metrics,
                     apply_auto_aim_scene_mode_request,
+                    complete_scene_control_commands.after(apply_auto_aim_scene_mode_request),
                     manage_shooting_range_debug_process,
                     change_appearance,
                     update_scene_mode_button_panel,

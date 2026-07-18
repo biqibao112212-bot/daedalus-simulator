@@ -14,5 +14,7 @@ inline constexpr std::string_view kTcpImageBindEnvironment =
     "DAEDALUS_TALOS_TCP_BIND";
 inline constexpr std::uint16_t kTcpImagePort = 5602;
 inline constexpr std::uint16_t kUdpCommandPort = 5601;
+inline constexpr std::uint16_t kUdpSceneControlPort = 5603;
+inline constexpr std::string_view kDefaultHost = "127.0.0.1";
 
 }  // namespace daedalus::sim::sdk::v1

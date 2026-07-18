@@ -1371,12 +1371,12 @@ mod tests {
             .unwrap()
             .encode();
         assert_eq!(&rgb[8..10], &1u16.to_be_bytes());
-        assert_eq!(&rgb[20..24], &2_764_800u32.to_be_bytes());
+        assert_eq!(&rgb[20..24], &4_665_600u32.to_be_bytes());
 
         let rgba = TcpImageHeader::new(PixelFormat::Rgba32, 1440, 1080, EPOCH, 1, 2)
             .unwrap()
             .encode();
-        assert_eq!(&rgba[20..24], &3_686_400u32.to_be_bytes());
+        assert_eq!(&rgba[20..24], &6_220_800u32.to_be_bytes());
     }
 
     #[test]

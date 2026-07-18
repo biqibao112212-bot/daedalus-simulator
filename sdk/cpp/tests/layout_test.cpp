@@ -17,6 +17,8 @@ int main() {
   valid.version = kShmVersion;
   valid.image_width = kImageWidth;
   valid.image_height = kImageHeight;
+  valid.meta_size = static_cast<std::uint32_t>(kMetaSize);
+  valid.sdk_abi_revision = kSdkAbiRevision;
   if (!isCompatible(valid)) {
     return 1;
   }

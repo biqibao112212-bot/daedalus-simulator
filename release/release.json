@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "sdk_version": "1.0.0",
   "shm_version": 7,
+  "sdk_abi_revision": 1,
   "image": {
     "format": "rgb24",
     "width": 1440,
@@ -11,5 +12,7 @@
   "physics_hz": 250,
   "default_image_transport": "tcp",
   "tcp_image_port": 5602,
-  "udp_command_port": 5601
+  "udp_command_port": 5601,
+  "scene_control_protocol": 1,
+  "scene_control_port": 5603
 }

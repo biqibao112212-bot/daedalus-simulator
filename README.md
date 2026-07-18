@@ -12,6 +12,22 @@
 
 </div>
 
+## 正式仓库与发布
+
+本仓库是模拟器、公共 SDK 和正式 Release 的唯一源码所有者。自瞄与打符不再复制模拟器源码，只消费带版本的 `DaedalusSimSdk` 和发布包。
+
+- 固定基线：RGB24 `1440×1080`、物理 `250 Hz`、高性能采集上限 `200 Hz`；
+- 默认高性能模式：离屏图像持续渲染，关闭可见预览；加 `-Visible` 仅用于人工验收；
+- 正式构建、打包、标签规则见 [RELEASE.md](RELEASE.md)；
+- 完整客户端 SDK 见 [sdk/README.md](sdk/README.md)；
+- 性能实测与两种模式见 [SIMULATOR_PERFORMANCE.md](SIMULATOR_PERFORMANCE.md)。
+
+```powershell
+Set-Location D:\仿真\repos\daedalus-simulator
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-release.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\package-release.ps1
+```
+
 ## 🚀 功能亮点
 
 * 🎯 **全要素战场环境仿真**

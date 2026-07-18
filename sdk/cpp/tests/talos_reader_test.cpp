@@ -1,0 +1,52 @@
+#include <daedalus_sim_sdk/talos_metadata_reader.hpp>
+
+#include <cstdio>
+#include <fstream>
+
+using namespace daedalus::sim::sdk::v1;
+
+int main() {
+  ShmMetaRegion region{};
+  TalosMetadataReader invalid(&region, sizeof(region));
+  if (invalid.compatibility() != TalosCompatibility::InvalidMagic) return 1;
+
+  region.header.magic = kShmMagic;
+  region.header.version = kShmVersion;
+  region.header.image_width = kImageWidth;
+  region.header.image_height = kImageHeight;
+  region.header.meta_size = static_cast<std::uint32_t>(kMetaSize);
+  region.header.sdk_abi_revision = kSdkAbiRevision;
+  region.camera_info.timestamp_ns = 1;
+  region.camera_info.width = kImageWidth;
+  region.camera_info.height = kImageHeight;
+  region.image.read_idx = 0;
+  region.image.slots[0].seq = 7;
+  region.image.slots[0].timestamp_ns = 11;
+  region.image.slots[0].width = kImageWidth;
+  region.image.slots[0].height = kImageHeight;
+
+  TalosMetadataReader reader(&region, sizeof(region));
+  if (reader.compatibility() != TalosCompatibility::Compatible) return 2;
+  const auto header = reader.readHeader();
+  if (!header || header.value->meta_size != kMetaSize) return 3;
+  const auto image = reader.readLatestImageMeta();
+  if (!image || image.value->seq != 7 || image.value->timestamp_ns != 11) {
+    return 4;
+  }
+  const auto camera = reader.readCameraInfo();
+  if (!camera || camera.value->width != kImageWidth) return 5;
+  if (reader.readLatestPose(5)) return 6;
+
+  const char* path = "daedalus_sdk_test_meta.bin";
+  {
+    std::ofstream output(path, std::ios::binary | std::ios::trunc);
+    output.write(reinterpret_cast<const char*>(&region), sizeof(region));
+  }
+  TalosMetadataMapping mapping;
+  if (!mapping.open(path) || !mapping.isOpen()) return 7;
+  const auto mapped_reader = mapping.reader();
+  if (!mapped_reader || !mapped_reader.value->readLatestImageMeta()) return 8;
+  mapping.close();
+  std::remove(path);
+  return 0;
+}

@@ -150,6 +150,8 @@ fn should_mark_aim_capture_target(
 pub struct AutoAimSceneState {
     pub current: AutoAimSceneMode,
     pub requested: AutoAimSceneMode,
+    force_rebuild: bool,
+    generation: u64,
 }
 
 impl AutoAimSceneState {
@@ -157,6 +159,8 @@ impl AutoAimSceneState {
         Self {
             current: mode,
             requested: mode,
+            force_rebuild: false,
+            generation: 1,
         }
     }
 
@@ -164,8 +168,17 @@ impl AutoAimSceneState {
         self.requested = mode;
     }
 
+    pub fn force_rebuild_current(&mut self) {
+        self.requested = self.current;
+        self.force_rebuild = true;
+    }
+
+    pub fn generation(&self) -> u64 {
+        self.generation
+    }
+
     pub fn is_switch_pending(&self) -> bool {
-        self.current != self.requested
+        self.force_rebuild || self.current != self.requested
     }
 }
 
@@ -826,6 +839,8 @@ pub fn apply_auto_aim_scene_mode_request(
 
     *stats = ProjectileStatistics::default();
     scene_state.current = next_mode;
+    scene_state.force_rebuild = false;
+    scene_state.generation = scene_state.generation.saturating_add(1);
     spawn_auto_aim_scene(
         &mut commands,
         &asset_server,

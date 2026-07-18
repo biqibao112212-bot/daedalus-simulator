@@ -18,6 +18,11 @@ impl ShmSubscriber {
             if meta.header.version != SHM_VERSION {
                 return Err(ShmError::InvalidSize);
             }
+            if meta.header.meta_size != SHM_META_SIZE
+                || meta.header.sdk_abi_revision != SDK_ABI_REVISION
+            {
+                return Err(ShmError::InvalidSize);
+            }
         }
 
         Ok(Self { meta_region })

@@ -48,7 +48,10 @@ tag_default = 0
 intensity_default = 1000.0
 
 [network_bridge]
-enabled = false
+# Keep the public SDK command plane available in headless/high-performance
+# runs. This listener is idle when no consumer is attached and is required for
+# the default `command_transport = "udp"` contract below.
+enabled = true
 bind = "0.0.0.0:5601"
 
 [auto_aim]

@@ -27,7 +27,9 @@ impl ShmPublisher {
                 heartbeat_ns: producer_epoch,
                 image_width: IMAGE_WIDTH,
                 image_height: IMAGE_HEIGHT,
-                _pad: [0; 32],
+                meta_size: SHM_META_SIZE,
+                sdk_abi_revision: SDK_ABI_REVISION,
+                _pad: [0; 24],
             };
 
             // 初始化所有 TripleBuffer (CRITICAL: 零填充破坏了正确的初始状态)

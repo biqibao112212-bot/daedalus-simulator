@@ -91,6 +91,18 @@ pub enum RangeTargetMotionMode {
     LinearAndSpin,
 }
 
+impl RangeTargetMotionMode {
+    pub(crate) fn from_scene_control(value: &str) -> Option<Self> {
+        match value {
+            "stationary" => Some(Self::Stationary),
+            "linear" => Some(Self::Linear),
+            "spin" => Some(Self::Spin),
+            "linear_and_spin" => Some(Self::LinearAndSpin),
+            _ => None,
+        }
+    }
+}
+
 #[derive(Component)]
 pub struct SceneModeUiRoot;
 
@@ -139,6 +151,42 @@ impl Default for ShootingRangeControlState {
             armor_3: default_motion_for_target(ShootingRangeTargetKind::Armor3),
             armor_1: default_motion_for_target(ShootingRangeTargetKind::Armor1),
         }
+    }
+}
+
+impl ShootingRangeControlState {
+    pub(crate) fn set_target_motion(
+        &mut self,
+        target: u8,
+        mode: RangeTargetMotionMode,
+        direction_deg: f32,
+        linear_speed_mps: f32,
+        linear_span_m: f32,
+        spin_deg_s: f32,
+    ) -> Result<(), &'static str> {
+        if !direction_deg.is_finite()
+            || !linear_speed_mps.is_finite()
+            || !linear_span_m.is_finite()
+            || !spin_deg_s.is_finite()
+            || linear_speed_mps < 0.0
+            || !(0.0..=RANGE_TARGET_MAX_LINEAR_SPAN_M).contains(&linear_span_m)
+        {
+            return Err("invalid range target motion parameters");
+        }
+        let settings = match target {
+            1 => &mut self.armor_1,
+            3 => &mut self.armor_3,
+            _ => return Err("target must be 1 or 3"),
+        };
+        *settings = RangeTargetMotionSettings {
+            mode,
+            direction_deg,
+            linear_speed_mps,
+            linear_span_m,
+            spin_deg_s,
+            travel_sign: 1.0,
+        };
+        Ok(())
     }
 }
 

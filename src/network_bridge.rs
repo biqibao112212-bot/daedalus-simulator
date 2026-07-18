@@ -193,7 +193,6 @@ fn drain_network_gimbal_commands(
 
 fn apply_latest_network_gimbal_command(
     latest: Option<Res<LatestNetworkGimbalCommand>>,
-    keyboard: Res<ButtonInput<KeyCode>>,
     time: Res<Time>,
     config: Res<SimulationConfig>,
     mut metrics: ResMut<FrequencyMetrics>,
@@ -231,8 +230,7 @@ fn apply_latest_network_gimbal_command(
 
     let (mut gimbal_transform, mut gimbal_data) = gimbal.into_inner();
     let (current_yaw, current_pitch, _) = gimbal_transform.rotation.to_euler(EulerRot::YXZ);
-    let space_pressed = keyboard.pressed(KeyCode::Space);
-    let (yaw, pitch) = if should_apply_aim_command(command, space_pressed) {
+    let (yaw, pitch) = if should_apply_aim_command(command) {
         let max_step = config.vehicle.gimbal_rotation_speed * time.delta_secs();
         let yaw = command.yaw_deg().map_or(current_yaw, |yaw| {
             step_towards_angle(current_yaw, yaw.to_radians(), max_step)
@@ -259,7 +257,7 @@ fn apply_latest_network_gimbal_command(
         config.vehicle.gimbal_pitch_limit,
         FIRE_ALIGNMENT_TOLERANCE_RAD,
     );
-    if should_launch_from_command(command, space_pressed, aim_aligned) {
+    if should_launch_from_command(command, aim_aligned) {
         commands.insert_resource(PendingAutoAimShotContext {
             yaw_deg: command.yaw_deg(),
             pitch_deg: command.pitch_deg(),
@@ -275,18 +273,12 @@ fn apply_latest_network_gimbal_command(
     }
 }
 
-fn should_launch_from_command(
-    command: NetworkGimbalCommand,
-    fire_pressed: bool,
-    aim_aligned: bool,
-) -> bool {
-    fire_pressed && command.fire_advice && aim_aligned && !command.should_ignore()
+fn should_launch_from_command(command: NetworkGimbalCommand, aim_aligned: bool) -> bool {
+    command.fire_advice && aim_aligned && !command.should_ignore()
 }
 
-fn should_apply_aim_command(command: NetworkGimbalCommand, lock_pressed: bool) -> bool {
-    lock_pressed
-        && !command.should_ignore()
-        && (command.yaw_deg().is_some() || command.pitch_deg().is_some())
+fn should_apply_aim_command(command: NetworkGimbalCommand) -> bool {
+    !command.should_ignore() && (command.yaw_deg().is_some() || command.pitch_deg().is_some())
 }
 
 fn command_pitch_target_rad(pitch_deg: f32, pitch_limit: f32) -> f32 {
@@ -392,14 +384,13 @@ mod tests {
     }
 
     #[test]
-    fn fire_advice_requires_space_authorization() {
+    fn fire_advice_requires_alignment() {
         let command: NetworkGimbalCommand =
             serde_json::from_str(r#"{"yaw_deg":0.0,"pitch_deg":90.0,"distance_m":2.0,"fire":1}"#)
                 .unwrap();
 
-        assert!(!should_launch_from_command(command, false, true));
-        assert!(!should_launch_from_command(command, true, false));
-        assert!(should_launch_from_command(command, true, true));
+        assert!(!should_launch_from_command(command, false));
+        assert!(should_launch_from_command(command, true));
     }
 
     #[test]
@@ -407,16 +398,15 @@ mod tests {
         let command: NetworkGimbalCommand =
             serde_json::from_str(r#"{"distance_m":-1.0,"fire":1}"#).unwrap();
 
-        assert!(!should_launch_from_command(command, true, true));
+        assert!(!should_launch_from_command(command, true));
     }
 
     #[test]
-    fn aim_command_requires_space_authorization() {
+    fn aim_command_applies_without_keyboard_authorization() {
         let command: NetworkGimbalCommand =
             serde_json::from_str(r#"{"yaw_deg":12.0,"pitch_deg":91.0,"distance_m":2.0}"#).unwrap();
 
-        assert!(!should_apply_aim_command(command, false));
-        assert!(should_apply_aim_command(command, true));
+        assert!(should_apply_aim_command(command));
     }
 
     #[test]
@@ -424,7 +414,7 @@ mod tests {
         let command: NetworkGimbalCommand =
             serde_json::from_str(r#"{"yaw_deg":12.0,"pitch_deg":91.0,"distance_m":-1.0}"#).unwrap();
 
-        assert!(!should_apply_aim_command(command, true));
+        assert!(!should_apply_aim_command(command));
     }
 
     #[test]

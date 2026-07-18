@@ -8,6 +8,7 @@ namespace daedalus::sim::sdk::v1 {
 inline constexpr const char *kSdkVersion = "1.0.0";
 inline constexpr std::uint32_t kShmMagic = 0x54414C05;
 inline constexpr std::uint32_t kShmVersion = 7;
+inline constexpr std::uint32_t kSdkAbiRevision = 1;
 inline constexpr std::uint32_t kImageWidth = 1440;
 inline constexpr std::uint32_t kImageHeight = 1080;
 inline constexpr std::uint32_t kImageChannels = 3;
@@ -250,7 +251,9 @@ struct alignas(64) ShmHeader {
   std::uint64_t heartbeat_ns;
   std::uint32_t image_width;
   std::uint32_t image_height;
-  std::uint8_t pad[32];
+  std::uint32_t meta_size;
+  std::uint32_t sdk_abi_revision;
+  std::uint8_t pad[24];
 };
 static_assert(sizeof(ShmHeader) == 64);
 
@@ -276,7 +279,8 @@ static_assert(offsetof(ShmMetaRegion, ground_truth_history) == 6272);
 [[nodiscard]] inline bool isCompatible(const ShmHeader &header) noexcept {
   return header.magic == kShmMagic && header.version == kShmVersion &&
          header.image_width == kImageWidth &&
-         header.image_height == kImageHeight;
+         header.image_height == kImageHeight && header.meta_size == kMetaSize &&
+         header.sdk_abi_revision == kSdkAbiRevision;
 }
 
 } // namespace daedalus::sim::sdk::v1

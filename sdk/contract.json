@@ -2,6 +2,7 @@
   "sdk_version": "1.0.0",
   "shm_magic": "0x54414C05",
   "shm_version": 7,
+  "sdk_abi_revision": 1,
   "image_width": 1440,
   "image_height": 1080,
   "image_channels": 3,
@@ -9,6 +10,17 @@
   "tcp_image_protocol": 1,
   "tcp_image_port": 5602,
   "udp_command_port": 5601,
+  "scene_control_protocol": 1,
+  "scene_control_port": 5603,
+  "scene_control_operations": [
+    "ping",
+    "create_session",
+    "status",
+    "reset_scene",
+    "set_scene",
+    "set_range_target_motion",
+    "set_rune_state"
+  ],
   "capabilities": [
     "image_identity",
     "camera_intrinsics",
@@ -17,7 +29,8 @@
     "armor_ground_truth",
     "rune_ground_truth",
     "gimbal_command",
-    "tcp_image"
+    "tcp_image",
+    "scene_control"
   ],
   "consumers": ["auto-aim", "energy-buff"]
 }
