@@ -1,8 +1,8 @@
-# Daedalus Simulator 1.0.0 构建、运行与性能基线
+# Daedalus Simulator 1.0.1 构建、运行与性能基线
 
 - 适用仓库/分支：`daedalus-simulator/main`
 - 本机固定目录：`D:\仿真\repos\daedalus-simulator`
-- 正式 Release：`D:\仿真\releases\daedalus-simulator\1.0.0`
+- 正式 Release：`D:\仿真\releases\daedalus-simulator\1.0.1`
 - 公共 SDK：`DaedalusSimSdk 1.0.0`，`SHM v7 ABI r1`
 
 本文是模拟器性能配置和公开基线的权威文档。机器可读结果见
@@ -13,7 +13,7 @@
 - 图像：RGB24，`1440×1080`，单帧 4,665,600 字节；
 - 物理：250 Hz，单 substep；
 - 高性能采集上限：200 Hz；
-- Windows 渲染后端：DX12，高性能 GPU；
+- Windows 渲染后端：高性能模式使用 DX12；可视验收模式使用 Vulkan；
 - Windows/WSL 图像数据面：TCP 5602，latest-only；
 - 元数据、曝光位姿和真值：SDK IPC；
 - 云台命令：UDP 5601；场景控制：UDP 5603；
@@ -38,7 +38,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\package-release.ps
 ### 默认：高性能模式
 
 ```powershell
-Set-Location D:\仿真\releases\daedalus-simulator\1.0.0
+Set-Location D:\仿真\releases\daedalus-simulator\1.0.1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\start-simulator.ps1
 ```
 
@@ -47,11 +47,19 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\start-simulator.ps1
 ### 可视验收模式
 
 ```powershell
-Set-Location D:\仿真\releases\daedalus-simulator\1.0.0
+Set-Location D:\仿真\releases\daedalus-simulator\1.0.1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\start-simulator.ps1 -Visible
 ```
 
-该模式启用最高 60 Hz 的可见预览，只用于人工检查画面、相机和场景。默认采集仍是离屏 1440×1080 图像，不应把 `preview_present_hz` 当成采集帧率。
+该模式默认选择 Vulkan 并启用最高 60 Hz 的可见预览，只用于人工检查画面、相机和场景。默认采集仍是离屏 1440×1080 图像，不应把 `preview_present_hz` 当成采集帧率。
+
+启动器也接受显式后端参数，供诊断使用：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\start-simulator.ps1 -Visible -RenderBackend vulkan
+```
+
+不要把 `-Visible -RenderBackend dx12` 作为正式验收配置。本机 Windows 11、RTX 4060 Laptop、驱动 572.70 上，DX12 可见交换链在窗口重配置时可复现 `ResizeBuffers failed: window is in use`，随后 Bevy 报 `Surface::configure / Invalid surface` 并退出；同一 Release 改为 Vulkan 后，靶场切换、运动靶、1440×1080 离屏采集和 TensorRT 消费链路均正常。该问题不影响默认无窗口 DX12 高性能模式。
 
 ## 自瞄 B + TensorRT
 
@@ -65,6 +73,17 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\run-autoaim-b.ps1
 启动器会同时启动正式模拟器 Release 和 WSL 自瞄 B。TensorRT 属于消费者推理后端，不由模拟器自动加载；启动器默认设置 `AIM_SIM_WITH_VIVSIONN_TRT=ON`，使用 `D:\仿真\models\engines\armor.engine`。首次运行或缓存清理后会自动按正式 SDK 重建桥接器。
 
 ## 2026-07-18 当前实测
+
+### 1.0.1 可见模式修复验收
+
+`1.0.1` 仅改变发布启动器的渲染后端选择，不改变模拟器二进制逻辑、SDK 或 IPC。正式候选包完成以下回归：
+
+| 模式 | 采样 | 主更新 Hz | 采集/TCP Hz | 物理 Hz | 预览 Hz | B 完整视觉 Hz | 端到端平均 / P95 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Vulkan 可见靶场 + B/TensorRT | 60 s | 108.12 | 108.12 / 108.12 | 250.00 | 59.95 | 108.13 | 32.46 / 41.82 ms |
+| DX12 高性能纯模拟器 | 20 s | 168.25 | 152.26 / 不适用 | 250.01 | 0 | 未运行 | 不适用 |
+
+可见联合测试运行到 119.137 秒时，主窗口和独立自瞄调试窗口均保持响应；完成 9509 个视觉结果，后端为 `vivsionn_trt`，曝光真值严格匹配。两项测试的采集队列丢帧、GPU map 错误均为 0；联合测试 TCP 读写错误也为 0。靶场通过 SDK ACK 确认切换完成，3 号靶车按 1.5 m/s 往复平移和 45°/s 自转。
 
 ### 被测版本和环境
 
@@ -98,7 +117,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\run-autoaim-b.ps1
 | 模式 | 主更新 Hz | 离屏采集提交 Hz | TCP 图像 Hz | 物理 Hz | 可见预览 Hz | B 完整视觉 Hz | 流水线均值 |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | 高性能，纯模拟器，无 TCP 消费者 | 177.199 (180.070) | 160.009 (160.366) | 不适用 | 250.022 (249.914) | 0 | 未运行 | 不适用 |
-| 可视验收，纯模拟器，复测 | 158.298 (158.751) | 153.015 (152.501) | 不适用 | 250.009 (249.932) | 60.010 (59.827) | 未运行 | 不适用 |
+| 可视验收，纯模拟器，历史 DX12 复测 | 158.298 (158.751) | 153.015 (152.501) | 不适用 | 250.009 (249.932) | 60.010 (59.827) | 未运行 | 不适用 |
 | 高性能，模拟器 + 自瞄 B/TensorRT | 121.565 (122.913) | 121.333 (121.921) | 121.366 (121.921) | 249.963 (249.859) | 0 | 121.233 (122.000) | 6.032 ms |
 
 每秒统计范围：
@@ -106,7 +125,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\run-autoaim-b.ps1
 | 模式 | 主更新 | 采集/TCP | 完整视觉 | GPU 利用率 | GPU 功耗 |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | 高性能纯模拟器 | 138.399–191.365 Hz | 138.399–169.763 Hz | 不适用 | 27%–44% | 14.96–19.17 W |
-| 可视验收复测 | 144.915–169.771 Hz | 142.917–159.539 Hz | 不适用 | 31%–43% | 15.13–17.97 W |
+| 可视验收历史 DX12 复测 | 144.915–169.771 Hz | 142.917–159.539 Hz | 不适用 | 31%–43% | 15.13–17.97 W |
 | 高性能 + 自瞄 B | 106.648–135.964 Hz | TCP 106.648–133.979 Hz | 106–132 Hz | 31%–41% | 25.30–34.20 W |
 
 联合运行最终计数：自瞄处理 6133 帧、完成 6122 个视觉结果；模拟器发送 6123 帧；曝光真值严格匹配；采集队列丢帧 0；GPU map 错误 0。桥接器后端日志为 `vivsionn_trt`，UDP 云台输出保持启用。
@@ -121,7 +140,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\run-autoaim-b.ps1
 
 1. 两个仓库都必须为文档记录的提交或其明确后继，并保持 `git status --short` 为空；
 2. 校验 Release 二进制与模型 SHA256；
-3. 使用 1440×1080、DX12、Release、TCP、250 Hz 和 200 Hz capture cap；
+3. 使用 1440×1080、Release、TCP、250 Hz 和 200 Hz capture cap；高性能模式用 DX12，可视验收模式用 Vulkan；
 4. 记录电源计划，并在启动前用 `nvidia-smi` 连续采样空载 GPU；
 5. 设置统计输出后启动：
 

@@ -5,7 +5,7 @@
 - 分支：`main`
 - 工作目录：`D:\仿真\repos\daedalus-simulator`
 - 代码基线：本文件所在提交
-- 模拟器版本：`Daedalus Simulator 1.0.0`
+- 模拟器版本：`Daedalus Simulator 1.0.1`
 - 公共 SDK：`DaedalusSimSdk 1.0.0`
 - IPC 布局：`SHM v7`
 - 固定图像规格：RGB24，`1440×1080`

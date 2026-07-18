@@ -1,7 +1,9 @@
 [CmdletBinding()]
 param(
     [switch]$Visible,
-    [string]$IpcDir
+    [string]$IpcDir,
+    [ValidateSet('dx12', 'vulkan')]
+    [string]$RenderBackend
 )
 
 $ErrorActionPreference = 'Stop'
@@ -18,7 +20,14 @@ if (-not (Test-Path -LiteralPath $binary)) {
 New-Item -ItemType Directory -Force -Path $IpcDir | Out-Null
 $env:BEVY_ASSET_ROOT = $root
 $env:TALOS_IPC_DIR = $IpcDir
-$env:WGPU_BACKEND = 'dx12'
+$launchMode = if ($Visible) { 'visible' } else { 'performance' }
+if ([string]::IsNullOrWhiteSpace($RenderBackend)) {
+    # DX12 remains the measured high-performance backend. On the validated
+    # Windows/NVIDIA configuration, resizing the visible DX12 swap chain can
+    # fail in wgpu with `ResizeBuffers ... window is in use`; Vulkan does not.
+    $RenderBackend = if ($Visible) { 'vulkan' } else { 'dx12' }
+}
+$env:WGPU_BACKEND = $RenderBackend
 $env:WGPU_POWER_PREF = 'high'
 $env:DAEDALUS_CONFIG = 'config.performance.toml'
 $env:DAEDALUS_TALOS_RGB_ONLY = '1'
@@ -37,4 +46,5 @@ if ($Visible) {
     Remove-Item Env:DAEDALUS_PREVIEW_MAX_HZ -ErrorAction SilentlyContinue
 }
 
+Write-Host "Daedalus launch mode=$launchMode backend=$RenderBackend ipc=$IpcDir"
 & $binary

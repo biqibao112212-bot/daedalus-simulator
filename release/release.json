@@ -1,6 +1,6 @@
 {
   "product": "daedalus-simulator",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "sdk_version": "1.0.0",
   "shm_version": 7,
   "sdk_abi_revision": 1,

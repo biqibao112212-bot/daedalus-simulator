@@ -17,7 +17,7 @@
 本仓库是模拟器、公共 SDK 和正式 Release 的唯一源码所有者。自瞄与打符不再复制模拟器源码，只消费带版本的 `DaedalusSimSdk` 和发布包。
 
 - 固定基线：RGB24 `1440×1080`、物理 `250 Hz`、高性能采集上限 `200 Hz`；
-- 默认高性能模式：离屏图像持续渲染，关闭可见预览；加 `-Visible` 仅用于人工验收；
+- 默认高性能模式：DX12 离屏图像持续渲染，关闭可见预览；加 `-Visible` 进入 Vulkan 可视验收模式；
 - 正式构建、打包、标签规则见 [RELEASE.md](RELEASE.md)；
 - 完整客户端 SDK 见 [sdk/README.md](sdk/README.md)；
 - 性能实测与两种模式见 [SIMULATOR_PERFORMANCE.md](SIMULATOR_PERFORMANCE.md)。
