@@ -71,8 +71,8 @@ mod tests {
     fn depth_camera_render_layers(profile: CaptureSceneProfile) -> Option<RenderLayers> {
         let mut world = World::new();
         world.insert_resource(DepthCameraSettings {
-            width: 1280,
-            height: 720,
+            width: 1440,
+            height: 1080,
             fov_y: 45.0_f32.to_radians(),
             near: 0.1,
             far: 100.0,

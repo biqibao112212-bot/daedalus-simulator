@@ -1,0 +1,10 @@
+{
+  "sdk_version": "1.0.0",
+  "shm_magic": "0x54414C05",
+  "shm_version": 7,
+  "image_width": 1440,
+  "image_height": 1080,
+  "image_channels": 3,
+  "meta_size": 76992,
+  "consumers": ["auto-aim", "energy-buff"]
+}

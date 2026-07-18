@@ -253,8 +253,8 @@ pub struct CaptureStreamConfig {
 impl Default for CaptureStreamConfig {
     fn default() -> Self {
         Self {
-            width: 1280,
-            height: 720,
+            width: 1440,
+            height: 1080,
         }
     }
 }

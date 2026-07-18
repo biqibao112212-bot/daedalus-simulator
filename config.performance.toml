@@ -22,12 +22,12 @@ main_camera_fxaa = false
 illuminance = 500.0
 
 [capture.color]
-width = 1280
-height = 720
+width = 1440
+height = 1080
 
 [capture.depth]
-width = 1280
-height = 720
+width = 1440
+height = 1080
 near = 0.1
 far = 80.0
 

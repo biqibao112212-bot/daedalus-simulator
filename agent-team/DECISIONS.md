@@ -1,23 +1,12 @@
-# Simulator decisions
+# 模拟器关键决策
 
-## D-001 — Single simulator owner
+上下文版本：`CTX-SIM-2026.07-v2`
 
-The simulator is owned only by `integration/perf-main`. Feature branches do
-not carry or synchronize private simulator modifications.
-
-## D-002 — Public contract replaces shared context
-
-Consumer branches learn simulator behavior from versioned public interface and
-scenario-control documents, not by reading simulator private context or by
-cross-branch Agent Team handoffs.
-
-## D-003 — Committed evidence only
-
-Performance and compatibility claims must identify a committed revision and be
-reproduced from a clean checkout. Results from dirty source or stale binaries
-are exploratory only.
-
-## D-004 — Legacy context is retained
-
-Existing lower-case context, handoffs, evidence, and scratch records remain in
-place and are not yet archived. They are not part of the active context set.
+1. 模拟器唯一权威分支为 `integration/perf-main`，消费者分支中的历史模拟器副本不再是可修改实现。
+2. 基线固定为 1440×1080 RGB24；物理 250 Hz；高性能采集上限 200 Hz；必须使用 Release 评估性能。
+3. 公共兼容边界为 `DaedalusSimSdk 1.x`。破坏 ABI 或语义时升级主版本；消费者不得复制结构体。
+4. `SHM v7` 通过 `magic + version + struct_size` 失败关闭。图像、位姿、真值必须使用同一生产者 epoch、序号和曝光时间戳。
+5. 跨 Windows/WSL 的 1440×1080 图像默认走 TCP latest-only 通道。文件映射保留为同系统兼容模式，不作为 B 分支性能配置。
+6. 高性能模式默认关闭可见预览，但离屏图像仍正常渲染和采集；只有验收画面时才启用 `-Visible`。
+7. TensorRT 属于消费者推理后端，不由模拟器自动启动。消费者启动器负责显式启动算法，防止纯模拟器基线混入推理开销。
+8. 模拟器性能结论只认当前版本实测；旧分辨率和旧脏工作树记录全部失效。

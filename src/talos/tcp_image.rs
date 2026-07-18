@@ -9,8 +9,8 @@ use std::time::{Duration, Instant};
 pub const MAGIC: u32 = 0x5449_4d47;
 pub const VERSION: u16 = 1;
 pub const HEADER_BYTES: usize = 64;
-pub const MAX_WIDTH: u32 = 1280;
-pub const MAX_HEIGHT: u32 = 720;
+pub const MAX_WIDTH: u32 = 1440;
+pub const MAX_HEIGHT: u32 = 1080;
 
 const DEFAULT_ACCEPT_POLL: Duration = Duration::from_millis(10);
 pub const DEFAULT_WRITE_TIMEOUT: Duration = Duration::from_millis(250);
@@ -1367,13 +1367,13 @@ mod tests {
         ];
         assert_eq!(header.encode(), expected);
 
-        let rgb = TcpImageHeader::new(PixelFormat::Rgb24, 1280, 720, EPOCH, 1, 2)
+        let rgb = TcpImageHeader::new(PixelFormat::Rgb24, 1440, 1080, EPOCH, 1, 2)
             .unwrap()
             .encode();
         assert_eq!(&rgb[8..10], &1u16.to_be_bytes());
         assert_eq!(&rgb[20..24], &2_764_800u32.to_be_bytes());
 
-        let rgba = TcpImageHeader::new(PixelFormat::Rgba32, 1280, 720, EPOCH, 1, 2)
+        let rgba = TcpImageHeader::new(PixelFormat::Rgba32, 1440, 1080, EPOCH, 1, 2)
             .unwrap()
             .encode();
         assert_eq!(&rgba[20..24], &3_686_400u32.to_be_bytes());
@@ -1871,8 +1871,10 @@ mod tests {
         first.shutdown(Shutdown::Both).unwrap();
         drop(first);
 
-        let large = vec![0x11; 1280 * 720 * 4];
-        publisher.submit_rgba32(1280, 720, 10, 100, &large).unwrap();
+        let large = vec![0x11; 1440 * 1080 * 4];
+        publisher
+            .submit_rgba32(1440, 1080, 10, 100, &large)
+            .unwrap();
         assert!(wait_until(Duration::from_secs(2), || {
             sender.counters().disconnect_total >= 1
         }));

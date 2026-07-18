@@ -416,12 +416,12 @@ mod tests {
 
     #[test]
     fn talos_dimension_override_accepts_only_bounded_positive_integers() {
-        assert_eq!(parse_talos_dimension_override("1", 1280), Some(1));
-        assert_eq!(parse_talos_dimension_override(" 640 ", 1280), Some(640));
-        assert_eq!(parse_talos_dimension_override("1280", 1280), Some(1280));
-        assert_eq!(parse_talos_dimension_override("0", 1280), None);
-        assert_eq!(parse_talos_dimension_override("1281", 1280), None);
-        assert_eq!(parse_talos_dimension_override("invalid", 1280), None);
+        assert_eq!(parse_talos_dimension_override("1", 1440), Some(1));
+        assert_eq!(parse_talos_dimension_override(" 640 ", 1440), Some(640));
+        assert_eq!(parse_talos_dimension_override("1440", 1440), Some(1440));
+        assert_eq!(parse_talos_dimension_override("0", 1440), None);
+        assert_eq!(parse_talos_dimension_override("1441", 1440), None);
+        assert_eq!(parse_talos_dimension_override("invalid", 1440), None);
     }
 
     #[test]

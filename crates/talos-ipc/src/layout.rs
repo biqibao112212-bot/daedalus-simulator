@@ -1,13 +1,14 @@
 use std::sync::atomic::AtomicU8;
 
-pub const IMAGE_WIDTH: u32 = 1280;
-pub const IMAGE_HEIGHT: u32 = 720;
+pub const IMAGE_WIDTH: u32 = 1440;
+pub const IMAGE_HEIGHT: u32 = 1080;
 
 pub const CACHE_LINE_SIZE: usize = 64;
 pub const SHM_MAGIC: u32 = 0x54414C05;
-// Version 6 adds a seqlock-protected exposure history. Readers must reject
-// older layouts instead of interpreting enlarged metadata with stale offsets.
-pub const SHM_VERSION: u32 = 6;
+// Version 7 freezes the public SDK v1 baseline at the native 1440x1080 camera
+// geometry. Readers must reject earlier layouts and obtain ABI declarations
+// from the simulator-owned SDK package.
+pub const SHM_VERSION: u32 = 7;
 
 pub const IMAGE_CHANNELS: u32 = 3;
 pub const IMAGE_SIZE: usize = (IMAGE_WIDTH * IMAGE_HEIGHT * IMAGE_CHANNELS) as usize;
@@ -523,8 +524,10 @@ mod layout_tests {
     use super::*;
 
     #[test]
-    fn ground_truth_v6_layout_is_stable() {
-        assert_eq!(SHM_VERSION, 6);
+    fn simulator_sdk_v1_layout_is_stable() {
+        assert_eq!(SHM_VERSION, 7);
+        assert_eq!(IMAGE_WIDTH, 1440);
+        assert_eq!(IMAGE_HEIGHT, 1080);
         assert_eq!(size_of::<GroundTruthArmor>(), 32);
         assert_eq!(std::mem::offset_of!(GroundTruthArmor, relative_slot), 0);
         assert_eq!(std::mem::offset_of!(GroundTruthArmor, relative_position), 4);

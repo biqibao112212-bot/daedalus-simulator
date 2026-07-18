@@ -24,13 +24,13 @@ main_camera_fxaa = false
 illuminance = 500.0
 [capture.color]
 # RGB capture resolution for existing camera pipeline.
-width = 1280
-height = 720
+width = 1440
+height = 1080
 
 [capture.depth]
 # Depth capture resolution for livox-compatible point cloud output.
-width = 1280
-height = 720
+width = 1440
+height = 1080
 near = 0.1
 far = 80.0
 

@@ -356,8 +356,8 @@ pub fn compute_camera_intrinsics(width: u32, height: u32, fov_y: f32) -> CameraI
     }
 }
 
-pub const IMAGE_WIDTH: u32 = 1280;
-pub const IMAGE_HEIGHT: u32 = 720;
+pub const IMAGE_WIDTH: u32 = 1440;
+pub const IMAGE_HEIGHT: u32 = 1080;
 
 #[cfg(test)]
 mod tests {

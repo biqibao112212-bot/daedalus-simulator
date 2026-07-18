@@ -1,19 +1,18 @@
-# Simulator board
+# 模拟器任务板
 
-## Current state
+上下文版本：`CTX-SIM-2026.07-v2`
 
-- Management architecture: active.
-- Business/source modifications: frozen by user instruction.
-- Canonical committed baseline: `integration/perf-main@2fa0de2feeb1`.
-- Published interface status: `legacy-0` (descriptive, not compatibility-stable).
-- Old context/evidence: retained in place; archival deferred.
+## 已完成
 
-## Next work after the freeze is lifted
+- 统一 1440×1080 RGB 基线、250 Hz 物理和最高 200 Hz 采集目标。
+- 发布 `DaedalusSimSdk 1.0.0 / SHM v7`，Rust 与 C++ 布局由静态断言和测试约束。
+- SDK 支持图像身份、相机参数、曝光位姿、底盘观测、目标/打符真值、运行状态和云台命令。
+- B 分支已删除本地手写布局并通过已安装 SDK 构建。
+- Windows/WSL 的 1440×1080 默认图像数据面确定为 TCP；元数据、真值和控制仍使用 SDK IPC。
+- Release 纯模拟器及 B+TensorRT 联合性能已实测，详见 `SIMULATOR_PERFORMANCE.md`。
 
-1. Design and implement simulator contract v1 as a standalone public API.
-2. Add generated Rust/C++ bindings and contract conformance tests.
-3. Move all consumer access behind v1; remove duplicated simulator layouts.
-4. Validate Release builds and runtime from a clean checkout.
-5. Tag a simulator release and pin consumers to that release.
+## 后续
 
-No item above is authorized as a source-code change during the current freeze.
+- 为场景创建、重置、目标运动和打符状态建立带确认/错误码的 SDK 控制 API；当前公开环境变量仍是过渡入口。
+- 适配装甲板主线、火控和打符分支时，只升级 SDK 依赖，不复制模拟器代码。
+- 发布正式安装包或版本标签后，将消费者从本机安装路径切换为版本化包发现。

@@ -1,46 +1,17 @@
-# Simulator scenario-control contract
+# 模拟器场景控制接口
 
-- Owner: `integration/perf-main`
-- Contract status: `legacy-0`
-- Reference revision: `2fa0de2feeb1`
+- 上下文版本：`CTX-SIM-2026.07-v2`
+- 状态：公开配置入口，SDK 控制 API 待下一版固化
 
-This is the public description of how consumers select scenes and control test
-targets. Read the canonical copy with:
+当前消费者可使用以下稳定类别，具体可选值以模拟器源码校验为准：
 
-```powershell
-git show integration/perf-main:agent-team/SCENARIO_CONTROL.md
-```
+- `DAEDALUS_SCENE_MODE` / `DAEDALUS_AUTO_AIM_MODE`：装甲板、前哨站或打符场景。
+- `DAEDALUS_CAPTURE_SCENE_PROFILE`：完整场景或面向算法的精简采集层。
+- `DAEDALUS_AUTO_GEN_SEED`：确定性生成种子。
+- 自动生成参数：目标类型、距离、yaw/pitch 扫描、抖动、稳定帧、光照、打符模式/队伍/状态。
+- 靶场参数：目标距离、编号、初始位姿和初始 yaw。
+- 云台命令：统一通过 SDK 的 `GimbalCommand`；自瞄和打符不得建立私有命令结构。
 
-## Existing legacy controls
+实现入口位于 `src/auto_gen.rs`、`src/setup.rs`、`src/capture.rs` 和 `src/talos/plugin.rs`。在 SDK 控制 API 发布前，任何新增场景控制都先在本分支实现并写入本文件；消费者只能传公开参数，不能修改实体内部结构。
 
-The committed baseline exposes environment-variable configuration, including:
-
-- scene selection through `DAEDALUS_SCENE_MODE` or
-  `DAEDALUS_AUTO_AIM_MODE`;
-- capture profile through `DAEDALUS_CAPTURE_SCENE_PROFILE`;
-- Talos dimensions and transport through `DAEDALUS_TALOS_WIDTH`,
-  `DAEDALUS_TALOS_HEIGHT`, `DAEDALUS_TALOS_IMAGE_TRANSPORT`, and TCP settings;
-- deterministic auto-generation seed through `DAEDALUS_AUTO_GEN_SEED`;
-- armor/energy generation mode, distance/yaw/pitch sweeps, jitter, settle
-  frames, camera height, lighting, rune mode/team/state/targets;
-- shooting-range target distance, active target number, target pose, and
-  initial yaw controls;
-- energy scene player and gimbal initial pose controls.
-
-Exact accepted values and defaults remain implementation-defined in
-`src/auto_gen.rs`, `src/setup.rs`, `src/capture.rs`, and
-`src/talos/plugin.rs`. These environment variables are legacy configuration,
-not yet a stable remote-control API.
-
-## Required v1 controls
-
-The stable control API must support deterministic session creation, scene
-selection, reset/step/run, random seed, player/camera/gimbal initial state,
-target spawn/despawn, target identity/team/type, pose and motion profile,
-armor/rune state, active target selection, lighting/capture profile, and
-ground-truth/telemetry subscription. Each request needs an acknowledgement and
-defined error response.
-
-Consumers must use this public API once v1 is released. They must not mutate
-simulator internals, depend on entity names, or require consumer-specific scene
-patches.
+下一版控制 API 必须覆盖：创建确定性会话、reset/step/run、目标生成与销毁、身份/队伍/类型、位姿和运动轨迹、装甲板/打符状态、相机/云台初态、光照/采集配置、确认响应与错误码。
