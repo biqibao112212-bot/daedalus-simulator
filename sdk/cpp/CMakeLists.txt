@@ -20,6 +20,13 @@ if(BUILD_TESTING)
   add_test(NAME daedalus_sim_sdk_layout_test
     COMMAND daedalus_sim_sdk_layout_test
   )
+  add_executable(daedalus_sim_sdk_tcp_image_test tests/tcp_image_test.cpp)
+  target_link_libraries(daedalus_sim_sdk_tcp_image_test PRIVATE
+    DaedalusSimSdk::DaedalusSimSdk
+  )
+  add_test(NAME daedalus_sim_sdk_tcp_image_test
+    COMMAND daedalus_sim_sdk_tcp_image_test
+  )
 endif()
 
 install(TARGETS DaedalusSimSdk EXPORT DaedalusSimSdkTargets)

@@ -1,15 +1,16 @@
 # 模拟器公共 SDK 接口
 
 - 契约版本：`DaedalusSimSdk 1.0.0`
-- 生产分支：`integration/perf-main`
+- 生产仓库：`D:\仿真\repos\daedalus-simulator`
+- 生产分支：`main`
 - IPC：`SHM v7`
 - 图像：RGB24，最大且默认 `1440×1080`
 
 消费者应从模拟器安装 SDK，不得复制 `talos_v1.hpp`：
 
 ```powershell
-Set-Location D:\仿真\worktrees\main-performance
-wsl bash -lc "cmake -S /mnt/d/仿真/worktrees/main-performance/sdk/cpp -B /tmp/daedalus-sdk -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/mnt/d/仿真/worktrees/main-performance/build/sim-sdk-install && cmake --build /tmp/daedalus-sdk && ctest --test-dir /tmp/daedalus-sdk --output-on-failure && cmake --install /tmp/daedalus-sdk"
+Set-Location D:\仿真\repos\daedalus-simulator
+.\scripts\build-release.ps1
 ```
 
 CMake 消费方式：
@@ -19,7 +20,7 @@ find_package(DaedalusSimSdk 1 REQUIRED CONFIG)
 target_link_libraries(my_consumer PRIVATE DaedalusSimSdk::DaedalusSimSdk)
 ```
 
-配置时把 `D:\仿真\worktrees\main-performance\build\sim-sdk-install` 加入 `CMAKE_PREFIX_PATH`。
+开发时可把 `D:\仿真\repos\daedalus-simulator\build\sim-sdk-install` 加入 `CMAKE_PREFIX_PATH`；正式消费者必须使用 Release 包内的 `sdk` 目录。
 
 ## 契约内容
 
@@ -32,6 +33,8 @@ target_link_libraries(my_consumer PRIVATE DaedalusSimSdk::DaedalusSimSdk)
 - `GroundTruthBatch`、打符真值和 16 槽曝光历史：仅用于标注与验收，严禁作为学习模型输入。
 - `RuntimeState`：跟随状态和运行时云台状态。
 - `GimbalCommand`：自瞄/打符共用的云台与发射命令出口。
+- `tcp_image_v1.hpp`：TCP 图像帧头、像素格式、大小校验和编解码。
+- `endpoints_v1.hpp`：IPC 文件名、环境变量和默认网络端口。
 
 消费者打开 IPC 后必须调用 `isCompatible`；不兼容时立即失败，不得猜测布局。所有跨流关联必须同时校验生产者 epoch、`frame_seq` 和 `timestamp_ns`，不得用相邻帧代替缺失曝光。
 

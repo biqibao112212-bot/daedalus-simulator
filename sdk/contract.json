@@ -6,5 +6,18 @@
   "image_height": 1080,
   "image_channels": 3,
   "meta_size": 76992,
+  "tcp_image_protocol": 1,
+  "tcp_image_port": 5602,
+  "udp_command_port": 5601,
+  "capabilities": [
+    "image_identity",
+    "camera_intrinsics",
+    "exposure_pose",
+    "chassis_observation",
+    "armor_ground_truth",
+    "rune_ground_truth",
+    "gimbal_command",
+    "tcp_image"
+  ],
   "consumers": ["auto-aim", "energy-buff"]
 }

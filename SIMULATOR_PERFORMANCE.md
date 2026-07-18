@@ -1,27 +1,27 @@
 # Daedalus Simulator 1.0.0 构建、运行与性能
 
-适用分支：`integration/perf-main`
-工作目录：`D:\仿真\worktrees\main-performance`
+适用仓库/分支：`daedalus-simulator/main`
+工作目录：`D:\仿真\repos\daedalus-simulator`
 SDK：`DaedalusSimSdk 1.0.0`，`SHM v7`
 固定基线：RGB24 `1440×1080`、物理 250 Hz、Release
 
 ## 构建
 
 ```powershell
-Set-Location D:\仿真\worktrees\main-performance
+Set-Location D:\仿真\repos\daedalus-simulator
 cargo build --release --features talos
 ```
 
-Release 程序：`D:\仿真\worktrees\main-performance\target\release\daedalus.exe`。禁止用 Debug 帧率代表性能。
+开发构建程序：`D:\仿真\repos\daedalus-simulator\target\release\daedalus.exe`。正式运行使用 `D:\仿真\releases\daedalus-simulator\<version>`；禁止用 Debug 帧率代表性能。
 
-SDK 安装方法见 `agent-team/SIMULATOR_INTERFACE.md`，默认本机安装路径为 `D:\仿真\worktrees\main-performance\build\sim-sdk-install`。
+SDK 和正式打包方法见 `RELEASE.md`。
 
 ## 默认高性能模式
 
 该模式关闭可见预览，但离屏 Talos 相机仍会渲染并发布图像；窗口黑屏不等于没有采集。
 
 ```powershell
-$env:BEVY_ASSET_ROOT='D:\仿真\worktrees\main-performance'
+$env:BEVY_ASSET_ROOT='D:\仿真\repos\daedalus-simulator'
 $env:WGPU_BACKEND='dx12'
 $env:WGPU_POWER_PREF='high'
 $env:DAEDALUS_CONFIG='config.performance.toml'
@@ -30,7 +30,7 @@ $env:DAEDALUS_TALOS_RGB_ONLY='1'
 $env:DAEDALUS_TALOS_CAPTURE_MAX_HZ='200'
 $env:DAEDALUS_TALOS_IMAGE_TRANSPORT='tcp'
 $env:DAEDALUS_AUTO_AIM_ON_START='1'
-Set-Location D:\仿真\worktrees\main-performance
+Set-Location D:\仿真\repos\daedalus-simulator
 .\target\release\daedalus.exe
 ```
 
