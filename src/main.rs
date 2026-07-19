@@ -301,6 +301,17 @@ fn simulator_window(present_mode: PresentMode) -> Window {
     window
 }
 
+fn primary_window_for_mode(
+    disable_performance_ui: bool,
+    present_mode: PresentMode,
+) -> Option<Window> {
+    if disable_performance_ui {
+        None
+    } else {
+        Some(simulator_window(present_mode))
+    }
+}
+
 fn simulator_asset_folder() -> String {
     [
         std::env::current_dir().ok().map(|path| path.join("assets")),
@@ -415,7 +426,7 @@ fn main() {
     app.add_plugins((
         DefaultPlugins
             .set(WindowPlugin {
-                primary_window: Some(simulator_window(present_mode)),
+                primary_window: primary_window_for_mode(disable_performance_ui, present_mode),
                 ..default()
             })
             .set(AssetPlugin {
@@ -511,7 +522,7 @@ fn main() {
                     update_frequency_metrics,
                     apply_auto_aim_scene_mode_request,
                     complete_scene_control_commands.after(apply_auto_aim_scene_mode_request),
-                    manage_shooting_range_debug_process,
+                    manage_shooting_range_debug_process.run_if(|| !performance_ui_disabled()),
                     change_appearance,
                     update_scene_mode_button_panel,
                     update_help_text,
@@ -623,11 +634,19 @@ fn main() {
 mod tests {
     use avian3d::prelude::{Physics, PhysicsTime};
     use bevy::prelude::{App, Time};
+    use bevy::window::PresentMode;
 
     use super::{
         FixedPhysicsStepGate, FixedPhysicsTickDivider, PhysicsScheduleMode,
         configure_physics_runtime, fixed_time_from_config, physics_schedule_mode,
+        primary_window_for_mode,
     };
+
+    #[test]
+    fn performance_mode_does_not_create_a_primary_window() {
+        assert!(primary_window_for_mode(true, PresentMode::Immediate).is_none());
+        assert!(primary_window_for_mode(false, PresentMode::Immediate).is_some());
+    }
 
     #[test]
     fn physics_schedule_selector_is_fixed_by_default_and_post_update_when_enabled() {

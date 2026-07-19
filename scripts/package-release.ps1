@@ -45,6 +45,7 @@ Copy-Item -LiteralPath (Join-Path $root 'release\release.json') -Destination $ta
 Copy-Item -LiteralPath (Join-Path $root 'sdk\contract.json') -Destination (Join-Path $target 'docs\sdk-contract.json')
 Copy-Item -LiteralPath `
     (Join-Path $root 'SIMULATOR_PERFORMANCE.md'),`
+    (Join-Path $root 'SIMULATOR_TROUBLESHOOTING.md'),`
     (Join-Path $root 'sdk\README.md'),`
     (Join-Path $root 'agent-team\SIMULATOR_INTERFACE.md'),`
     (Join-Path $root 'agent-team\SCENARIO_CONTROL.md') `

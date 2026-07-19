@@ -42,7 +42,10 @@ Set-Location D:\仿真\releases\daedalus-simulator\1.0.1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\start-simulator.ps1
 ```
 
-该模式设置 `DAEDALUS_PERF_DISABLE_UI=1`，关闭可见预览，但离屏 Talos 相机仍持续渲染、readback 并向消费者发布图像。窗口隐藏或没有可见画面不代表没有图像采集；判断采集是否正常应读取 `capture_copy_submit_hz`、`capture_processing_complete_total` 和消费者输入计数。
+该模式设置 `DAEDALUS_PERF_DISABLE_UI=1`，不创建主窗口、不拉起靶场前端
+debug 子进程，但离屏 Talos 相机仍持续渲染、readback 并向消费者发布图像。
+没有前端窗口不代表没有图像采集；判断采集是否正常应读取
+`capture_copy_submit_hz`、`capture_processing_complete_total` 和消费者输入计数。
 
 ### 可视验收模式
 

@@ -32,7 +32,7 @@ D:\仿真\releases\daedalus-simulator\1.0.1.zip
 - `bin/daedalus.exe` 及运行 DLL；
 - `assets/`、两套固定配置和启动脚本；
 - `sdk/` 下可被 `find_package(DaedalusSimSdk 1 CONFIG REQUIRED)` 发现的完整开发包；
-- 接口、性能和契约文档；
+- 接口、性能、故障排查和契约文档；
 - `release-manifest.json` 文件大小与 SHA256 清单。
 
 发布提交通过 clean 状态复验后创建注释标签 `simulator-v<version>`。只有用户明确授权时才推送提交、标签和 ZIP。

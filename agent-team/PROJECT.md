@@ -14,7 +14,7 @@
 
 来自消费者调试的模拟器 bug 或需求必须先形成具体提案并由用户明确批准。批准前模拟器仓库保持只读；批准后修改仍由本仓库独立完成并通过新 Release/SDK 传播，消费者不能直接修改或携带模拟器实现。
 
-当前完成独立仓库拆分：Rust 生产端、公共 C++ SDK、版本契约和 Release 工具均由本仓库单点发布。自瞄 B 是首个消费者；打符适配状态由消费者仓库维护。
+当前完成独立仓库拆分：Rust 生产端、公共 C++ SDK、版本契约和 Release 工具均由本仓库单点发布。自瞄 B 是首个消费者；打符适配状态由消费者仓库维护。高性能模式的无主窗口/无 debug 子进程修复已在源码完成，SDK 与 IPC 契约不变；正式 Release 需在清洁提交后按 patch 版本重新打包。
 
 公共入口：
 
@@ -25,4 +25,5 @@
 - 接口说明：`agent-team/SIMULATOR_INTERFACE.md`
 - 场景控制：`agent-team/SCENARIO_CONTROL.md`
 - 构建与性能：`SIMULATOR_PERFORMANCE.md`
+- 公共故障排查：`SIMULATOR_TROUBLESHOOTING.md`
 - 正式发布：`RELEASE.md`
