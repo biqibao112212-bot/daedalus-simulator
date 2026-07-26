@@ -37,20 +37,29 @@
 - Camera calibration revision 2 fixes digital exposure at EV100 9.7 with auto
   exposure and tonemapping disabled; physical shutter/gain do not apply.
 - Final binaries use accepted implementation
-  `6883879f74549eb960cbbc5283aede5222f57fb7`; documentation-updated packages
-  were regenerated from clean commit
-  `e0d297d0afcbea26743fe56167bd87333549c69f`. Each manifest lists 44 payload
-  files, including the machine-readable short performance result, and every
-  directory/ZIP payload hash was independently verified.
+  `6883879f74549eb960cbbc5283aede5222f57fb7`; installer-ready packages were
+  regenerated from clean commit
+  `9aa339d1a8226b900986f28ffb61eac8fd7127b2`. The Windows manifest lists 47
+  payload files and the Linux manifest lists 46, including platform-specific
+  Chinese root READMEs, installers, SDK documentation, and the machine-readable
+  short performance result. Every directory/ZIP payload hash was independently
+  verified.
 - Final Windows package live acceptance returned a 1440x1080 RGBA32 frame,
   exposure timestamp, exact-frame gimbal state, scene status, and matching
   command/applied-command ID on the RTX 4060 / DX12 adapter.
 - Final Linux package no-GPU acceptance passed on Vulkan llvmpipe: stable
   startup, TCP 5602, UDP 5601/5603, 76992-byte IPC metadata, and locked runtime
   capabilities.
+- Windows non-admin installation passed in an isolated directory using the
+  packaged PowerShell installer; the installed executable matches the package
+  byte-for-byte. Linux per-user installation passed with an isolated prefix;
+  both generated launch commands are executable and syntactically valid, and
+  the installed executable matches the package byte-for-byte. The Linux
+  installer's unsafe-target guard also correctly refused an accidental `/opt`
+  target during command-line harness debugging.
 - Archive SHA256: Windows
-  `4fd2a91fe1eb65e0a2c7e339195c79ed46beb8ae42b4d0ce7a89e2eddaadb3b1`;
-  Linux `00944d0bcd50eeb5fe63ecacdf6696b2e7ce609e4e0936fbdc7e961ed9831a4a`.
+  `d6dbaf48e6b7ec7e4429123190d01ec7eef8da4c1aa71a4ea0b8c6efbc3dcbe8`;
+  Linux `608ad757a03be6b5593f59b2b846dabefc7d2296a9ee527ac330f683a3abbffe`.
 - A 5.021-second package-SDK TCP short test under an independent concurrent
   CUDA training load received 424 RGBA32 frames: 84.44 Hz and 500.94 MiB/s.
   Payload throughput is 7.24% below the old RGB24 joint baseline, while FPS is
@@ -60,9 +69,8 @@
 
 ## In progress
 
-Platform-specific Chinese root READMEs and non-admin one-click installers are
-implemented. Commit, package refresh, clean-room installer tests, and final
-manifest/hash verification are active.
+No active release gate. Version 1.1.0 is ready for internal-laboratory
+distribution.
 
 ## Remaining gates
 
@@ -73,6 +81,7 @@ manifest/hash verification are active.
 
 ## Next steps
 
-1. Commit the platform README and installer additions.
-2. Regenerate both archives and test installation into disposable directories.
-3. Verify installed launchers, package manifests, ZIP payloads, and hashes.
+1. Distribute the platform ZIP matching the user's operating system.
+2. Ask recipients to read root `README_ZH.md` before installation.
+3. Add a branded GUI installer later only if the laboratory wants to maintain
+   an Inno Setup, NSIS, or MSI toolchain.
