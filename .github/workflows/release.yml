@@ -38,18 +38,6 @@ jobs:
         shell: pwsh
         run: .\scripts\check-compatibility.ps1
 
-      - name: Materialize approved commercial license
-        shell: pwsh
-        env:
-          COMMERCIAL_LICENSE_B64: ${{ secrets.COMMERCIAL_LICENSE_B64 }}
-        run: |
-          if ([string]::IsNullOrWhiteSpace($env:COMMERCIAL_LICENSE_B64)) {
-            throw 'COMMERCIAL_LICENSE_B64 is required for closed-source packaging.'
-          }
-          [IO.File]::WriteAllBytes(
-            'release\COMMERCIAL_LICENSE.txt',
-            [Convert]::FromBase64String($env:COMMERCIAL_LICENSE_B64))
-
       - name: Package Windows release
         shell: pwsh
         env:
@@ -101,17 +89,6 @@ jobs:
       - name: Check public compatibility
         shell: pwsh
         run: ./scripts/check-compatibility.ps1
-
-      - name: Materialize approved commercial license
-        shell: bash
-        env:
-          COMMERCIAL_LICENSE_B64: ${{ secrets.COMMERCIAL_LICENSE_B64 }}
-        run: |
-          [[ -n "$COMMERCIAL_LICENSE_B64" ]] || {
-            echo 'COMMERCIAL_LICENSE_B64 is required for closed-source packaging.' >&2
-            exit 1
-          }
-          printf '%s' "$COMMERCIAL_LICENSE_B64" | base64 --decode > release/COMMERCIAL_LICENSE.txt
 
       - name: Package Linux release
         shell: bash

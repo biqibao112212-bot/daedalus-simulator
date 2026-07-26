@@ -43,15 +43,15 @@ if (-not $SkipBuild) {
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 
-$dirty = @(git -C $root status --porcelain -- . ':(exclude)release/COMMERCIAL_LICENSE.txt')
+$dirty = @(git -C $root status --porcelain -- .)
 if ($dirty.Count -ne 0) {
     throw 'Release packaging requires a clean committed worktree.'
 }
 $sourceCommit = (git -C $root rev-parse HEAD).Trim()
-$commercialLicense = Join-Path $root 'release\COMMERCIAL_LICENSE.txt'
-if (-not (Test-Path -LiteralPath $commercialLicense)) {
-    throw 'Closed-source packaging is blocked: provide an approved release/COMMERCIAL_LICENSE.txt after legal review.'
-}
+$repositoryLicense = Join-Path $root 'LICENSE'
+$internalUseNotice = Join-Path $root 'release\INTERNAL_LAB_USE_NOTICE.md'
+if (-not (Test-Path -LiteralPath $repositoryLicense)) { throw "Repository license is missing: $repositoryLicense" }
+if (-not (Test-Path -LiteralPath $internalUseNotice)) { throw "Internal-use notice is missing: $internalUseNotice" }
 if ((Test-Path -LiteralPath $target) -or (Test-Path -LiteralPath $zip)) {
     if (-not $Force) { throw "Release $version/$packageId already exists. Use -Force to replace it." }
     if (Test-Path -LiteralPath $target) { Remove-Item -LiteralPath $target -Recurse -Force }
@@ -76,7 +76,8 @@ Copy-Item -LiteralPath `
     (Join-Path $root 'release\camera-calibration.json') `
     -Destination $target
 Copy-Item -LiteralPath (Join-Path $root 'release\start-simulator.ps1') -Destination $target
-Copy-Item -LiteralPath $commercialLicense -Destination (Join-Path $target 'LICENSE.txt')
+Copy-Item -LiteralPath $repositoryLicense -Destination (Join-Path $target 'LICENSE.txt')
+Copy-Item -LiteralPath $internalUseNotice -Destination (Join-Path $target 'INTERNAL_LAB_USE_NOTICE.md')
 Copy-Item -LiteralPath `
     (Join-Path $root 'SIMULATOR_PERFORMANCE.md'),
     (Join-Path $root 'SIMULATOR_TROUBLESHOOTING.md'),
@@ -84,6 +85,7 @@ Copy-Item -LiteralPath `
     (Join-Path $root 'release\PLATFORM_SUPPORT.md'),
     (Join-Path $root 'release\LEGAL_RELEASE_GATE.md'),
     (Join-Path $root 'docs\SIMULATOR_USER_GUIDE_ZH.md'),
+    (Join-Path $root 'docs\SDK_API_REFERENCE_ZH.md'),
     (Join-Path $root 'docs\RELEASE_PROGRESS_ZH.md'),
     (Join-Path $root 'sdk\README.md') `
     -Destination (Join-Path $target 'docs')

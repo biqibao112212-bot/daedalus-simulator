@@ -5,12 +5,12 @@
 - Branch: `release/simulator-multiplatform-x86`
 - Isolated worktree: `D:\仿真\isolated\daedalus-simulator-multiplatform-x86`
 - Protected main checkout: `D:\仿真\repos\daedalus-simulator` (`main`)
-- Current source baseline: `a307cac`
+- Current committed baseline: `81602c7`
 - Product candidate: simulator `1.1.0`, SDK `1.1.0`, SHM v7 / ABI revision 2
 
 ## Mission
 
-Define and implement a publishable x86_64 release flow for Windows and Linux.
+Define and implement an internal-laboratory x86_64 release flow for Windows and Linux.
 Each target must build its own Rust binary and C++ SDK, run target-platform
 tests, and produce a platform-specific package with a SHA256 manifest.
 
@@ -50,3 +50,7 @@ scripts/package-release.sh
 Release claims require a clean committed tree and target-platform Rust/CMake
 validation. Do not modify the protected `main` checkout or formal release
 assets from this isolated branch without explicit intent.
+
+The current distribution profile is `internal-lab`: non-commercial training
+and research inside the owning laboratory. It does not require a commercial
+license file. External/public distribution remains a separate review scope.

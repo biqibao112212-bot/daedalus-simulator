@@ -1,15 +1,18 @@
-# Closed-source release gate
+# Internal laboratory release policy
 
-The repository currently contains an `AGPL-3.0` license file. A binary-only
-distribution must not be published until the copyright owner has supplied and
-approved a separate commercial/distribution license for this product and the
-third-party dependency notices have been reviewed.
+This release profile is intended for non-commercial training and research
+inside the owning laboratory. Packaging does not require a commercial license
+file. Every package carries the repository `LICENSE`, the internal-use notice,
+the exact source commit, and a SHA256 manifest.
 
-The packaging scripts therefore require:
+The engineering gates are:
 
-1. `release/COMMERCIAL_LICENSE.txt`, approved for the intended recipients;
-2. a clean committed source revision;
-3. target-native build and test gates.
+1. a clean committed source revision;
+2. target-native simulator and SDK builds;
+3. all SDK tests and compatibility checks pass;
+4. no simulator implementation source, debug symbols, inference models, or
+   editable simulator configuration is placed in the package.
 
-Stripping symbols, LTO, or omitting source files does not replace this license
-approval. This file is an engineering release gate, not legal advice.
+Do not republish this internal package or provide it to another organization
+without a separate licensing and dependency review. This file documents the
+release profile; it is not legal advice.

@@ -54,8 +54,9 @@ if [[ "$SKIP_BUILD" == 0 ]]; then
 fi
 
 SOURCE_COMMIT="$("$GIT_BIN" -C "$GIT_ROOT" rev-parse HEAD)"
-[[ -z "$("$GIT_BIN" -C "$GIT_ROOT" status --porcelain -- . ':(exclude)release/COMMERCIAL_LICENSE.txt')" ]] || die "Release packaging requires a clean committed worktree."
-[[ -f "$ROOT/release/COMMERCIAL_LICENSE.txt" ]] || die "Closed-source packaging is blocked: provide an approved release/COMMERCIAL_LICENSE.txt after legal review."
+[[ -z "$("$GIT_BIN" -C "$GIT_ROOT" status --porcelain -- .)" ]] || die "Release packaging requires a clean committed worktree."
+[[ -f "$ROOT/LICENSE" ]] || die "repository LICENSE is missing"
+[[ -f "$ROOT/release/INTERNAL_LAB_USE_NOTICE.md" ]] || die "internal-use notice is missing"
 
 if [[ "$FORCE" == 0 && ( -e "$TARGET_DIR" || -e "$ZIP_PATH" ) ]]; then
   die "Release already exists; use --force to replace it"
@@ -78,10 +79,12 @@ cp -a -- "$ROOT/assets" "$TARGET_DIR/assets"
 cp -- "$ROOT/release/release.json" "$ROOT/release/platform-matrix.json" \
   "$ROOT/release/camera-calibration.json" "$TARGET_DIR/"
 cp -- "$ROOT/release/start-simulator.sh" "$TARGET_DIR/start-simulator.sh"
-cp -- "$ROOT/release/COMMERCIAL_LICENSE.txt" "$TARGET_DIR/LICENSE.txt"
+cp -- "$ROOT/LICENSE" "$TARGET_DIR/LICENSE.txt"
+cp -- "$ROOT/release/INTERNAL_LAB_USE_NOTICE.md" "$TARGET_DIR/INTERNAL_LAB_USE_NOTICE.md"
 cp -- "$ROOT/SIMULATOR_PERFORMANCE.md" "$ROOT/SIMULATOR_TROUBLESHOOTING.md" \
   "$ROOT/RELEASE.md" "$ROOT/release/PLATFORM_SUPPORT.md" "$ROOT/release/LEGAL_RELEASE_GATE.md" \
-  "$ROOT/docs/SIMULATOR_USER_GUIDE_ZH.md" "$ROOT/docs/RELEASE_PROGRESS_ZH.md" \
+  "$ROOT/docs/SIMULATOR_USER_GUIDE_ZH.md" "$ROOT/docs/SDK_API_REFERENCE_ZH.md" \
+  "$ROOT/docs/RELEASE_PROGRESS_ZH.md" \
   "$ROOT/sdk/README.md" "$TARGET_DIR/docs/"
 cp -- "$ROOT/sdk/contract.json" "$TARGET_DIR/docs/sdk-contract.json"
 cp -a -- "$SDK_INSTALL/." "$TARGET_DIR/sdk/"

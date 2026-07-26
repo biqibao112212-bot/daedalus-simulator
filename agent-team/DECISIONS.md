@@ -41,9 +41,14 @@
     consumer-owned and absent from the package.
 13. A read-only Agent Team audit identified same-user IPC bypass limitations
     and the repository AGPL-3.0 license. Strong anti-bypass requires OS account
-    or container isolation, and closed-source packaging remains blocked until
-    an approved commercial license is provided.
+    or container isolation. The active package profile is now non-commercial
+    use inside the owning laboratory: it carries the repository license and an
+    internal-use notice without requiring a commercial license file. External
+    or public distribution remains outside this decision and requires review.
 14. A complete auto-aim loop must not pair an image with an arbitrary latest
     gimbal state. Distribution builds publish an empty-target exposure record
     into the existing 16-slot history, and SDK consumers query exact exposure
     state by the TCP image `source_sequence`.
+15. The Chinese user guide explains the end-to-end workflow; a separate
+    `docs/SDK_API_REFERENCE_ZH.md` is the function-level source of truth for
+    signatures, parameters, return values, errors, and usage examples.

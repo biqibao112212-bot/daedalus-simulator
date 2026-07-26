@@ -17,9 +17,9 @@ Build the Windows package from a Windows host with Rust, CMake, CTest, and a
 Visual C++ toolchain installed:
 
 ```powershell
-.scripts\build-release.ps1 -Platform windows -Arch x86_64
-.scripts\check-compatibility.ps1
-.scripts\package-release.ps1 -Platform windows -Arch x86_64
+.\scripts\build-release.ps1 -Platform windows -Arch x86_64
+.\scripts\check-compatibility.ps1
+.\scripts\package-release.ps1 -Platform windows -Arch x86_64
 ```
 
 Build the Linux package on an x86_64 Linux host or Linux CI runner:

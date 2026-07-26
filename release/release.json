@@ -34,6 +34,7 @@
   "udp_command_port": 5601,
   "scene_control_protocol": 1,
   "scene_control_port": 5603,
+  "distribution_profile": "internal-lab",
   "distribution_locked": true,
   "fixed_calibration": "camera-calibration.json",
   "runtime_capabilities": "daedalus-runtime-capabilities-v1.json",

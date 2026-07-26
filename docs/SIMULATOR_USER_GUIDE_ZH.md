@@ -175,6 +175,9 @@ while (true) {
 
 ## 7. SDK 接口总览
 
+本节用于快速查找。每个函数的签名、参数、返回值、错误处理和独立示例见
+[`SDK_API_REFERENCE_ZH.md`](SDK_API_REFERENCE_ZH.md)。
+
 ### 7.1 `TcpImageClient`——相机取图
 
 头文件：`tcp_image_client.hpp`

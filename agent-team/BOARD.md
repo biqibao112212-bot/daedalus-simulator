@@ -16,29 +16,30 @@
 - Image frame identity now resolves to exact exposure-time gimbal state through
   a 16-frame history; the Chinese user guide documents the complete loop.
 - Rust `cargo check --locked --features talos,distribution-release` passed.
+- Internal-laboratory packaging no longer requires a commercial license file;
+  packages carry the repository license and internal-use notice.
+- A dedicated Chinese SDK API reference documents signatures, parameters,
+  return values, errors, and examples.
 
 ## In progress
 
-Implementation and local validation are complete; no formal package is claimed
-from the uncommitted worktree.
+Native Windows build, SDK CTest, runtime smoke test, and package generation are
+the active acceptance stage.
 
 ## Remaining gates
 
-- Windows CMake/CTest/SDK install on a Windows host with CMake and MSVC.
-- Windows package generation from a clean committed revision.
 - Linux package generation from a clean committed revision; current source
-  changes intentionally keep the worktree dirty so no formal release artifact
-  is claimed from uncommitted source.
-- Target-platform runtime smoke tests with actual GPU drivers.
+  changes must be committed before a formal release artifact is generated.
+- Linux runtime smoke test with an actual GPU driver.
 - Final physical camera exposure/calibration values and revision approval.
-- Approved `release/COMMERCIAL_LICENSE.txt`; current AGPL repository license is
-  an explicit closed-source publication blocker.
+- Any external or public distribution requires a separate licensing and
+  third-party dependency review; the current profile is internal-lab only.
 - Consumer-side joint validation for each CUDA/TensorRT profile. The existing
   CUDA 12.8 + TensorRT 10.9.0.34 Windows/WSL baseline is recorded metadata,
   not a new validation performed by this branch.
 
 ## Next steps
 
-1. Run clean-checkout/package validation after an authorized commit.
-2. Complete Windows CMake/CTest/SDK validation on a native Windows toolchain.
-3. Publish platform-specific ZIPs only after both native SDK gates pass.
+1. Complete native Windows build, runtime smoke test, and package inspection.
+2. Generate the Linux package from the same committed revision.
+3. Complete final camera calibration and the consumer auto-aim joint test.

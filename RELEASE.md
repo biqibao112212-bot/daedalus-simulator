@@ -57,7 +57,9 @@ Every package contains the simulator binary, assets, fixed calibration,
 the matching SDK install tree, public contracts, launch script, and a
 `release-manifest.json` with the source commit and SHA256 for every file.
 Editable TOML and simulator source are intentionally absent. Packaging is
-blocked until `release/COMMERCIAL_LICENSE.txt` has been approved and supplied.
+configured for non-commercial use inside the owning laboratory and carries
+the repository license plus `INTERNAL_LAB_USE_NOTICE.md`. External or public
+distribution requires a separate licensing and dependency review.
 
 ## GPU and inference boundary
 
