@@ -7,6 +7,8 @@ namespace daedalus::sim::sdk::v1 {
 
 inline constexpr std::string_view kMetaFileName = "talos_ipc_meta";
 inline constexpr std::string_view kImagePoolFileName = "talos_ipc_image_pool";
+inline constexpr std::string_view kRuntimeCapabilitiesFileName =
+    "daedalus-runtime-capabilities-v1.json";
 inline constexpr std::string_view kIpcDirectoryEnvironment = "TALOS_IPC_DIR";
 inline constexpr std::string_view kImageTransportEnvironment =
     "DAEDALUS_TALOS_IMAGE_TRANSPORT";

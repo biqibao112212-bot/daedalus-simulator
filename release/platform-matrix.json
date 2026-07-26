@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "product": "daedalus-simulator",
+  "architecture": {
+    "family": "x86",
+    "name": "x86_64",
+    "rust_targets": [
+      "x86_64-pc-windows-msvc",
+      "x86_64-unknown-linux-gnu"
+    ],
+    "arm_targets": "not supported by this release",
+    "i686_targets": "not supported by this release"
+  },
+  "gpu_and_inference_boundary": {
+    "simulator_bundles_inference_runtime": false,
+    "simulator_links_cuda_or_tensorrt": false,
+    "inference_owner": "consumer",
+    "render_adapter_selection": "wgpu high-performance adapter within the selected OS backend",
+    "runtime_capabilities_file": "daedalus-runtime-capabilities-v1.json",
+    "version_selection": "consumer-build-profile",
+    "compatibility_rule": "Build the consumer bridge against the selected CUDA/TensorRT profile; the simulator package is unchanged.",
+    "validated_profiles": [
+      {
+        "id": "windows-wsl-cuda12.8-tensorrt10.9",
+        "cuda": "12.8",
+        "tensorrt": "10.9.0.34",
+        "scope": "Windows simulator with WSL consumer bridge",
+        "status": "validated-existing-baseline"
+      }
+    ]
+  },
+  "targets": [
+    {
+      "id": "windows-x86_64",
+      "os": "windows",
+      "rust_target": "x86_64-pc-windows-msvc",
+      "binary": "daedalus.exe",
+      "render_backends": {
+        "performance_default": "dx12",
+        "visible_default": "vulkan",
+        "diagnostic_options": ["dx12", "vulkan"]
+      },
+      "driver_requirements": [
+        "Up-to-date DirectX 12 or Vulkan-capable graphics driver",
+        "Do not bundle GPU drivers with the release"
+      ]
+    },
+    {
+      "id": "linux-x86_64",
+      "os": "linux",
+      "rust_target": "x86_64-unknown-linux-gnu",
+      "binary": "daedalus",
+      "render_backends": {
+        "performance_default": "vulkan",
+        "visible_default": "vulkan",
+        "diagnostic_options": ["vulkan"]
+      },
+      "driver_requirements": [
+        "A system Vulkan loader and a compatible GPU driver",
+        "Do not bundle GPU drivers with the release"
+      ]
+    }
+  ]
+}

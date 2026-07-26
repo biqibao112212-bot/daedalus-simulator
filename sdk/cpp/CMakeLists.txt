@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(DaedalusSimSdk VERSION 1.0.0 LANGUAGES CXX)
+project(DaedalusSimSdk VERSION 1.1.0 LANGUAGES CXX)
 
 include(CMakePackageConfigHelpers)
 include(CTest)
@@ -7,6 +7,7 @@ find_package(Threads REQUIRED)
 
 add_library(DaedalusSimSdk STATIC
   src/scene_control_client.cpp
+  src/runtime_capabilities.cpp
   src/socket_platform.cpp
   src/talos_metadata_reader.cpp
   src/tcp_image_client.cpp
@@ -81,6 +82,16 @@ if(BUILD_TESTING)
   )
   add_test(NAME daedalus_sim_sdk_tcp_client_test
     COMMAND daedalus_sim_sdk_tcp_client_test
+  )
+
+  add_executable(daedalus_sim_sdk_runtime_capabilities_test
+    tests/runtime_capabilities_test.cpp
+  )
+  target_link_libraries(daedalus_sim_sdk_runtime_capabilities_test PRIVATE
+    DaedalusSimSdk::DaedalusSimSdk
+  )
+  add_test(NAME daedalus_sim_sdk_runtime_capabilities_test
+    COMMAND daedalus_sim_sdk_runtime_capabilities_test
   )
 endif()
 

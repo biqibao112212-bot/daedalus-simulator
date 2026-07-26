@@ -1,38 +1,82 @@
-# Daedalus 正式发布流程
+# Daedalus Simulator release process
 
-版本唯一来源是 `VERSION`，发布契约是 `release/release.json`，SDK 契约是 `sdk/contract.json`。三者必须一致。
+`VERSION` is the single product-version source. `release/release.json` is the
+runtime release contract, `sdk/contract.json` is the SDK contract, and
+`release/platform-matrix.json` defines the supported OS/architecture targets.
+These files must agree before a package is published.
 
-## 构建与测试
+## Supported packages
+
+- Windows x86_64: `x86_64-pc-windows-msvc`, `bin/daedalus.exe`.
+- Linux x86_64: `x86_64-unknown-linux-gnu`, `bin/daedalus`.
+- 32-bit i686 and ARM are not release targets.
+
+Each platform builds and tests its own Rust binary and C++ SDK. Never copy the
+Linux SDK install tree into a Windows package or vice versa.
+
+## Build and validate
+
+Windows requires Rust, MSVC, CMake, and CTest on `PATH`:
 
 ```powershell
-Set-Location D:\仿真\repos\daedalus-simulator
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-release.ps1
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-compatibility.ps1
+.\scripts\build-release.ps1 -Platform windows -Arch x86_64
+.\scripts\check-compatibility.ps1
 ```
 
-该流程构建 Rust Release，并在 WSL 中构建、测试 C++ SDK。
+Linux requires an x86_64 Linux runner with Rust, CMake, CTest, a C++17 compiler,
+and the system window/audio/Vulkan development packages:
 
-## 生成发布包
-
-工作树必须干净并已提交：
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\package-release.ps1
+```bash
+bash scripts/build-release.sh
 ```
 
-默认输出：
+Both build paths use
+`cargo build --locked --release --features talos,distribution-release`, run
+the SDK CTest suite, and install the SDK into a platform-specific build tree.
+
+## Package
+
+Release packaging requires a clean committed worktree. The output layout is:
 
 ```text
-D:\仿真\releases\daedalus-simulator\1.0.1\
-D:\仿真\releases\daedalus-simulator\1.0.1.zip
+<output-root>/<version>/windows-x86_64/
+<output-root>/<version>/windows-x86_64.zip
+<output-root>/<version>/linux-x86_64/
+<output-root>/<version>/linux-x86_64.zip
 ```
 
-发布目录包含：
+```powershell
+.\scripts\package-release.ps1 -Platform windows -Arch x86_64
+```
 
-- `bin/daedalus.exe` 及运行 DLL；
-- `assets/`、两套固定配置和启动脚本；
-- `sdk/` 下可被 `find_package(DaedalusSimSdk 1 CONFIG REQUIRED)` 发现的完整开发包；
-- 接口、性能、故障排查和契约文档；
-- `release-manifest.json` 文件大小与 SHA256 清单。
+```bash
+bash scripts/package-release.sh
+```
 
-发布提交通过 clean 状态复验后创建注释标签 `simulator-v<version>`。只有用户明确授权时才推送提交、标签和 ZIP。
+Every package contains the simulator binary, assets, fixed calibration,
+the matching SDK install tree, public contracts, launch script, and a
+`release-manifest.json` with the source commit and SHA256 for every file.
+Editable TOML and simulator source are intentionally absent. Packaging is
+blocked until `release/COMMERCIAL_LICENSE.txt` has been approved and supplied.
+
+## GPU and inference boundary
+
+The package does not contain GPU drivers, CUDA, cuDNN, TensorRT, ONNX files, or
+TensorRT engines. Windows uses DX12 for the measured high-performance mode and
+Vulkan for visible validation; Linux uses Vulkan for both. Drivers are supplied
+by the host system.
+
+wgpu selects a high-performance adapter from the selected OS backend. After
+renderer initialization the exact adapter, backend, vendor/device IDs and
+driver strings are published to
+`$TALOS_IPC_DIR/daedalus-runtime-capabilities-v1.json` and read through the
+SDK `readRuntimeCapabilities()` API.
+
+CUDA/TensorRT inference is owned by the consumer bridge. Different inference
+versions are selected by rebuilding that consumer against its own CUDA/TensorRT
+profile; the simulator package and SDK contract do not change. The existing
+recorded baseline is Windows simulator + WSL consumer bridge with CUDA 12.8 and
+TensorRT 10.9.0.34. Other profiles require an independent joint validation.
+
+See `release/PLATFORM_SUPPORT.md` for the full platform matrix and release
+acceptance gates.

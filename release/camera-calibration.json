@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "calibration_id": "daedalus-camera-1440x1080-v1",
+  "revision": 1,
+  "read_only": true,
+  "runtime_setter_available": false,
+  "image": {
+    "width": 1440,
+    "height": 1080,
+    "pixel_format": "rgba32",
+    "alpha_semantics": "opaque; consumers may discard the fourth channel"
+  },
+  "intrinsics": {
+    "model": "pinhole",
+    "fx": 1303.67532368147,
+    "fy": 1303.67532368147,
+    "cx": 720.0,
+    "cy": 540.0,
+    "distortion_model": "plumb_bob",
+    "distortion": [0.0, 0.0, 0.0, 0.0, 0.0]
+  },
+  "extrinsics": {
+    "from_frame": "gimbal",
+    "to_frame": "camera_optical",
+    "translation_m": [-0.00183099997229874, 0.194811643336925, -0.191965559402888],
+    "quaternion_xyzw": [0.216439577143693, 0.0, 0.0, 0.976296005227323],
+    "source": "vehicle.glb/SHOT_DIRECTION plus fixed 0.2 m camera clearance"
+  },
+  "exposure": {
+    "auto_exposure": false,
+    "tonemapping": "none",
+    "physical_exposure_time_us": null,
+    "analog_gain": null,
+    "status": "digital renderer; replace null physical-camera fields after final calibration"
+  },
+  "coordinates": {
+    "handedness": "right-handed",
+    "world_up": "+Y",
+    "quaternion_order": "xyzw",
+    "linear_unit": "meter",
+    "angular_unit": "degree at SDK boundary"
+  }
+}

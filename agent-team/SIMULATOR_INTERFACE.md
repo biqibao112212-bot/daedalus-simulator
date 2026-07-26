@@ -1,10 +1,10 @@
 # 模拟器公共 SDK 接口
 
-- 契约版本：`DaedalusSimSdk 1.0.0`
+- 契约版本：`DaedalusSimSdk 1.1.0` / SHM v7 / ABI revision 2
 - 生产仓库：`D:\仿真\repos\daedalus-simulator`
 - 生产分支：`main`
 - IPC：`SHM v7`
-- 图像：RGB24，最大且默认 `1440×1080`
+- 图像：默认 TCP RGBA32 `1440×1080`；旧 SHM 图像槽 RGB24
 
 消费者应从模拟器安装 SDK，不得复制 `talos_v1.hpp`：
 

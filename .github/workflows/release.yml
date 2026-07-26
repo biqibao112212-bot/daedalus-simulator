@@ -1,0 +1,125 @@
+name: simulator-release
+
+on:
+  push:
+    tags:
+      - 'simulator-v*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-x86_64:
+    name: Windows x86_64 release
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify release tag
+        shell: pwsh
+        run: |
+          $version = (Get-Content VERSION -Raw).Trim()
+          if ($env:GITHUB_REF_TYPE -eq 'tag' -and $env:GITHUB_REF_NAME -ne "simulator-v$version") {
+            throw "Tag $env:GITHUB_REF_NAME does not match VERSION $version"
+          }
+
+      - name: Install Rust target
+        shell: pwsh
+        run: rustup target add x86_64-pc-windows-msvc
+
+      - name: Build simulator and SDK
+        shell: pwsh
+        run: .\scripts\build-release.ps1 -Platform windows -Arch x86_64
+
+      - name: Check public compatibility
+        shell: pwsh
+        run: .\scripts\check-compatibility.ps1
+
+      - name: Materialize approved commercial license
+        shell: pwsh
+        env:
+          COMMERCIAL_LICENSE_B64: ${{ secrets.COMMERCIAL_LICENSE_B64 }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:COMMERCIAL_LICENSE_B64)) {
+            throw 'COMMERCIAL_LICENSE_B64 is required for closed-source packaging.'
+          }
+          [IO.File]::WriteAllBytes(
+            'release\COMMERCIAL_LICENSE.txt',
+            [Convert]::FromBase64String($env:COMMERCIAL_LICENSE_B64))
+
+      - name: Package Windows release
+        shell: pwsh
+        env:
+          RELEASE_OUTPUT_ROOT: ${{ github.workspace }}\dist
+        run: .\scripts\package-release.ps1 -Platform windows -Arch x86_64 -OutputRoot $env:RELEASE_OUTPUT_ROOT -SkipBuild
+
+      - name: Upload Windows package
+        uses: actions/upload-artifact@v4
+        with:
+          name: daedalus-simulator-windows-x86_64
+          path: dist/**/*
+          if-no-files-found: error
+
+  linux-x86_64:
+    name: Linux x86_64 release
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify release tag
+        shell: bash
+        run: |
+          version="$(tr -d '[:space:]' < VERSION)"
+          if [[ "${GITHUB_REF_TYPE}" == tag && "${GITHUB_REF_NAME}" != "simulator-v${version}" ]]; then
+            echo "Tag ${GITHUB_REF_NAME} does not match VERSION ${version}" >&2
+            exit 1
+          fi
+
+      - name: Install Linux build dependencies
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes \
+            cmake g++ make pkg-config zip \
+            libasound2-dev libudev-dev libvulkan-dev \
+            libwayland-dev libx11-dev libxcursor-dev libxi-dev \
+            libxkbcommon-dev libxrandr-dev
+
+      - name: Install Rust target
+        shell: bash
+        run: rustup target add x86_64-unknown-linux-gnu
+
+      - name: Build simulator and SDK
+        shell: bash
+        run: bash scripts/build-release.sh
+
+      - name: Check public compatibility
+        shell: pwsh
+        run: ./scripts/check-compatibility.ps1
+
+      - name: Materialize approved commercial license
+        shell: bash
+        env:
+          COMMERCIAL_LICENSE_B64: ${{ secrets.COMMERCIAL_LICENSE_B64 }}
+        run: |
+          [[ -n "$COMMERCIAL_LICENSE_B64" ]] || {
+            echo 'COMMERCIAL_LICENSE_B64 is required for closed-source packaging.' >&2
+            exit 1
+          }
+          printf '%s' "$COMMERCIAL_LICENSE_B64" | base64 --decode > release/COMMERCIAL_LICENSE.txt
+
+      - name: Package Linux release
+        shell: bash
+        run: bash scripts/package-release.sh --output-root "$GITHUB_WORKSPACE/dist" --skip-build
+
+      - name: Upload Linux package
+        uses: actions/upload-artifact@v4
+        with:
+          name: daedalus-simulator-linux-x86_64
+          path: dist/**/*
+          if-no-files-found: error

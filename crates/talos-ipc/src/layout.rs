@@ -9,7 +9,7 @@ pub const SHM_MAGIC: u32 = 0x54414C05;
 // geometry. Readers must reject earlier layouts and obtain ABI declarations
 // from the simulator-owned SDK package.
 pub const SHM_VERSION: u32 = 7;
-pub const SDK_ABI_REVISION: u32 = 1;
+pub const SDK_ABI_REVISION: u32 = 2;
 
 pub const IMAGE_CHANNELS: u32 = 3;
 pub const IMAGE_SIZE: usize = (IMAGE_WIDTH * IMAGE_HEIGHT * IMAGE_CHANNELS) as usize;
@@ -330,7 +330,8 @@ pub struct ExposureState {
     pub gimbal_quaternion_world_wxyz: [f32; 4],
     pub camera_position_world: [f32; 3],
     pub camera_quaternion_world_wxyz: [f32; 4],
-    pub _pad: [u8; 8],
+    pub gimbal_yaw_rad: f32,
+    pub gimbal_pitch_rad: f32,
 }
 const _: () = assert!(size_of::<ExposureState>() == 128);
 
@@ -349,7 +350,8 @@ impl Default for ExposureState {
             gimbal_quaternion_world_wxyz: [0.0; 4],
             camera_position_world: [0.0; 3],
             camera_quaternion_world_wxyz: [0.0; 4],
-            _pad: [0; 8],
+            gimbal_yaw_rad: 0.0,
+            gimbal_pitch_rad: 0.0,
         }
     }
 }
@@ -398,11 +400,16 @@ impl Default for GroundTruthHistory {
 #[derive(Debug, Clone, Copy)]
 pub struct RuntimeState {
     pub timestamp_ns: u64,
+    pub frame_seq: u64,
+    pub last_applied_command_id: u64,
     pub following: u8,
     pub _pad1: [u8; 3],
     pub gimbal_yaw_rad: f32,
     pub gimbal_pitch_rad: f32,
-    pub _pad: [u8; 44],
+    pub gimbal_yaw_velocity_rad_s: f32,
+    pub gimbal_pitch_velocity_rad_s: f32,
+    pub status_flags: u32,
+    pub _pad: [u8; 16],
 }
 const _: () = assert!(size_of::<RuntimeState>() == 64);
 
@@ -410,11 +417,16 @@ impl Default for RuntimeState {
     fn default() -> Self {
         Self {
             timestamp_ns: 0,
+            frame_seq: 0,
+            last_applied_command_id: 0,
             following: 0,
             _pad1: [0; 3],
             gimbal_yaw_rad: 0.0,
             gimbal_pitch_rad: 0.0,
-            _pad: [0; 44],
+            gimbal_yaw_velocity_rad_s: 0.0,
+            gimbal_pitch_velocity_rad_s: 0.0,
+            status_flags: 0,
+            _pad: [0; 16],
         }
     }
 }

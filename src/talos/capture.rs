@@ -445,7 +445,12 @@ pub fn publish_talos_pose_system(
             _pad1: [0; 3],
             gimbal_yaw_rad: gimbal_data.local_yaw,
             gimbal_pitch_rad: gimbal_data.pitch,
-            _pad: [0; 44],
+            frame_seq: frame_stamp.frame_seq,
+            last_applied_command_id: crate::network_bridge::last_applied_network_command_id(),
+            gimbal_yaw_velocity_rad_s: 0.0,
+            gimbal_pitch_velocity_rad_s: 0.0,
+            status_flags: 0,
+            _pad: [0; 16],
         });
     }
 }

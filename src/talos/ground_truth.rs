@@ -196,7 +196,10 @@ pub fn publish_ground_truth_system(
     >,
     parent_query: Query<&ChildOf>,
     controlled_chassis_query: Query<&GlobalTransform, (With<Controlled>, With<Infantry>)>,
-    gimbal_query: Query<&GlobalTransform, (With<Controlled>, With<InfantryGimbal>)>,
+    gimbal_query: Query<
+        (&GlobalTransform, &InfantryGimbal),
+        (With<Controlled>, With<InfantryGimbal>),
+    >,
     launch_offset_query: Query<&Transform, (With<Controlled>, With<InfantryLaunchOffset>)>,
     camera_query: Query<&GlobalTransform, With<CaptureSource>>,
     rune_query: Query<(
@@ -242,7 +245,8 @@ pub fn publish_ground_truth_system(
         exposure_state.chassis_rpy_world = [roll, pitch, yaw];
         exposure_state.state_flags |= EXPOSURE_STATE_HAS_CHASSIS_WORLD_POSE;
     }
-    if let (Ok(gimbal_tf), Ok(launch_local)) = (gimbal_query.single(), launch_offset_query.single())
+    if let (Ok((gimbal_tf, gimbal_state)), Ok(launch_local)) =
+        (gimbal_query.single(), launch_offset_query.single())
     {
         let p = to_ros_vec3(gimbal_tf.translation());
         let q = {
@@ -254,6 +258,8 @@ pub fn publish_ground_truth_system(
         };
         exposure_state.gimbal_position_world = p.to_array();
         exposure_state.gimbal_quaternion_world_wxyz = [q.w, q.x, q.y, q.z];
+        exposure_state.gimbal_yaw_rad = gimbal_state.local_yaw;
+        exposure_state.gimbal_pitch_rad = gimbal_state.pitch;
         exposure_state.state_flags |= EXPOSURE_STATE_HAS_GIMBAL_WORLD_POSE;
     }
     if let Ok(camera_tf) = camera_query.single() {
@@ -263,6 +269,16 @@ pub fn publish_ground_truth_system(
             &mut exposure_state.camera_quaternion_world_wxyz,
         );
         exposure_state.state_flags |= EXPOSURE_STATE_HAS_CAMERA_WORLD_POSE;
+    }
+
+    // Distribution consumers need exact image/exposure pose and gimbal state,
+    // but not simulator target truth. Publish an empty batch with the frame
+    // identity so the 16-slot history remains a synchronization channel.
+    if crate::distribution::is_locked() {
+        if let Ok(mut publisher) = ctx.publisher.try_lock() {
+            publisher.publish_ground_truth(&batch, &exposure_state);
+        }
+        return;
     }
 
     // Collect robot ground truth from all infantry robots

@@ -1,17 +1,22 @@
 {
-  "sdk_version": "1.0.0",
+  "sdk_version": "1.1.0",
   "shm_magic": "0x54414C05",
   "shm_version": 7,
-  "sdk_abi_revision": 1,
+  "sdk_abi_revision": 2,
   "image_width": 1440,
   "image_height": 1080,
   "image_channels": 3,
+  "shm_image_format": "rgb24",
+  "tcp_image_default_format": "rgba32",
+  "tcp_image_supported_formats": ["rgb24", "rgba32"],
   "meta_size": 76992,
   "tcp_image_protocol": 1,
   "tcp_image_port": 5602,
   "udp_command_port": 5601,
   "scene_control_protocol": 1,
   "scene_control_port": 5603,
+  "runtime_capabilities_file": "daedalus-runtime-capabilities-v1.json",
+  "fixed_calibration_file": "camera-calibration.json",
   "scene_control_operations": [
     "ping",
     "create_session",
@@ -23,14 +28,21 @@
   ],
   "capabilities": [
     "image_identity",
-    "camera_intrinsics",
-    "exposure_pose",
-    "chassis_observation",
-    "armor_ground_truth",
-    "rune_ground_truth",
+    "fixed_calibration",
     "gimbal_command",
+    "gimbal_actual_state",
+    "frame_synchronized_gimbal_state",
+    "exposure_pose_by_frame",
     "tcp_image",
-    "scene_control"
+    "scene_control",
+    "runtime_capabilities"
+  ],
+  "unsupported_interfaces": [
+    "camera_calibration_setter",
+    "vision_detection_result_upload",
+    "pnp_result_upload",
+    "trajectory_prediction_result_upload",
+    "inference_model_management"
   ],
   "consumers": ["auto-aim", "energy-buff"]
 }

@@ -1,17 +1,56 @@
 [CmdletBinding()]
-param([switch]$SkipSimulator)
+param(
+    [ValidateSet('windows', 'linux')]
+    [string]$Platform = 'windows',
+    [ValidateSet('x86_64')]
+    [string]$Arch = 'x86_64',
+    [string]$RustTarget,
+    [switch]$SkipSimulator,
+    [switch]$SkipSdk
+)
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root
 
+if ([string]::IsNullOrWhiteSpace($RustTarget)) {
+    $RustTarget = switch ($Platform) {
+        'windows' { 'x86_64-pc-windows-msvc' }
+        'linux' { 'x86_64-unknown-linux-gnu' }
+    }
+}
+if ($Platform -ne 'windows') {
+    throw 'Linux release builds must run scripts/build-release.sh on an x86_64 Linux/WSL environment. PowerShell does not cross-compile the Linux SDK here.'
+}
+
 if (-not $SkipSimulator) {
-    cargo build --release --features talos
+    cargo build --locked --release --features talos,distribution-release --target $RustTarget
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 
-$rootForWsl = $root.Replace('\','/')
-$rootWsl = (& wsl.exe -d Ubuntu-OSTEP -- wslpath -a -u $rootForWsl).Trim()
-$command = "cmake -S '$rootWsl/sdk/cpp' -B '$rootWsl/build/sim-sdk' -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON && cmake --build '$rootWsl/build/sim-sdk' --parallel && ctest --test-dir '$rootWsl/build/sim-sdk' --output-on-failure && cmake --install '$rootWsl/build/sim-sdk' --prefix '$rootWsl/build/sim-sdk-install'"
-& wsl.exe -- bash -lc $command
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+if (-not $SkipSdk) {
+    $cmake = Get-Command cmake -ErrorAction SilentlyContinue
+    $ctest = Get-Command ctest -ErrorAction SilentlyContinue
+    if ($null -eq $cmake -or $null -eq $ctest) {
+        throw 'Windows SDK release builds require cmake and ctest on PATH. Install a Windows CMake toolchain, then rerun this script.'
+    }
+
+    $packageId = "$Platform-$Arch"
+    $buildRoot = Join-Path $root "build\release\$packageId"
+    $sdkBuild = Join-Path $buildRoot 'sdk-build'
+    $sdkInstall = Join-Path $buildRoot 'sdk-install'
+    New-Item -ItemType Directory -Force -Path $buildRoot | Out-Null
+
+    cmake -S (Join-Path $root 'sdk\cpp') -B $sdkBuild -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DCMAKE_INSTALL_PREFIX=$sdkInstall
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    cmake --build $sdkBuild --parallel
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    ctest --test-dir $sdkBuild --output-on-failure
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    cmake --install $sdkBuild
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+}
+
+Write-Output "rust_target=$RustTarget"
+Write-Output "binary=$(Join-Path $root "target\$RustTarget\release\daedalus.exe")"
+Write-Output "sdk_install=$(Join-Path $root "build\release\windows-$Arch\sdk-install")"

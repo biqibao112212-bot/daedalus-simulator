@@ -5,10 +5,10 @@
 
 namespace daedalus::sim::sdk::v1 {
 
-inline constexpr const char *kSdkVersion = "1.0.0";
+inline constexpr const char *kSdkVersion = "1.1.0";
 inline constexpr std::uint32_t kShmMagic = 0x54414C05;
 inline constexpr std::uint32_t kShmVersion = 7;
-inline constexpr std::uint32_t kSdkAbiRevision = 1;
+inline constexpr std::uint32_t kSdkAbiRevision = 2;
 inline constexpr std::uint32_t kImageWidth = 1440;
 inline constexpr std::uint32_t kImageHeight = 1080;
 inline constexpr std::uint32_t kImageChannels = 3;
@@ -19,6 +19,8 @@ inline constexpr std::size_t kImagePoolSize = kImageSlotStrideBytes * 3;
 inline constexpr std::size_t kMetaSize = 76992;
 inline constexpr std::size_t kGimbalPoseIndex = 0;
 inline constexpr std::size_t kOdomPoseIndex = 1;
+inline constexpr std::size_t kMuzzlePoseIndex = 2;
+inline constexpr std::size_t kCameraPoseIndex = 3;
 inline constexpr std::uint8_t kFlagNew = 0x80;
 inline constexpr std::uint8_t kIndexMask = 0x03;
 
@@ -84,11 +86,16 @@ static_assert(sizeof(ChassisObservation) == 128);
 
 struct alignas(64) RuntimeState {
   std::uint64_t timestamp_ns;
+  std::uint64_t frame_seq;
+  std::uint64_t last_applied_command_id;
   std::uint8_t following;
   std::uint8_t pad1[3];
   float gimbal_yaw_rad;
   float gimbal_pitch_rad;
-  std::uint8_t pad[44];
+  float gimbal_yaw_velocity_rad_s;
+  float gimbal_pitch_velocity_rad_s;
+  std::uint32_t status_flags;
+  std::uint8_t pad[16];
 };
 static_assert(sizeof(RuntimeState) == 64);
 
@@ -204,7 +211,8 @@ struct alignas(64) ExposureState {
   float gimbal_quaternion_world_wxyz[4];
   float camera_position_world[3];
   float camera_quaternion_world_wxyz[4];
-  std::uint8_t pad[8];
+  float gimbal_yaw_rad;
+  float gimbal_pitch_rad;
 };
 static_assert(sizeof(ExposureState) == 128);
 static_assert(offsetof(ExposureState, chassis_position_world) == 24);

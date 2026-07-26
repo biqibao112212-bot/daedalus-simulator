@@ -1,18 +1,49 @@
-# 模拟器关键决策
+# Daedalus Simulator release decisions
 
-上下文版本：`CTX-SIM-REPO-2026.07-v2`
-
-1. 模拟器唯一权威实现为独立仓库 `D:\仿真\repos\daedalus-simulator` 的 `main`；旧共享仓库只作迁移来源。
-2. 基线固定为 1440×1080 RGB24；物理 250 Hz；高性能采集上限 200 Hz；必须使用 Release 评估性能。
-3. 公共兼容边界为 `DaedalusSimSdk 1.x`。破坏 ABI 或语义时升级主版本；消费者不得复制结构体。
-4. `SHM v7` 通过 `magic + version + struct_size` 失败关闭。图像、位姿、真值必须使用同一生产者 epoch、序号和曝光时间戳。
-5. 跨 Windows/WSL 的 1440×1080 图像默认走 TCP latest-only 通道。文件映射保留为同系统兼容模式，不作为 B 分支性能配置。
-6. 高性能模式默认关闭可见预览，但离屏图像仍正常渲染和采集；只有验收画面时才启用 `-Visible`。
-7. TensorRT 属于消费者推理后端，不由模拟器自动启动。消费者启动器负责显式启动算法，防止纯模拟器基线混入推理开销。
-8. 模拟器性能结论只认当前版本实测；旧分辨率和旧脏工作树记录全部失效。
-9. 正式发布物必须包含模拟器二进制、运行配置、资产、完整 SDK、契约、SHA256 清单和版本标签。
-10. 实时瞄准命令、图像和场景管理分离为 `5601/udp`、`5602/tcp`、`5603/udp`；只有管理面使用会话、命令号和应用完成 ACK。
-11. SDK 1.0 的场景边界是固定场景、固定靶车运动和打符状态；消费者不得绕过 SDK 访问 Bevy 实体。新增暂停/单步或任意实体生命周期时由模拟器升级公共协议。
-12. 消费者调试发现的问题不授予模拟器写权限。必须先向用户提交具体变更提案并获得明确批准，之后才由模拟器仓库独立修改和发布；批准前只能只读诊断，消费者分支永远不得携带模拟器实现。
-13. Windows 渲染后端按用途隔离：无窗口高性能模式固定 DX12；人工可视验收默认 Vulkan。原因是已验证机器上的 DX12 可见交换链在窗口重配置时会触发 wgpu `ResizeBuffers / Invalid surface` 致命错误，而 Vulkan 可见模式稳定；该选择不改变 1440×1080 离屏采集、SDK 或消费者接口。
-14. 高性能模式的 UI 边界由模拟器自身保证：`DAEDALUS_PERF_DISABLE_UI=1` 时不创建 Bevy 主窗口，也不启动靶场 auto-aim debug 子进程；可视 `-Visible` 模式仍创建主窗口并保留 debug。该修复不改变 SDK/IPC/场景控制协议，需随下一次 patch Release 传播。
+1. Work is isolated in `D:\仿真\isolated\daedalus-simulator-multiplatform-x86`
+   on branch `release/simulator-multiplatform-x86`; the canonical `main`
+   checkout is never switched or written by this task.
+2. The release architecture uses two native build paths: PowerShell for
+   Windows MSVC and Bash for Linux GNU. A Windows WSL SDK build must not be
+   reused as a Windows SDK artifact.
+3. The release architecture targets x86_64 only. 32-bit i686 and ARM are not
+   promised because the fixed SDK layout and GPU/runtime validation are 64-bit.
+4. Release directories are version/platform/architecture scoped so Windows
+   and Linux packages can coexist without replacing protected artifacts.
+5. Windows defaults to DX12 for high-performance mode and Vulkan for visible
+   validation. Linux defaults to Vulkan for both modes. GPU drivers remain
+   system dependencies.
+6. The simulator does not bundle or link CUDA, cuDNN, TensorRT, ONNX, or engine
+   files. Inference versions are consumer-owned build profiles; the simulator
+   package is unchanged between profiles. Joint tests must prove the actual
+   consumer backend and engine hash.
+7. The release candidate boundary is SDK 1.1.0, SHM v7, ABI revision 2,
+   default TCP RGBA32 1440x1080 (legacy SHM RGB24), TCP 5602, UDP 5601, and
+   scene control 5603. ABI revision 2
+   adds frame/command identity and typed actual gimbal feedback while keeping
+   the metadata region size unchanged.
+8. A formal package requires a clean committed source revision, target-native
+   Rust/CMake tests, a platform-specific binary/SDK pair, and a SHA256 file
+   manifest. Dirty local builds are evidence for development only.
+9. The Linux packager uses native Git on native Linux and falls back to
+   `git.exe` only when WSL is reading a Windows-created worktree whose `.git`
+   pointer contains a Windows path. This keeps local WSL packaging diagnostic
+   without weakening the clean-tree gate.
+10. Distribution builds compile with `distribution-release`: configuration is
+    embedded, hot reload and local mutation/debug paths are disabled, network
+    controls bind to loopback, and ground truth is not published.
+11. Fixed camera calibration is read-only. The current digital-camera geometry
+    is recorded in `release/camera-calibration.json`; null physical exposure
+    fields must be replaced and the calibration revision bumped after final
+    calibration. No calibration setter or vision-result upload API is added.
+12. wgpu owns adapter selection; the SDK reads the actual selected adapter and
+    driver from the runtime capabilities record. CUDA/TensorRT remains wholly
+    consumer-owned and absent from the package.
+13. A read-only Agent Team audit identified same-user IPC bypass limitations
+    and the repository AGPL-3.0 license. Strong anti-bypass requires OS account
+    or container isolation, and closed-source packaging remains blocked until
+    an approved commercial license is provided.
+14. A complete auto-aim loop must not pair an image with an arbitrary latest
+    gimbal state. Distribution builds publish an empty-target exposure record
+    into the existing 16-slot history, and SDK consumers query exact exposure
+    state by the TCP image `source_sequence`.

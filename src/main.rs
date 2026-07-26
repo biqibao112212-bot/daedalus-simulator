@@ -4,10 +4,12 @@ mod capture;
 mod components;
 mod config;
 mod dataset;
+mod distribution;
 mod handler;
 mod integrated_auto_aim;
 mod network_bridge;
 mod robomaster;
+mod runtime_capabilities;
 mod scene_control;
 mod setup;
 mod statistic;
@@ -46,6 +48,7 @@ use crate::integrated_auto_aim::IntegratedAutoAimPlugin;
 use crate::integrated_auto_aim::configure_integrated_auto_aim_environment;
 use crate::network_bridge::NetworkBridgePlugin;
 use crate::robomaster::prelude::RoboMasterPlugins;
+use crate::runtime_capabilities::RuntimeCapabilitiesPlugin;
 use crate::scene_control::{
     SceneControlPlugin, complete_scene_control_commands, receive_scene_control_commands,
 };
@@ -313,6 +316,20 @@ fn primary_window_for_mode(
 }
 
 fn simulator_asset_folder() -> String {
+    if distribution::is_locked() {
+        return std::env::current_exe()
+            .ok()
+            .and_then(|path| {
+                path.parent()
+                    .and_then(|bin| bin.parent())
+                    .map(PathBuf::from)
+            })
+            .map(|root| root.join("assets"))
+            .filter(|path| path.is_dir())
+            .unwrap_or_else(|| PathBuf::from("assets"))
+            .to_string_lossy()
+            .into_owned();
+    }
     [
         std::env::current_dir().ok().map(|path| path.join("assets")),
         std::env::current_exe()
@@ -368,7 +385,13 @@ fn should_enable_talos_plugin(app: &App) -> bool {
 }
 
 fn main() {
+    distribution::prepare_environment();
     let args = Args::parse();
+
+    if distribution::is_locked() && (args.auto_gen || args.debug_ui) {
+        eprintln!("development command-line modes are disabled in the distribution build");
+        std::process::exit(2);
+    }
 
     if args.debug_ui {
         run_auto_aim_debug_ui_app();
@@ -436,17 +459,21 @@ fn main() {
             .set(render_plugin_for_platform()),
         physics_plugins_from_config(&config),
     ));
+    app.add_plugins(RuntimeCapabilitiesPlugin);
     configure_physics_runtime(&mut app, &config);
 
-    if !disable_performance_ui {
+    if !disable_performance_ui && !distribution::is_locked() {
         app.add_plugins(EguiPlugin::default());
         if config.debug.inspector {
             app.add_plugins(WorldInspectorPlugin::new());
         }
     }
 
+    if !distribution::is_locked() {
+        app.add_plugins(DatasetPlugin);
+    }
+
     app.add_plugins(RoboMasterPlugins)
-        .add_plugins(DatasetPlugin)
         .add_plugins(ConfigPlugin)
         .add_plugins(NetworkBridgePlugin)
         .add_plugins(SceneControlPlugin)
@@ -478,7 +505,8 @@ fn main() {
         .add_systems(Startup, (setup, setup_projectile))
         .add_systems(
             Startup,
-            spawn_scene_mode_button_panel.run_if(|| !performance_ui_disabled()),
+            spawn_scene_mode_button_panel
+                .run_if(|| !performance_ui_disabled() && !distribution::is_locked()),
         )
         .add_observer(setup_ground)
         .add_observer(setup_dart_launch)
@@ -503,17 +531,21 @@ fn main() {
             (
                 // Input phase
                 (
-                    auto_aim_switch,
-                    following_controls,
-                    switch_slapper_control,
-                    vehicle_controls.run_if(|mode: Res<CameraMode>| mode.0 != FollowingType::Free),
+                    (
+                        auto_aim_switch,
+                        following_controls,
+                        switch_slapper_control,
+                        vehicle_controls
+                            .run_if(|mode: Res<CameraMode>| mode.0 != FollowingType::Free),
+                        gimbal_controls,
+                        mouse_gimbal_controls,
+                        scene_mode_keyboard_shortcuts,
+                        handle_scene_mode_button_interactions,
+                        toggle_shooting_range_control_window,
+                    )
+                        .run_if(|| !distribution::is_locked()),
                     remote_vehicle_controls,
-                    gimbal_controls,
-                    mouse_gimbal_controls,
                     remote_gimbal_controls,
-                    scene_mode_keyboard_shortcuts,
-                    handle_scene_mode_button_interactions,
-                    toggle_shooting_range_control_window,
                     receive_scene_control_commands,
                 )
                     .in_set(GameplaySystems::Input),
@@ -522,7 +554,8 @@ fn main() {
                     update_frequency_metrics,
                     apply_auto_aim_scene_mode_request,
                     complete_scene_control_commands.after(apply_auto_aim_scene_mode_request),
-                    manage_shooting_range_debug_process.run_if(|| !performance_ui_disabled()),
+                    manage_shooting_range_debug_process
+                        .run_if(|| !performance_ui_disabled() && !distribution::is_locked()),
                     change_appearance,
                     update_scene_mode_button_panel,
                     update_help_text,
@@ -531,7 +564,9 @@ fn main() {
                     .in_set(GameplaySystems::GameLogic),
                 // Camera phase
                 (
-                    freecam_controls.run_if(|mode: Res<CameraMode>| mode.0 == FollowingType::Free),
+                    freecam_controls.run_if(|mode: Res<CameraMode>| {
+                        !distribution::is_locked() && mode.0 == FollowingType::Free
+                    }),
                     systems::update_camera_follow
                         .run_if(|mode: Res<CameraMode>| mode.0 != FollowingType::Free),
                 )
@@ -540,9 +575,10 @@ fn main() {
                 // Cleanup phase
                 (
                     cleanup_projectiles,
-                    screenshot_on_f2
-                        .run_if(|input: Res<ButtonInput<KeyCode>>| input.just_pressed(KeyCode::F2)),
-                    screenshot_saving,
+                    screenshot_on_f2.run_if(|input: Res<ButtonInput<KeyCode>>| {
+                        !distribution::is_locked() && input.just_pressed(KeyCode::F2)
+                    }),
+                    screenshot_saving.run_if(|| !distribution::is_locked()),
                 )
                     .in_set(GameplaySystems::Cleanup),
             ),
@@ -571,20 +607,24 @@ fn main() {
             PostUpdate,
             projectile_launch.after(TransformSystems::Propagate).run_if(
                 |keyboard: Res<ButtonInput<KeyCode>>, auto_aim: Res<SubscribeAutoAim>| {
-                    keyboard.pressed(KeyCode::Space) && !auto_aim.load(Ordering::Acquire)
+                    !distribution::is_locked()
+                        && keyboard.pressed(KeyCode::Space)
+                        && !auto_aim.load(Ordering::Acquire)
                 },
             ),
         )
         .add_systems(
             PostUpdate,
-            dart_launch
-                .after(TransformSystems::Propagate)
-                .run_if(|keyboard: Res<ButtonInput<KeyCode>>| keyboard.just_pressed(KeyCode::KeyG)),
+            dart_launch.after(TransformSystems::Propagate).run_if(
+                |keyboard: Res<ButtonInput<KeyCode>>| {
+                    !distribution::is_locked() && keyboard.just_pressed(KeyCode::KeyG)
+                },
+            ),
         )
         .add_systems(PostUpdate, uav_launch.after(TransformSystems::Propagate))
         .add_systems(FixedUpdate, projectile_aerodynamics);
 
-    if !disable_performance_ui {
+    if !disable_performance_ui && !distribution::is_locked() {
         app.add_systems(
             EguiPrimaryContextPass,
             (

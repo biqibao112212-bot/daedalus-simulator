@@ -27,6 +27,20 @@ struct GroundTruthExposureSnapshot {
   std::uint64_t publication = 0;
 };
 
+// Public command-space gimbal feedback. yaw_deg uses the same zero as
+// UdpGimbalCommand::yaw_deg. pitch_deg is 90 degrees at level aim, matching
+// UdpGimbalCommand::pitch_deg.
+struct GimbalState {
+  std::uint64_t frame_seq = 0;
+  std::uint64_t timestamp_ns = 0;
+  std::uint64_t last_applied_command_id = 0;
+  float yaw_deg = 0.0F;
+  float pitch_deg = 90.0F;
+  float yaw_velocity_deg_s = 0.0F;
+  float pitch_velocity_deg_s = 0.0F;
+  std::uint32_t status_flags = 0;
+};
+
 class TalosMetadataReader {
  public:
   TalosMetadataReader(const void* mapped_memory,
@@ -41,6 +55,13 @@ class TalosMetadataReader {
   [[nodiscard]] ClientResult<ChassisObservation> readChassisObservation() const;
   [[nodiscard]] ClientResult<GroundTruthBatch> readLatestGroundTruth() const;
   [[nodiscard]] ClientResult<RuntimeState> readRuntimeState() const;
+  [[nodiscard]] ClientResult<GimbalState> readGimbalState() const;
+  // Reads the actual gimbal state captured with a specific image frame. The
+  // history retains the latest 16 exposure frames.
+  [[nodiscard]] ClientResult<GimbalState> readGimbalStateForFrame(
+      std::uint64_t frame_seq) const;
+  [[nodiscard]] ClientResult<ExposureState> readExposureStateForFrame(
+      std::uint64_t frame_seq) const;
   [[nodiscard]] ClientResult<GroundTruthExposureSnapshot>
   readGroundTruthForFrame(std::uint64_t frame_seq) const;
 

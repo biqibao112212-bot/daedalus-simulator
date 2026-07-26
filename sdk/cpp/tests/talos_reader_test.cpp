@@ -19,11 +19,23 @@ int main() {
   region.camera_info.timestamp_ns = 1;
   region.camera_info.width = kImageWidth;
   region.camera_info.height = kImageHeight;
+  region.runtime_state.timestamp_ns = 17;
+  region.runtime_state.frame_seq = 13;
+  region.runtime_state.last_applied_command_id = 19;
+  region.runtime_state.gimbal_yaw_rad = 0.5F;
+  region.runtime_state.gimbal_pitch_rad = 0.0F;
   region.image.read_idx = 0;
   region.image.slots[0].seq = 7;
   region.image.slots[0].timestamp_ns = 11;
   region.image.slots[0].width = kImageWidth;
   region.image.slots[0].height = kImageHeight;
+  region.ground_truth_history.slots[0].commit_seq = 2;
+  region.ground_truth_history.slots[0].ground_truth.frame_seq = 21;
+  region.ground_truth_history.slots[0].ground_truth.timestamp_ns = 22;
+  region.ground_truth_history.slots[0].exposure_state.frame_seq = 21;
+  region.ground_truth_history.slots[0].exposure_state.timestamp_ns = 22;
+  region.ground_truth_history.slots[0].exposure_state.gimbal_yaw_rad = 0.25F;
+  region.ground_truth_history.slots[0].exposure_state.gimbal_pitch_rad = 0.0F;
 
   TalosMetadataReader reader(&region, sizeof(region));
   if (reader.compatibility() != TalosCompatibility::Compatible) return 2;
@@ -36,6 +48,15 @@ int main() {
   const auto camera = reader.readCameraInfo();
   if (!camera || camera.value->width != kImageWidth) return 5;
   if (reader.readLatestPose(5)) return 6;
+  const auto gimbal = reader.readGimbalState();
+  if (!gimbal || gimbal.value->timestamp_ns != 17 ||
+      gimbal.value->frame_seq != 13 ||
+      gimbal.value->last_applied_command_id != 19 ||
+      gimbal.value->pitch_deg != 90.0F) return 9;
+  const auto exposure_gimbal = reader.readGimbalStateForFrame(21);
+  if (!exposure_gimbal || exposure_gimbal.value->frame_seq != 21 ||
+      exposure_gimbal.value->timestamp_ns != 22 ||
+      exposure_gimbal.value->pitch_deg != 90.0F) return 10;
 
   const char* path = "daedalus_sdk_test_meta.bin";
   {

@@ -1,6 +1,7 @@
 #include <daedalus_sim_sdk/talos_metadata_reader.hpp>
 
 #include <atomic>
+#include <cmath>
 #include <cstring>
 #include <limits>
 #include <memory>
@@ -260,6 +261,56 @@ ClientResult<RuntimeState> TalosMetadataReader::readRuntimeState() const {
         ClientError::ProtocolError, "Talos runtime state is not initialized");
   }
   return ClientResult<RuntimeState>::success(value);
+}
+
+ClientResult<GimbalState> TalosMetadataReader::readGimbalState() const {
+  const auto runtime = readRuntimeState();
+  if (!runtime) {
+    return ClientResult<GimbalState>::failure(runtime.status.error,
+                                               runtime.status.message);
+  }
+  constexpr float kRadiansToDegrees =
+      180.0F / 3.14159265358979323846F;
+  GimbalState state{};
+  state.frame_seq = runtime.value->frame_seq;
+  state.timestamp_ns = runtime.value->timestamp_ns;
+  state.last_applied_command_id = runtime.value->last_applied_command_id;
+  state.yaw_deg = runtime.value->gimbal_yaw_rad * kRadiansToDegrees;
+  state.pitch_deg = 90.0F + runtime.value->gimbal_pitch_rad * kRadiansToDegrees;
+  state.yaw_velocity_deg_s =
+      runtime.value->gimbal_yaw_velocity_rad_s * kRadiansToDegrees;
+  state.pitch_velocity_deg_s =
+      runtime.value->gimbal_pitch_velocity_rad_s * kRadiansToDegrees;
+  state.status_flags = runtime.value->status_flags;
+  return ClientResult<GimbalState>::success(state);
+}
+
+ClientResult<ExposureState> TalosMetadataReader::readExposureStateForFrame(
+    std::uint64_t frame_seq) const {
+  const auto snapshot = readGroundTruthForFrame(frame_seq);
+  if (!snapshot) {
+    return ClientResult<ExposureState>::failure(snapshot.status.error,
+                                                 snapshot.status.message);
+  }
+  return ClientResult<ExposureState>::success(snapshot.value->exposure_state);
+}
+
+ClientResult<GimbalState> TalosMetadataReader::readGimbalStateForFrame(
+    std::uint64_t frame_seq) const {
+  const auto exposure = readExposureStateForFrame(frame_seq);
+  if (!exposure) {
+    return ClientResult<GimbalState>::failure(exposure.status.error,
+                                               exposure.status.message);
+  }
+  constexpr float kRadiansToDegrees =
+      180.0F / 3.14159265358979323846F;
+  GimbalState state{};
+  state.frame_seq = exposure.value->frame_seq;
+  state.timestamp_ns = exposure.value->timestamp_ns;
+  state.yaw_deg = exposure.value->gimbal_yaw_rad * kRadiansToDegrees;
+  state.pitch_deg =
+      90.0F + exposure.value->gimbal_pitch_rad * kRadiansToDegrees;
+  return ClientResult<GimbalState>::success(state);
 }
 
 ClientResult<GroundTruthExposureSnapshot>

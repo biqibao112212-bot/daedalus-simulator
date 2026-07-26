@@ -29,9 +29,12 @@ struct LatestNetworkGimbalCommand {
 const FIRE_ALIGNMENT_TOLERANCE_RAD: f32 = 0.035;
 const COMMAND_STALE_TIMEOUT_S: f64 = 0.25;
 static NETWORK_COMMAND_RECEIVED_COUNT: AtomicU64 = AtomicU64::new(0);
+static LAST_APPLIED_NETWORK_COMMAND_ID: AtomicU64 = AtomicU64::new(0);
 
 #[derive(Debug, Clone, Copy, Deserialize)]
 struct NetworkGimbalCommand {
+    #[serde(default)]
+    command_id: u64,
     yaw: Option<f32>,
     yaw_deg: Option<f32>,
     pitch: Option<f32>,
@@ -107,6 +110,10 @@ impl Plugin for NetworkBridgePlugin {
 
 pub fn network_command_received_count() -> u64 {
     NETWORK_COMMAND_RECEIVED_COUNT.load(Ordering::Relaxed)
+}
+
+pub fn last_applied_network_command_id() -> u64 {
+    LAST_APPLIED_NETWORK_COMMAND_ID.load(Ordering::Acquire)
 }
 
 fn setup_network_bridge(mut commands: Commands, config: Res<SimulationConfig>) {
@@ -244,6 +251,7 @@ fn apply_latest_network_gimbal_command(
         gimbal_data.pitch = pitch;
         gimbal_transform.rotation = Quat::from_euler(EulerRot::YXZ, yaw, pitch, 0.0);
         metrics.mark(FrequencyMetricKind::GimbalUpdate, now_s);
+        LAST_APPLIED_NETWORK_COMMAND_ID.store(command.command_id, Ordering::Release);
 
         (yaw, pitch)
     } else {

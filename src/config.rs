@@ -351,6 +351,11 @@ impl Default for AutoAimConfig {
 
 impl SimulationConfig {
     pub fn load() -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
+        if crate::distribution::is_locked() {
+            let mut config: Self = toml::from_str(include_str!("../config.performance.toml"))?;
+            crate::distribution::apply_locked_config(&mut config);
+            return Ok(config);
+        }
         let path = config_path();
         let content = std::fs::read_to_string(&path)?;
         let mut config: Self = toml::from_str(&content)?;
@@ -636,6 +641,13 @@ pub struct ConfigPlugin;
 impl Plugin for ConfigPlugin {
     fn build(&self, app: &mut App) {
         let config = SimulationConfig::default();
+
+        if crate::distribution::is_locked() {
+            info!("distribution configuration is embedded and read-only; hot reload disabled");
+            app.insert_resource(config)
+                .register_type::<SimulationConfig>();
+            return;
+        }
 
         // Set up file watcher using crossbeam-channel for thread safety
         let (tx, rx): (

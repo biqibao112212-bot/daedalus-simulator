@@ -10,7 +10,7 @@ memmap2 = { version = "0" }
 
 [package]
 name = "daedalus"
-version = "0.1.0"
+version = "1.1.0"
 edition = "2024"
 default-run = "daedalus"
 
@@ -18,6 +18,7 @@ default-run = "daedalus"
 ros2 = ["dep:r2r"]
 talos = ["dep:talos-ipc"]
 ffmpeg = ["dep:ffmpeg-next"]
+distribution-release = []
 default = ["talos"]
 
 [dependencies]
@@ -49,3 +50,9 @@ required-features = ["talos", "ffmpeg"]
 
 [patch.crates-io]
 r2r_msg_gen = { path = "third_party/r2r_msg_gen" }
+
+[profile.release]
+codegen-units = 1
+lto = "thin"
+panic = "abort"
+strip = "symbols"

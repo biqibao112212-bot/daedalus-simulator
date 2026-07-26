@@ -2,11 +2,16 @@
 
 #include "socket_platform.hpp"
 
+#include <atomic>
 #include <cmath>
 #include <iomanip>
 #include <sstream>
 
 namespace daedalus::sim::sdk::v1 {
+
+namespace {
+std::atomic<std::uint64_t> g_next_command_id{1};
+}
 
 ClientResult<std::string> encodeUdpGimbalCommand(
     const UdpGimbalCommand& command) {
@@ -20,7 +25,8 @@ ClientResult<std::string> encodeUdpGimbalCommand(
   }
   std::ostringstream json;
   json << std::setprecision(9) << '{';
-  bool comma = false;
+  json << "\"command_id\":" << command.command_id;
+  bool comma = true;
   const auto append = [&](const char* name, const std::optional<float>& value) {
     if (!value) return;
     if (comma) json << ',';
@@ -40,14 +46,30 @@ UdpGimbalClient::UdpGimbalClient(UdpEndpoint endpoint)
     : endpoint_(std::move(endpoint)) {}
 
 ClientStatus UdpGimbalClient::send(const UdpGimbalCommand& command) const {
-  auto payload = encodeUdpGimbalCommand(command);
-  if (!payload) return payload.status;
+  return sendTracked(command).status;
+}
+
+ClientResult<std::uint64_t> UdpGimbalClient::sendTracked(
+    const UdpGimbalCommand& command) const {
+  auto outgoing = command;
+  if (outgoing.command_id == 0) {
+    outgoing.command_id =
+        g_next_command_id.fetch_add(1, std::memory_order_relaxed);
+  }
+  auto payload = encodeUdpGimbalCommand(outgoing);
+  if (!payload) {
+    return ClientResult<std::uint64_t>::failure(payload.status.error,
+                                                 payload.status.message);
+  }
   auto address = detail::resolveIpv4(endpoint_, SOCK_DGRAM, IPPROTO_UDP);
-  if (!address) return address.status;
+  if (!address) {
+    return ClientResult<std::uint64_t>::failure(address.status.error,
+                                                 address.status.message);
+  }
   detail::SocketHandle socket = ::socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
   if (socket == detail::kInvalidSocket) {
-    return ClientStatus::failure(ClientError::SocketCreateFailed,
-                                 detail::socketErrorMessage("socket"));
+    return ClientResult<std::uint64_t>::failure(
+        ClientError::SocketCreateFailed, detail::socketErrorMessage("socket"));
   }
   const int sent = ::sendto(
       socket, payload.value->data(), static_cast<int>(payload.value->size()), 0,
@@ -58,9 +80,10 @@ ClientStatus UdpGimbalClient::send(const UdpGimbalCommand& command) const {
                            : detail::socketErrorMessage("sendto");
   detail::closeSocket(socket);
   if (!message.empty()) {
-    return ClientStatus::failure(ClientError::SendFailed, message);
+    return ClientResult<std::uint64_t>::failure(ClientError::SendFailed,
+                                                 message);
   }
-  return ClientStatus::success();
+  return ClientResult<std::uint64_t>::success(outgoing.command_id);
 }
 
 }  // namespace daedalus::sim::sdk::v1
