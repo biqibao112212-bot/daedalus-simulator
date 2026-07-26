@@ -36,9 +36,12 @@
   RGB delivery.
 - Camera calibration revision 2 fixes digital exposure at EV100 9.7 with auto
   exposure and tonemapping disabled; physical shutter/gain do not apply.
-- Final packages were regenerated from clean committed implementation
-  `6883879f74549eb960cbbc5283aede5222f57fb7`. Each manifest lists 43 payload
-  files and every directory/ZIP payload hash was independently verified.
+- Final binaries use accepted implementation
+  `6883879f74549eb960cbbc5283aede5222f57fb7`; documentation-updated packages
+  were regenerated from clean commit
+  `e0d297d0afcbea26743fe56167bd87333549c69f`. Each manifest lists 44 payload
+  files, including the machine-readable short performance result, and every
+  directory/ZIP payload hash was independently verified.
 - Final Windows package live acceptance returned a 1440x1080 RGBA32 frame,
   exposure timestamp, exact-frame gimbal state, scene status, and matching
   command/applied-command ID on the RTX 4060 / DX12 adapter.
@@ -46,20 +49,19 @@
   startup, TCP 5602, UDP 5601/5603, 76992-byte IPC metadata, and locked runtime
   capabilities.
 - Archive SHA256: Windows
-  `ec47bba7fa36e259fdc92492b5dde0f9c4cd3eb2b4e20730f722c1bc254550d6`;
-  Linux `addbba42d53ded68546606fdf4bb5018d5139bfcba42a9eabda408a699a79a57`.
+  `4fd2a91fe1eb65e0a2c7e339195c79ed46beb8ae42b4d0ce7a89e2eddaadb3b1`;
+  Linux `00944d0bcd50eeb5fe63ecacdf6696b2e7ce609e4e0936fbdc7e961ed9831a4a`.
 - A 5.021-second package-SDK TCP short test under an independent concurrent
   CUDA training load received 424 RGBA32 frames: 84.44 Hz and 500.94 MiB/s.
   Payload throughput is 7.24% below the old RGB24 joint baseline, while FPS is
   30.43% lower because the frame is 33.33% larger and the GPU load is not
-  comparable. This is retained as a contended lower bound, not a regression or
-  final performance pass.
+  comparable. The user accepted this contended lower bound for internal-lab
+  release; an idle-GPU measurement remains optional follow-up.
 
 ## In progress
 
-The user accepted the contended performance lower bound for internal-lab
-release. Regenerating both archives with the updated manuals and machine-
-readable short-test result is active; an idle-GPU test is optional follow-up.
+No release work item is active. Both documentation-complete archives are
+accepted for internal-lab publication; an idle-GPU benchmark is optional.
 
 ## Remaining gates
 
@@ -70,6 +72,6 @@ readable short-test result is active; an idle-GPU test is optional follow-up.
 
 ## Next steps
 
-1. Commit the accepted report and package-script documentation addition.
-2. Regenerate both archives with `--skip-build` / `-SkipBuild`, then verify
-   manifests, ZIP payload hashes, and package boundaries.
+1. Publish the Windows or Linux archive to laboratory members.
+2. If performance concerns appear later, rerun the idle-GPU 8-second warmup and
+   20-second measurement before changing the simulator.
