@@ -41,13 +41,18 @@ if (-not $SkipSdk) {
     $sdkInstall = Join-Path $buildRoot 'sdk-install'
     New-Item -ItemType Directory -Force -Path $buildRoot | Out-Null
 
-    cmake -S (Join-Path $root 'sdk\cpp') -B $sdkBuild -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DCMAKE_INSTALL_PREFIX=$sdkInstall
+    cmake -S (Join-Path $root 'sdk\cpp') -B $sdkBuild `
+        '-DCMAKE_BUILD_TYPE=Release' `
+        '-DBUILD_TESTING=ON' `
+        "-DCMAKE_INSTALL_PREFIX=$sdkInstall"
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-    cmake --build $sdkBuild --parallel
+    # Visual Studio is a multi-config generator; CMAKE_BUILD_TYPE alone does
+    # not select Release for build, test, or install.
+    cmake --build $sdkBuild --config Release --parallel
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-    ctest --test-dir $sdkBuild --output-on-failure
+    ctest --test-dir $sdkBuild -C Release --output-on-failure
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-    cmake --install $sdkBuild
+    cmake --install $sdkBuild --config Release
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 
