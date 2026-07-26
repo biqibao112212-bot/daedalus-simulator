@@ -36,15 +36,26 @@
   RGB delivery.
 - Camera calibration revision 2 fixes digital exposure at EV100 9.7 with auto
   exposure and tonemapping disabled; physical shutter/gain do not apply.
+- Final packages were regenerated from clean committed implementation
+  `6883879f74549eb960cbbc5283aede5222f57fb7`. Each manifest lists 43 payload
+  files and every directory/ZIP payload hash was independently verified.
+- Final Windows package live acceptance returned a 1440x1080 RGBA32 frame,
+  exposure timestamp, exact-frame gimbal state, scene status, and matching
+  command/applied-command ID on the RTX 4060 / DX12 adapter.
+- Final Linux package no-GPU acceptance passed on Vulkan llvmpipe: stable
+  startup, TCP 5602, UDP 5601/5603, 76992-byte IPC metadata, and locked runtime
+  capabilities.
+- Archive SHA256: Windows
+  `ec47bba7fa36e259fdc92492b5dde0f9c4cd3eb2b4e20730f722c1bc254550d6`;
+  Linux `addbba42d53ded68546606fdf4bb5018d5139bfcba42a9eabda408a699a79a57`.
 
 ## In progress
 
-Fixed-exposure validation and final clean-commit package refresh are active.
+No implementation item is active. Simulator 1.1.0 / SDK 1.1.0 is accepted for
+the defined internal-laboratory Windows-full/Linux-no-GPU release scope.
 
 ## Remaining gates
 
-- Rebuild and regenerate both platform packages from the final clean committed
-  revision, then verify manifests, archives, package boundaries, and hashes.
 - Any external or public distribution requires a separate licensing and
   third-party dependency review; the current profile is internal-lab only.
 - Consumer CUDA/TensorRT/model validation remains outside the simulator
@@ -52,6 +63,6 @@ Fixed-exposure validation and final clean-commit package refresh are active.
 
 ## Next steps
 
-1. Commit the fixed-exposure contract and updated acceptance record.
-2. Rebuild Windows and Linux from that clean revision.
-3. Regenerate both formal packages and run final archive/manifest checks.
+1. Hand the Windows or Linux package to laboratory users with the Chinese user
+   guide and SDK API reference included in that package.
+2. Open a separate release review before distribution outside the laboratory.
