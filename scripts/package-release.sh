@@ -79,6 +79,9 @@ cp -a -- "$ROOT/assets" "$TARGET_DIR/assets"
 cp -- "$ROOT/release/release.json" "$ROOT/release/platform-matrix.json" \
   "$ROOT/release/camera-calibration.json" "$TARGET_DIR/"
 cp -- "$ROOT/release/start-simulator.sh" "$TARGET_DIR/start-simulator.sh"
+cp -- "$ROOT/release/README_LINUX_ZH.md" "$TARGET_DIR/README_ZH.md"
+cp -- "$ROOT/release/install-linux.sh" "$TARGET_DIR/install-linux.sh"
+chmod +x "$TARGET_DIR/start-simulator.sh" "$TARGET_DIR/install-linux.sh"
 cp -- "$ROOT/LICENSE" "$TARGET_DIR/LICENSE.txt"
 cp -- "$ROOT/release/INTERNAL_LAB_USE_NOTICE.md" "$TARGET_DIR/INTERNAL_LAB_USE_NOTICE.md"
 cp -- "$ROOT/SIMULATOR_PERFORMANCE.md" "$ROOT/SIMULATOR_TROUBLESHOOTING.md" \

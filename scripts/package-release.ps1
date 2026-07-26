@@ -76,6 +76,12 @@ Copy-Item -LiteralPath `
     (Join-Path $root 'release\camera-calibration.json') `
     -Destination $target
 Copy-Item -LiteralPath (Join-Path $root 'release\start-simulator.ps1') -Destination $target
+Copy-Item -LiteralPath (Join-Path $root 'release\README_WINDOWS_ZH.md') `
+    -Destination (Join-Path $target 'README_ZH.md')
+Copy-Item -LiteralPath `
+    (Join-Path $root 'release\setup.cmd'),
+    (Join-Path $root 'release\install-windows.ps1') `
+    -Destination $target
 Copy-Item -LiteralPath $repositoryLicense -Destination (Join-Path $target 'LICENSE.txt')
 Copy-Item -LiteralPath $internalUseNotice -Destination (Join-Path $target 'INTERNAL_LAB_USE_NOTICE.md')
 Copy-Item -LiteralPath `

@@ -64,3 +64,9 @@
     tests plus Mesa llvmpipe software-Vulkan startup, ports, IPC, and runtime
     capability reporting. It does not require a discrete GPU and makes no
     real-time 1440x1080 RGB or complete live auto-aim performance claim.
+19. Each platform archive has a root Chinese README and a non-admin per-user
+    installer. Windows uses `setup.cmd` plus a PowerShell installer and Start
+    menu shortcuts; Linux uses `install-linux.sh` plus user-local command
+    wrappers. Installers never download GPU drivers, runtimes, inference
+    frameworks, or models. A GUI Setup.exe/MSI is not claimed without a
+    maintained installer toolchain.

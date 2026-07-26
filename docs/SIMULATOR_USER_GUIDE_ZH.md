@@ -55,6 +55,10 @@ daedalus-simulator/
 
 ## 4. 启动模拟器
 
+每个发布包根目录都有 `README_ZH.md`。首次使用建议先按其中的依赖检查和安装步骤操作：
+Windows 可双击 `setup.cmd`，Linux 可运行 `./install-linux.sh`；两者都默认安装到当前用户
+目录，不要求管理员权限。已经熟悉目录结构的用户也可以不安装，直接便携运行。
+
 ### 4.1 Windows
 
 ```powershell

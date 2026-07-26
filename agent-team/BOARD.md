@@ -60,8 +60,9 @@
 
 ## In progress
 
-No release work item is active. Both documentation-complete archives are
-accepted for internal-lab publication; an idle-GPU benchmark is optional.
+Platform-specific Chinese root READMEs and non-admin one-click installers are
+implemented. Commit, package refresh, clean-room installer tests, and final
+manifest/hash verification are active.
 
 ## Remaining gates
 
@@ -72,6 +73,6 @@ accepted for internal-lab publication; an idle-GPU benchmark is optional.
 
 ## Next steps
 
-1. Publish the Windows or Linux archive to laboratory members.
-2. If performance concerns appear later, rerun the idle-GPU 8-second warmup and
-   20-second measurement before changing the simulator.
+1. Commit the platform README and installer additions.
+2. Regenerate both archives and test installation into disposable directories.
+3. Verify installed launchers, package manifests, ZIP payloads, and hashes.
