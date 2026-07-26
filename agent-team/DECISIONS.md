@@ -52,3 +52,7 @@
 15. The Chinese user guide explains the end-to-end workflow; a separate
     `docs/SDK_API_REFERENCE_ZH.md` is the function-level source of truth for
     signatures, parameters, return values, errors, and usage examples.
+16. Windows release acceptance uses Visual Studio multi-config explicitly in
+    Release mode and enables `/FS` for parallel MSVC PDB writes. Headless
+    performance mode must use `ExitCondition::DontExit`; otherwise the absence
+    of a primary window terminates a valid release process.

@@ -5,7 +5,7 @@
 - Branch: `release/simulator-multiplatform-x86`
 - Isolated worktree: `D:\仿真\isolated\daedalus-simulator-multiplatform-x86`
 - Protected main checkout: `D:\仿真\repos\daedalus-simulator` (`main`)
-- Current committed baseline: `81602c7`
+- Validated implementation baseline: `fa155a9`
 - Product candidate: simulator `1.1.0`, SDK `1.1.0`, SHM v7 / ABI revision 2
 
 ## Mission

@@ -34,13 +34,33 @@
 - `cargo check --locked --features talos,distribution-release` 通过。
 - Talos IPC 7 项 Rust 单元测试通过。
 - Linux C++ SDK 7 项 CTest 通过。
+- Windows 原生 `x86_64-pc-windows-msvc` Release + thin LTO 构建通过。
+- Windows MSVC C++ SDK Release/x64 构建、安装和 7 项 CTest 全部通过。
 - SDK/Release/标定/平台矩阵兼容检查通过。
 - PowerShell、Bash、JSON 和 Git diff 格式检查通过。
 
+### Windows 发行包验收（2026-07-26）
+
+- 正式目录：`D:\仿真\releases\daedalus-simulator\1.1.0\windows-x86_64`。
+- ZIP：`D:\仿真\releases\daedalus-simulator\1.1.0\windows-x86_64.zip`。
+- 从发行包目录启动后保持运行；TCP 5602、UDP 5601/5603 全部就绪。
+- Talos 元数据创建成功且大小为 76992 字节，无场景资源缺失。
+- wgpu 自动选择 `NVIDIA GeForce RTX 4060 Laptop GPU`、`Dx12`、独立 GPU，
+  `distribution_locked=true`。
+- 使用发行包内 SDK 和 `find_package(DaedalusSimSdk 1.1)` 编译独立 C++ 验收消费者成功。
+- 实际取得 1440×1080 RGBA32 图像（6220800 字节）、帧号和曝光时间戳，并按帧号取得同步
+  云台状态。
+- 场景控制 `ping/create_session/status` 均取得 ACK；云台命令的发送 ID 与
+  `last_applied_command_id` 一致。
+- 包内清单、SHA256、许可证、内部使用说明和两份中文文档完整；未发现模拟器实现源码、
+  PDB、Cargo 工程、CUDA/TensorRT/ONNX 或模型文件。
+- 原生验收发现并修复了 Visual Studio 多配置误用 Debug、并行 PDB 冲突、CMake 安装前缀
+  转义以及无窗口高性能模式提前退出问题。
+
 ## 正式发布前剩余门禁
 
-1. 在 Windows 与 Linux 实际 GPU 上分别运行可视和高性能模式冒烟测试。
-2. 用示例消费者完成图像—同步云台状态—命令—实际状态闭环验收。
+1. 在 Windows 上完成可视 Vulkan 模式人工画面验收。
+2. 从最终提交生成 Linux 原生包，并在 Linux Vulkan GPU 上完成运行和 SDK 联调。
 3. 将最终标定的物理曝光、增益和外参写入 `camera-calibration.json` 并提升标定 revision。
 4. 当前包仅用于所属实验室内部非商业培训和研究；若要提供给其他组织或公开发布，
    必须另行审查许可证和第三方依赖。
