@@ -307,7 +307,9 @@ ClientResult<CameraInfo> readCameraInfo() const;
 ```
 
 返回固定的 `fx/fy/cx/cy`、五项畸变系数和图像尺寸。SDK 没有修改标定的 setter。
-发行根目录的 `camera-calibration.json` 还包含固定外参和标定版本，用户应将版本写入日志。
+发行根目录的 `camera-calibration.json` 还包含固定外参、数字曝光和标定版本，用户应将
+版本写入日志。数字曝光固定为 `EV100=9.7`，自动曝光关闭且不做色调映射；物理快门和
+模拟增益不适用于数字渲染器。
 
 ### `readGimbalState()`
 
@@ -361,6 +363,9 @@ ClientResult<ExposureState> readExposureStateForFrame(
 
 读取同一曝光时刻的底盘、云台和相机世界位姿以及云台弧度角。它用于坐标变换、延迟研究
 和回归测试；只做基础自瞄时优先使用更简单的 `readGimbalStateForFrame()`。
+
+这里的“曝光状态”是图像生成时刻的位姿快照，不是光学曝光参数。固定光学曝光请读取
+发行包根目录的 `camera-calibration.json`。
 
 `ExposureState::state_flags` 指明哪些位姿有效。四元数为 `wxyz`，长度单位为米，内部角度
 为弧度。不得忽略有效位直接使用未声明有效的字段。

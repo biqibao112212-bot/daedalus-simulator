@@ -59,6 +59,14 @@ drivers into the release directory. The default TCP contract is RGBA32
 SHM v7 / ABI revision 2, TCP image port 5602, UDP command port 5601, and scene
 control port 5603.
 
+The internal-lab Linux acceptance gate intentionally does not require a
+discrete GPU. A software Vulkan implementation such as Mesa llvmpipe is enough
+to validate the native x86_64 binary, package startup, endpoints, IPC creation,
+and runtime capability reporting. This is a compatibility/diagnostic mode, not
+a real-time performance promise: fixed 1440x1080 RGB delivery and a complete
+live auto-aim loop require a suitable hardware Vulkan adapter. Seeing a GPU in
+`nvidia-smi` alone does not prove that the Vulkan loader can use it.
+
 Release binaries embed their simulation configuration and disable config hot
 reload, local keyboard/mouse mutation, debug/auto-generation modes, dataset
 output, ground-truth publication, and managed inference bridges. Only visible

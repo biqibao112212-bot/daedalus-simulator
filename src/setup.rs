@@ -1,5 +1,6 @@
 use avian3d::prelude::*;
 use bevy::anti_alias::fxaa::Fxaa;
+use bevy::camera::Exposure;
 use bevy::core_pipeline::tonemapping::Tonemapping;
 use bevy::prelude::*;
 use bevy::world_serialization::{WorldInstance, WorldInstanceReady};
@@ -9,7 +10,7 @@ use std::f32::consts::PI;
 
 use crate::capture::{
     AimCaptureTargetCandidate, CaptureSceneProfile, DEFAULT_CAPTURE_CLEAR_COLOR,
-    aim_target_render_layers, mark_aim_capture_target,
+    FIXED_CAMERA_EV100, aim_target_render_layers, mark_aim_capture_target,
 };
 use crate::components::{
     ActiveSlapper, Controlled, DartLaunch, GameLayer, GroundRoot, Infantry, InfantryChassis,
@@ -776,6 +777,9 @@ fn spawn_auto_aim_scene(
 fn spawn_main_camera(commands: &mut Commands, config: &SimulationConfig) {
     let mut main_camera = commands.spawn((
         Camera3d::default(),
+        Exposure {
+            ev100: FIXED_CAMERA_EV100,
+        },
         Camera {
             // When Talos/ROS2 capture is enabled, the actual on-screen preview is a UI blit of the
             // off-screen capture texture. Keep this camera inactive to avoid rendering twice.

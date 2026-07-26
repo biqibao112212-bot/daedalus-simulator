@@ -55,8 +55,10 @@
         "visible_default": "vulkan",
         "diagnostic_options": ["vulkan"]
       },
+      "release_acceptance_scope": "native x86_64 build/SDK tests plus software Vulkan startup and IPC diagnostics; discrete-GPU performance is not a release gate",
       "driver_requirements": [
-        "A system Vulkan loader and a compatible GPU driver",
+        "A system Vulkan loader with either a hardware driver or a software implementation such as llvmpipe",
+        "A hardware Vulkan GPU is recommended for real-time RGB capture but is not required by the internal-lab Linux acceptance gate",
         "Do not bundle GPU drivers with the release"
       ]
     }

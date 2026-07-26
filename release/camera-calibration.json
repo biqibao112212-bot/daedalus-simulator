@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "calibration_id": "daedalus-camera-1440x1080-v1",
-  "revision": 1,
+  "calibration_id": "daedalus-camera-1440x1080-v2",
+  "revision": 2,
   "read_only": true,
   "runtime_setter_available": false,
   "image": {
@@ -27,11 +27,13 @@
     "source": "vehicle.glb/SHOT_DIRECTION plus fixed 0.2 m camera clearance"
   },
   "exposure": {
+    "model": "fixed_ev100",
+    "ev100": 9.7,
+    "exposure_scalar": 0.00100190788846429,
     "auto_exposure": false,
     "tonemapping": "none",
-    "physical_exposure_time_us": null,
-    "analog_gain": null,
-    "status": "digital renderer; replace null physical-camera fields after final calibration"
+    "physical_sensor_parameters_applicable": false,
+    "status": "fixed digital renderer exposure; physical shutter time and analog gain do not apply"
   },
   "coordinates": {
     "handedness": "right-handed",

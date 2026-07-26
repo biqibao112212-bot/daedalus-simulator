@@ -2,8 +2,8 @@ pub mod depth;
 pub mod driver;
 pub mod view_copy;
 
-use bevy::camera::RenderTarget;
 use bevy::camera::visibility::RenderLayers;
+use bevy::camera::{Exposure, RenderTarget};
 use bevy::core_pipeline::prepass::DepthPrepass;
 use bevy::core_pipeline::tonemapping::Tonemapping;
 use bevy::light::cluster::ClusterConfig;
@@ -13,6 +13,12 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub use driver::CaptureBundle;
+
+/// Fixed digital exposure used by every RGB camera in release builds.
+///
+/// This is an EV100 renderer setting, not a physical shutter time or sensor
+/// gain. Keep it synchronized with `release/camera-calibration.json`.
+pub const FIXED_CAMERA_EV100: f32 = 9.7;
 
 #[derive(Component)]
 pub struct CaptureSource;
@@ -169,6 +175,9 @@ pub fn setup_capture_camera(world: &mut World) {
 
     let mut capture_camera = world.spawn((
         Camera3d::default(),
+        Exposure {
+            ev100: FIXED_CAMERA_EV100,
+        },
         Tonemapping::None,
         RenderTarget::Image(render_target_handle.into()),
         Camera {
@@ -386,6 +395,18 @@ mod tests {
         setup_capture_camera(&mut world);
         let mut query = world.query_filtered::<Option<&RenderLayers>, With<CaptureCamera>>();
         query.single(&world).ok().flatten().cloned()
+    }
+
+    #[test]
+    fn capture_camera_uses_the_fixed_release_exposure() {
+        let mut world = World::new();
+        world.insert_resource(ImageHandle(Handle::default()));
+        world.insert_resource(CameraFov(45.0_f32.to_radians()));
+
+        setup_capture_camera(&mut world);
+        let mut query = world.query_filtered::<&Exposure, With<CaptureCamera>>();
+        let exposure = query.single(&world).expect("capture camera exposure");
+        assert_eq!(exposure.ev100, FIXED_CAMERA_EV100);
     }
 
     #[test]

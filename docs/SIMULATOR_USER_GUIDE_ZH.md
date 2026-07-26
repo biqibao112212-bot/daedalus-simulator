@@ -309,9 +309,10 @@ while (true) {
 - 像素原点：图像左上角；`u` 向右，`v` 向下；
 - 长度单位：米；四元数文件顺序：`xyzw`；曝光位姿 ABI 顺序：`wxyz`。
 
-固定内参、畸变和 `T_gimbal_camera` 位于 `camera-calibration.json`。用户可以在自己的
-算法内部转换到其他坐标系，但不能改变模拟器发布契约。最终实机标定完成后应替换该
-文件中的标定值并提升 `calibration_id/revision`。
+固定内参、畸变、`T_gimbal_camera` 和数字曝光位于 `camera-calibration.json`。当前标定为
+`daedalus-camera-1440x1080-v2` / revision 2，固定曝光为 `EV100=9.7`、关闭自动曝光、
+`Tonemapping=None`。模拟器没有物理传感器，因此不存在可解释为真实相机快门时间或模拟
+增益的值。用户可以在自己的算法内部转换坐标系，但不能改变模拟器发布契约。
 
 ## 9. 时间和同步规则
 

@@ -32,10 +32,11 @@
 10. Distribution builds compile with `distribution-release`: configuration is
     embedded, hot reload and local mutation/debug paths are disabled, network
     controls bind to loopback, and ground truth is not published.
-11. Fixed camera calibration is read-only. The current digital-camera geometry
-    is recorded in `release/camera-calibration.json`; null physical exposure
-    fields must be replaced and the calibration revision bumped after final
-    calibration. No calibration setter or vision-result upload API is added.
+11. Fixed camera calibration is read-only. Revision 2 records the digital
+    camera geometry and fixes renderer exposure at EV100 9.7 with auto exposure
+    and tonemapping disabled. Physical shutter time and analog gain do not
+    apply to this digital renderer. No calibration setter or vision-result
+    upload API is added.
 12. wgpu owns adapter selection; the SDK reads the actual selected adapter and
     driver from the runtime capabilities record. CUDA/TensorRT remains wholly
     consumer-owned and absent from the package.
@@ -56,3 +57,10 @@
     Release mode and enables `/FS` for parallel MSVC PDB writes. Headless
     performance mode must use `ExitCondition::DontExit`; otherwise the absence
     of a primary window terminates a valid release process.
+17. Windows is the full runtime acceptance platform: DX12 validates the image,
+    timestamp, synchronized gimbal, scene-control, and command-feedback loop;
+    Vulkan validates the visible rendered window on the selected discrete GPU.
+18. The internal-lab Linux gate intentionally accepts native x86_64 build/SDK
+    tests plus Mesa llvmpipe software-Vulkan startup, ports, IPC, and runtime
+    capability reporting. It does not require a discrete GPU and makes no
+    real-time 1440x1080 RGB or complete live auto-aim performance claim.

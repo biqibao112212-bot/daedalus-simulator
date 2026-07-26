@@ -54,11 +54,20 @@ if ($release.ballistics.projectile_speed_mps -le 0 -or
 if ($calibration.schema_version -ne 1 -or
     $calibration.read_only -ne $true -or
     $calibration.runtime_setter_available -ne $false -or
+    $calibration.revision -ne $release.fixed_calibration_revision -or
     $calibration.image.width -ne $contract.image_width -or
     $calibration.image.height -ne $contract.image_height -or
     $calibration.intrinsics.fx -ne $calibration.intrinsics.fy -or
     [string]::IsNullOrWhiteSpace($calibration.calibration_id)) {
     throw 'Fixed camera calibration is missing, mutable, or inconsistent with the SDK image contract.'
+}
+if ($calibration.exposure.model -ne 'fixed_ev100' -or
+    $calibration.exposure.ev100 -ne 9.7 -or
+    [math]::Abs($calibration.exposure.exposure_scalar - 0.00100190788846429) -gt 1e-15 -or
+    $calibration.exposure.auto_exposure -ne $false -or
+    $calibration.exposure.tonemapping -ne 'none' -or
+    $calibration.exposure.physical_sensor_parameters_applicable -ne $false) {
+    throw 'Fixed digital camera exposure is missing or inconsistent with the release contract.'
 }
 if ($matrix.schema_version -ne 1 -or
     $matrix.architecture.name -ne 'x86_64' -or

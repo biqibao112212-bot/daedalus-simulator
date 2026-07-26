@@ -5,7 +5,7 @@
 - Branch: `release/simulator-multiplatform-x86`
 - Isolated worktree: `D:\仿真\isolated\daedalus-simulator-multiplatform-x86`
 - Protected main checkout: `D:\仿真\repos\daedalus-simulator` (`main`)
-- Validated implementation baseline: `fa155a9`
+- Last fully accepted implementation baseline: `a03d057`
 - Product candidate: simulator `1.1.0`, SDK `1.1.0`, SHM v7 / ABI revision 2
 
 ## Mission
@@ -30,7 +30,9 @@ simulator release.
 - Windows: `x86_64-pc-windows-msvc`, `daedalus.exe`, DX12 performance default,
   Vulkan visible default.
 - Linux: `x86_64-unknown-linux-gnu`, `daedalus`, Vulkan performance and visible
-  defaults.
+  defaults. The internal-lab release gate accepts software Vulkan startup and
+  IPC diagnostics without a discrete GPU; real-time RGB performance is not
+  promised by that no-GPU acceptance scope.
 - `i686`, ARM, and other targets are outside this release.
 - GPU drivers are system prerequisites and are never bundled.
 - CUDA/TensorRT/model/engine files are not simulator assets. Inference is owned
