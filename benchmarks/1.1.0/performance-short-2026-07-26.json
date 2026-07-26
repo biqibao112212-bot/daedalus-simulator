@@ -1,0 +1,49 @@
+{
+  "schema": "daedalus-performance-short-v1",
+  "measured_at": "2026-07-26T16:29:57.4069236+08:00",
+  "timezone": "Asia/Shanghai",
+  "status": "accepted-internal-lab-contended-lower-bound",
+  "artifact": {
+    "simulator_version": "1.1.0",
+    "simulator_source_commit": "6883879f74549eb960cbbc5283aede5222f57fb7",
+    "simulator_binary_sha256": "9A006412FBEE0881ED535E70F2F6560580B253DBD5BCC8A125ABFB735DC7356A",
+    "sdk_version": "1.1.0",
+    "shm_version": 7,
+    "sdk_abi_revision": 2
+  },
+  "environment": {
+    "os": "Windows 11 Pro 10.0.26200 build 26200",
+    "power_plan": "Codex Gaming Stability Test",
+    "cpu": "Intel Core i9-14900HX, 24 cores, 32 logical processors",
+    "gpu": "NVIDIA GeForce RTX 4060 Laptop GPU",
+    "nvidia_driver": "572.70",
+    "render_backend": "Dx12",
+    "concurrent_load": "independent CUDA training process remained active and was not modified",
+    "gpu_before": {"utilization_pct": 46, "memory_mib": 4005, "power_w": 53.96},
+    "gpu_after": {"utilization_pct": 76, "memory_mib": 4254, "power_w": 54.16}
+  },
+  "method": {
+    "mode": "performance-headless-with-package-sdk-tcp-consumer",
+    "warmup_s": 3,
+    "sample_window_s": 5.02147,
+    "image_format": "rgba32",
+    "width": 1440,
+    "height": 1080,
+    "payload_bytes_per_frame": 6220800,
+    "transport": "tcp-latest-only"
+  },
+  "result": {
+    "observed_frames": 424,
+    "observed_hz": 84.4375,
+    "first_sequence": 4,
+    "last_sequence": 434,
+    "payload_mib_s": 500.935,
+    "comparison_to_old_joint_rgb24": {
+      "old_observed_hz": 121.366,
+      "old_payload_mib_s": 540.0135,
+      "fps_change_pct": -30.4274,
+      "payload_throughput_change_pct": -7.2366
+    }
+  },
+  "conclusion": "Accepted for internal-lab release as a stable heavy-load lower bound; idle-GPU FPS parity remains an optional follow-up measurement."
+}

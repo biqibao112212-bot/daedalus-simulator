@@ -48,11 +48,18 @@
 - Archive SHA256: Windows
   `ec47bba7fa36e259fdc92492b5dde0f9c4cd3eb2b4e20730f722c1bc254550d6`;
   Linux `addbba42d53ded68546606fdf4bb5018d5139bfcba42a9eabda408a699a79a57`.
+- A 5.021-second package-SDK TCP short test under an independent concurrent
+  CUDA training load received 424 RGBA32 frames: 84.44 Hz and 500.94 MiB/s.
+  Payload throughput is 7.24% below the old RGB24 joint baseline, while FPS is
+  30.43% lower because the frame is 33.33% larger and the GPU load is not
+  comparable. This is retained as a contended lower bound, not a regression or
+  final performance pass.
 
 ## In progress
 
-No implementation item is active. Simulator 1.1.0 / SDK 1.1.0 is accepted for
-the defined internal-laboratory Windows-full/Linux-no-GPU release scope.
+The user accepted the contended performance lower bound for internal-lab
+release. Regenerating both archives with the updated manuals and machine-
+readable short-test result is active; an idle-GPU test is optional follow-up.
 
 ## Remaining gates
 
@@ -63,6 +70,6 @@ the defined internal-laboratory Windows-full/Linux-no-GPU release scope.
 
 ## Next steps
 
-1. Hand the Windows or Linux package to laboratory users with the Chinese user
-   guide and SDK API reference included in that package.
-2. Open a separate release review before distribution outside the laboratory.
+1. Commit the accepted report and package-script documentation addition.
+2. Regenerate both archives with `--skip-build` / `-SkipBuild`, then verify
+   manifests, ZIP payload hashes, and package boundaries.
