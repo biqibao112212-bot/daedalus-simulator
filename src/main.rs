@@ -315,6 +315,14 @@ fn primary_window_for_mode(
     }
 }
 
+fn window_exit_condition_for_mode(disable_performance_ui: bool) -> ExitCondition {
+    if disable_performance_ui {
+        ExitCondition::DontExit
+    } else {
+        WindowPlugin::default().exit_condition
+    }
+}
+
 fn simulator_asset_folder() -> String {
     if distribution::is_locked() {
         return std::env::current_exe()
@@ -450,6 +458,7 @@ fn main() {
         DefaultPlugins
             .set(WindowPlugin {
                 primary_window: primary_window_for_mode(disable_performance_ui, present_mode),
+                exit_condition: window_exit_condition_for_mode(disable_performance_ui),
                 ..default()
             })
             .set(AssetPlugin {
@@ -674,18 +683,22 @@ fn main() {
 mod tests {
     use avian3d::prelude::{Physics, PhysicsTime};
     use bevy::prelude::{App, Time};
-    use bevy::window::PresentMode;
+    use bevy::window::{ExitCondition, PresentMode};
 
     use super::{
         FixedPhysicsStepGate, FixedPhysicsTickDivider, PhysicsScheduleMode,
         configure_physics_runtime, fixed_time_from_config, physics_schedule_mode,
-        primary_window_for_mode,
+        primary_window_for_mode, window_exit_condition_for_mode,
     };
 
     #[test]
     fn performance_mode_does_not_create_a_primary_window() {
         assert!(primary_window_for_mode(true, PresentMode::Immediate).is_none());
         assert!(primary_window_for_mode(false, PresentMode::Immediate).is_some());
+        assert!(matches!(
+            window_exit_condition_for_mode(true),
+            ExitCondition::DontExit
+        ));
     }
 
     #[test]
