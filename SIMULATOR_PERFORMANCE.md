@@ -84,8 +84,16 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\run-autoaim-b.ps1
 `1.0.2` 首次联合消费者验收发现，无窗口 `ScheduleRunnerPlugin` 的零等待忙循环会让
 渲染/readback 队列积压：TCP 完整帧约 27.9 Hz，消费者图像源年龄增长到 13.49 s，
 exact-exposure 匹配失败，完整视觉结果为 0。`1.0.3` 将后台主循环设置为 1 ms 有界节拍，
-保持无 Winit、无桌面窗口与 20 Hz 物理射频硬上限不变。该版本必须以完整消费者链路复验
-图像源年龄、exact-exposure、视觉吞吐和实际射频后，才可作为自瞄默认版本。
+保持无 Winit、无桌面窗口与 20 Hz 物理射频硬上限不变，并以完整消费者链路复验
+图像源年龄、exact-exposure、视觉吞吐和实际射频。
+
+正式 `1.0.3`（source `c2458368ef565472a98fda48f7b8612b20b270fb`）复验通过：
+纯模拟器无桌面窗口，主循环/采集约 91.45 Hz、物理约 250.5 Hz；5 m 原生 Shooting
+Range 静止 3 号靶完整链路中，图像源年龄约 42.54 ms，exact-exposure 有效，完整视觉
+约 64 Hz，45 秒发射 151 发并得到 151 个聚合 `accurate`。全窗口实际射频 3.356 Hz，
+首发至末发活跃段 6.708 Hz；后半段消费者检测器持续失去目标，因此射频损失不来自模拟器
+物理冷却。独立向 5601/UDP 以约 63.48 Hz 提交请求并设置 200 Hz 越权覆盖时，1.0.3
+仍固定 52 ms 逐发间隔、饱和 19.2308 Hz，`MainWindowHandle=0`。
 
 ### 1.0.2 高性能无窗口与物理射频验收
 
