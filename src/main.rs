@@ -326,6 +326,10 @@ fn performance_mode_uses_winit(disable_performance_ui: bool) -> bool {
     !disable_performance_ui
 }
 
+fn headless_schedule_interval() -> Duration {
+    Duration::from_millis(1)
+}
+
 fn simulator_asset_folder() -> String {
     [
         std::env::current_dir().ok().map(|path| path.join("assets")),
@@ -452,7 +456,7 @@ fn main() {
         app.add_plugins(default_plugins);
     } else {
         app.add_plugins(default_plugins.disable::<WinitPlugin>());
-        app.add_plugins(ScheduleRunnerPlugin::run_loop(Duration::ZERO));
+        app.add_plugins(ScheduleRunnerPlugin::run_loop(headless_schedule_interval()));
     }
     app.add_plugins(physics_plugins_from_config(&config));
     configure_physics_runtime(&mut app, &config);
@@ -651,14 +655,17 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
+    use std::time::Duration;
+
     use avian3d::prelude::{Physics, PhysicsTime};
     use bevy::prelude::{App, Time};
     use bevy::window::{ExitCondition, PresentMode};
 
     use super::{
         FixedPhysicsStepGate, FixedPhysicsTickDivider, PhysicsScheduleMode,
-        configure_physics_runtime, fixed_time_from_config, performance_mode_uses_winit,
-        physics_schedule_mode, primary_window_for_mode, window_exit_condition_for_mode,
+        configure_physics_runtime, fixed_time_from_config, headless_schedule_interval,
+        performance_mode_uses_winit, physics_schedule_mode, primary_window_for_mode,
+        window_exit_condition_for_mode,
     };
 
     #[test]
@@ -675,6 +682,7 @@ mod tests {
         ));
         assert!(!performance_mode_uses_winit(true));
         assert!(performance_mode_uses_winit(false));
+        assert_eq!(headless_schedule_interval(), Duration::from_millis(1));
     }
 
     #[test]

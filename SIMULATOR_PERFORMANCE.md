@@ -1,8 +1,8 @@
-# Daedalus Simulator 1.0.2 构建、运行与性能基线
+# Daedalus Simulator 1.0.3 构建、运行与性能基线
 
 - 适用仓库/分支：`daedalus-simulator/main`
 - 本机固定目录：`D:\仿真\repos\daedalus-simulator`
-- 正式 Release：`D:\仿真\releases\daedalus-simulator\1.0.2`
+- 正式 Release：`D:\仿真\releases\daedalus-simulator\1.0.3`
 - 公共 SDK：`DaedalusSimSdk 1.0.0`，`SHM v7 ABI r1`
 
 本文是模拟器性能配置和公开基线的权威文档。机器可读结果见
@@ -39,7 +39,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\package-release.ps
 ### 默认：高性能模式
 
 ```powershell
-Set-Location D:\仿真\releases\daedalus-simulator\1.0.2
+Set-Location D:\仿真\releases\daedalus-simulator\1.0.3
 powershell -NoProfile -ExecutionPolicy Bypass -File .\start-simulator.ps1
 ```
 
@@ -52,7 +52,7 @@ debug 子进程，禁用 Winit 桌面事件循环，改用无窗口 `ScheduleRun
 ### 可视验收模式
 
 ```powershell
-Set-Location D:\仿真\releases\daedalus-simulator\1.0.2
+Set-Location D:\仿真\releases\daedalus-simulator\1.0.3
 powershell -NoProfile -ExecutionPolicy Bypass -File .\start-simulator.ps1 -Visible
 ```
 
@@ -78,6 +78,14 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\run-autoaim-b.ps1
 启动器会同时启动正式模拟器 Release 和 WSL 自瞄 B。TensorRT 属于消费者推理后端，不由模拟器自动加载；启动器默认设置 `AIM_SIM_WITH_VIVSIONN_TRT=ON`，使用 `D:\仿真\models\engines\armor.engine`。首次运行或缓存清理后会自动按正式 SDK 重建桥接器。
 
 ## 当前与历史实测
+
+### 1.0.3 无窗口调度节拍修复
+
+`1.0.2` 首次联合消费者验收发现，无窗口 `ScheduleRunnerPlugin` 的零等待忙循环会让
+渲染/readback 队列积压：TCP 完整帧约 27.9 Hz，消费者图像源年龄增长到 13.49 s，
+exact-exposure 匹配失败，完整视觉结果为 0。`1.0.3` 将后台主循环设置为 1 ms 有界节拍，
+保持无 Winit、无桌面窗口与 20 Hz 物理射频硬上限不变。该版本必须以完整消费者链路复验
+图像源年龄、exact-exposure、视觉吞吐和实际射频后，才可作为自瞄默认版本。
 
 ### 1.0.2 高性能无窗口与物理射频验收
 

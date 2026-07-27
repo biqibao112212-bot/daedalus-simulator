@@ -17,3 +17,4 @@
 13. Windows 渲染后端按用途隔离：无窗口高性能模式固定 DX12；人工可视验收默认 Vulkan。原因是已验证机器上的 DX12 可见交换链在窗口重配置时会触发 wgpu `ResizeBuffers / Invalid surface` 致命错误，而 Vulkan 可见模式稳定；该选择不改变 1440×1080 离屏采集、SDK 或消费者接口。
 14. 高性能模式的 UI 边界由模拟器自身保证：`DAEDALUS_PERF_DISABLE_UI=1` 时不创建 Bevy 主窗口、不启动靶场 auto-aim debug 子进程，并禁用 Winit 桌面事件循环，改用 `ScheduleRunnerPlugin` 保持纯后台运行；可视 `-Visible` 模式仍创建主窗口并保留 debug。该修复由 `1.0.2` 发布，不改变 SDK/IPC/场景控制协议。
 15. 20 Hz 是模拟器物理层的最大射频，而不是消费者建议值：所有发射入口共用 `ProjectileCooldown`，最短冷却强制为 0.05 s；配置或环境变量只能降低射频，不能提高上限。该语义由 `1.0.2` 固化，不升级 SDK 1.0.0。
+16. 无窗口高性能模式使用 `ScheduleRunnerPlugin` 的 1 ms 有界节拍，不使用零等待忙循环。零等待在 `1.0.2` 联合消费者验收中导致渲染/readback 排队、TCP 源年龄持续增长和 exact-exposure 失败；`1.0.3` 修复该回归，不恢复 Winit 桌面窗口，也不改变 SDK/IPC。
