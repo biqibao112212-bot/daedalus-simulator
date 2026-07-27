@@ -1,8 +1,8 @@
-# Daedalus Simulator 1.0.1 构建、运行与性能基线
+# Daedalus Simulator 1.0.2 构建、运行与性能基线
 
 - 适用仓库/分支：`daedalus-simulator/main`
 - 本机固定目录：`D:\仿真\repos\daedalus-simulator`
-- 正式 Release：`D:\仿真\releases\daedalus-simulator\1.0.1`
+- 正式 Release：`D:\仿真\releases\daedalus-simulator\1.0.2`
 - 公共 SDK：`DaedalusSimSdk 1.0.0`，`SHM v7 ABI r1`
 
 本文是模拟器性能配置和公开基线的权威文档。机器可读结果见
@@ -17,6 +17,7 @@
 - Windows/WSL 图像数据面：TCP 5602，latest-only；
 - 元数据、曝光位姿和真值：SDK IPC；
 - 云台命令：UDP 5601；场景控制：UDP 5603；
+- 模拟器物理发射上限：20 Hz（最短冷却 0.05 s）；消费者可以更慢，但不能提高该上限；
 - 只使用 Release 构建测性能，禁止用 Debug 帧率代替。
 
 200 Hz 是配置上限，不是承诺帧率。实际吞吐由渲染、GPU readback、TCP、消费者推理和机器后台负载共同决定。
@@ -38,19 +39,20 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\package-release.ps
 ### 默认：高性能模式
 
 ```powershell
-Set-Location D:\仿真\releases\daedalus-simulator\1.0.1
+Set-Location D:\仿真\releases\daedalus-simulator\1.0.2
 powershell -NoProfile -ExecutionPolicy Bypass -File .\start-simulator.ps1
 ```
 
 该模式设置 `DAEDALUS_PERF_DISABLE_UI=1`，不创建主窗口、不拉起靶场前端
-debug 子进程，但离屏 Talos 相机仍持续渲染、readback 并向消费者发布图像。
+debug 子进程，禁用 Winit 桌面事件循环，改用无窗口 `ScheduleRunnerPlugin` 持续运行；
+离屏 Talos 相机仍持续渲染、readback 并向消费者发布图像。
 没有前端窗口不代表没有图像采集；判断采集是否正常应读取
 `capture_copy_submit_hz`、`capture_processing_complete_total` 和消费者输入计数。
 
 ### 可视验收模式
 
 ```powershell
-Set-Location D:\仿真\releases\daedalus-simulator\1.0.1
+Set-Location D:\仿真\releases\daedalus-simulator\1.0.2
 powershell -NoProfile -ExecutionPolicy Bypass -File .\start-simulator.ps1 -Visible
 ```
 
@@ -75,7 +77,26 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\run-autoaim-b.ps1
 
 启动器会同时启动正式模拟器 Release 和 WSL 自瞄 B。TensorRT 属于消费者推理后端，不由模拟器自动加载；启动器默认设置 `AIM_SIM_WITH_VIVSIONN_TRT=ON`，使用 `D:\仿真\models\engines\armor.engine`。首次运行或缓存清理后会自动按正式 SDK 重建桥接器。
 
-## 2026-07-18 当前实测
+## 当前与历史实测
+
+### 1.0.2 高性能无窗口与物理射频验收
+
+`1.0.2` 在高性能模式下不创建 Bevy 主窗口，也不启动靶场前端 debug 子进程，
+同时禁用 Winit 桌面事件循环，使用 `ScheduleRunnerPlugin` 保持纯后台运行；
+`-Visible` 的 Vulkan 可视验收行为不变。SDK 仍为 `1.0.0`，SHM/ABI 和场景控制协议均未改变。
+
+模拟器将所有手动、UDP 和 Talos 自动开火请求统一交给 `ProjectileCooldown`。
+配置文件与环境变量都只能把射频调低：任何短于 0.05 s 的冷却都会在模拟器内部钳制为
+0.05 s，因此消费者连续提交超过 20 Hz 的 `fire_advice=true` 也不能突破物理发射上限。
+
+2026-07-27 的 Release 候选验收中，后台进程持续运行，`MainWindowHandle=0`，
+物理步进约 249.4 Hz，UDP 5601/5603 持续监听。以 62.83 Hz 连续提交开火请求 20 秒，
+模拟器发射 380 发；逐发事件的 379 个相邻间隔均为 52 ms，饱和实际射频为
+19.2308 Hz，未突破 20 Hz。实际值低于 20.00 Hz 是 250 Hz 固定物理步长的量化结果：
+4 ms 一步，0.05 s 冷却需要 13 步才完成，即 52 ms；这不是消费者限频。
+
+正式 Release 复验必须再次检查无窗口、统计持续增长、端口归属和逐发间隔；完整自瞄的
+静止靶实际射频另按消费者版本锁与原生 Shooting Range 场景记录。
 
 ### 1.0.1 可见模式修复验收
 

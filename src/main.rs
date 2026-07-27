@@ -21,17 +21,19 @@ mod ros2;
 mod talos;
 
 use avian3d::prelude::*;
+use bevy::app::ScheduleRunnerPlugin;
 use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
 use bevy::prelude::*;
 use bevy::render::settings::{InstanceFlags, RenderCreation, WgpuSettings, WgpuSettingsPriority};
 use bevy::render::{RenderPlugin, RenderSystems};
 use bevy::window::{ExitCondition, PresentMode, WindowPosition, WindowResolution};
-use bevy::winit::WinitSettings;
+use bevy::winit::{WinitPlugin, WinitSettings};
 use bevy_inspector_egui::bevy_egui::{EguiPlugin, EguiPrimaryContextPass};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use clap::Parser;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::time::Duration;
 
 use crate::auto_gen::AutoGenPlugin;
 use crate::capture::{
@@ -312,6 +314,18 @@ fn primary_window_for_mode(
     }
 }
 
+fn window_exit_condition_for_mode(disable_performance_ui: bool) -> ExitCondition {
+    if disable_performance_ui {
+        ExitCondition::DontExit
+    } else {
+        ExitCondition::OnAllClosed
+    }
+}
+
+fn performance_mode_uses_winit(disable_performance_ui: bool) -> bool {
+    !disable_performance_ui
+}
+
 fn simulator_asset_folder() -> String {
     [
         std::env::current_dir().ok().map(|path| path.join("assets")),
@@ -423,19 +437,24 @@ fn main() {
     let mut app = App::new();
     // The simulator must keep advancing at full speed when a benchmark window is unfocused.
     app.insert_resource(WinitSettings::continuous());
-    app.add_plugins((
-        DefaultPlugins
-            .set(WindowPlugin {
-                primary_window: primary_window_for_mode(disable_performance_ui, present_mode),
-                ..default()
-            })
-            .set(AssetPlugin {
-                file_path: simulator_asset_folder(),
-                ..default()
-            })
-            .set(render_plugin_for_platform()),
-        physics_plugins_from_config(&config),
-    ));
+    let default_plugins = DefaultPlugins
+        .set(WindowPlugin {
+            primary_window: primary_window_for_mode(disable_performance_ui, present_mode),
+            exit_condition: window_exit_condition_for_mode(disable_performance_ui),
+            ..default()
+        })
+        .set(AssetPlugin {
+            file_path: simulator_asset_folder(),
+            ..default()
+        })
+        .set(render_plugin_for_platform());
+    if performance_mode_uses_winit(disable_performance_ui) {
+        app.add_plugins(default_plugins);
+    } else {
+        app.add_plugins(default_plugins.disable::<WinitPlugin>());
+        app.add_plugins(ScheduleRunnerPlugin::run_loop(Duration::ZERO));
+    }
+    app.add_plugins(physics_plugins_from_config(&config));
     configure_physics_runtime(&mut app, &config);
 
     if !disable_performance_ui {
@@ -634,18 +653,28 @@ fn main() {
 mod tests {
     use avian3d::prelude::{Physics, PhysicsTime};
     use bevy::prelude::{App, Time};
-    use bevy::window::PresentMode;
+    use bevy::window::{ExitCondition, PresentMode};
 
     use super::{
         FixedPhysicsStepGate, FixedPhysicsTickDivider, PhysicsScheduleMode,
-        configure_physics_runtime, fixed_time_from_config, physics_schedule_mode,
-        primary_window_for_mode,
+        configure_physics_runtime, fixed_time_from_config, performance_mode_uses_winit,
+        physics_schedule_mode, primary_window_for_mode, window_exit_condition_for_mode,
     };
 
     #[test]
     fn performance_mode_does_not_create_a_primary_window() {
         assert!(primary_window_for_mode(true, PresentMode::Immediate).is_none());
         assert!(primary_window_for_mode(false, PresentMode::Immediate).is_some());
+        assert!(matches!(
+            window_exit_condition_for_mode(true),
+            ExitCondition::DontExit
+        ));
+        assert!(matches!(
+            window_exit_condition_for_mode(false),
+            ExitCondition::OnAllClosed
+        ));
+        assert!(!performance_mode_uses_winit(true));
+        assert!(performance_mode_uses_winit(false));
     }
 
     #[test]

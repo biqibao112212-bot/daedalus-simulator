@@ -3,6 +3,7 @@ param([string]$ConsumerLock)
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
+$version = (Get-Content -LiteralPath (Join-Path $root 'VERSION') -Raw).Trim()
 $release = Get-Content -LiteralPath (Join-Path $root 'release\release.json') -Raw -Encoding UTF8 | ConvertFrom-Json
 $contract = Get-Content -LiteralPath (Join-Path $root 'sdk\contract.json') -Raw -Encoding UTF8 | ConvertFrom-Json
 $requiredCapabilities = @(
@@ -16,6 +17,10 @@ $requiredCapabilities = @(
     'tcp_image',
     'scene_control'
 )
+
+if ($release.version -ne $version) {
+    throw "VERSION and release.json disagree: VERSION=$version release.json=$($release.version)."
+}
 
 if ($release.sdk_version -ne $contract.sdk_version -or
     $release.shm_version -ne $contract.shm_version -or

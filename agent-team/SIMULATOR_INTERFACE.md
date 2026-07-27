@@ -48,3 +48,10 @@ target_link_libraries(my_consumer PRIVATE DaedalusSimSdk::DaedalusSimSdk)
 - 图像性能模式：`DAEDALUS_TALOS_IMAGE_TRANSPORT=tcp`，默认监听 `0.0.0.0:5602`；消费者使用 latest-only TCP 接收器。
 - 文件图像模式：只作兼容与同系统调试。1440×1080 跨 Windows/WSL 会因读取期间槽位更新而大量拒帧，不得作为默认配置。
 - 场景控制：`5603/udp`，协议 `daedalus.scene-control/1`；详细操作见 `SCENARIO_CONTROL.md`。
+
+## 发射语义
+
+- `fire_advice=true` 是开火请求，不是发射成功回执；无目标、命令过期或云台未对齐时模拟器可以拒绝该请求。
+- 所有被接受的手动、UDP 和 Talos 请求最终共用模拟器内的 `ProjectileCooldown`。
+- 最大物理射频固定为 20 Hz，即相邻弹丸最短冷却 0.05 s。配置文件或环境变量可以降低射频，但不能突破该上限。
+- 实际射频应以模拟器 `launch_count` 在稳定采样窗口内的增量除以时间计算，不能以消费者发送频率或 `fire_advice` 为真帧数代替。

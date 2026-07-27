@@ -23,8 +23,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\package-release.ps
 默认输出：
 
 ```text
-D:\仿真\releases\daedalus-simulator\1.0.1\
-D:\仿真\releases\daedalus-simulator\1.0.1.zip
+D:\仿真\releases\daedalus-simulator\1.0.2\
+D:\仿真\releases\daedalus-simulator\1.0.2.zip
 ```
 
 发布目录包含：

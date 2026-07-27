@@ -20,7 +20,7 @@
 也不要在不知道进程来源时直接全局杀进程。
 
 ```powershell
-$release = 'D:\仿真\releases\daedalus-simulator\1.0.1'
+$release = 'D:\仿真\releases\daedalus-simulator\1.0.2'
 Get-Content -Raw -LiteralPath "$release\release.json" | ConvertFrom-Json |
     Select-Object product,version,sdk_version,shm_version,tcp_image_port,scene_control_port
 
@@ -70,7 +70,7 @@ Get-NetUDPEndpoint -LocalPort 5603 -ErrorAction SilentlyContinue |
 
 ```powershell
 $env:DAEDALUS_STATS_JSON='D:\仿真\runtime\diagnostics\simulator.json'
-Set-Location D:\仿真\releases\daedalus-simulator\1.0.1
+Set-Location D:\仿真\releases\daedalus-simulator\1.0.2
 powershell -NoProfile -ExecutionPolicy Bypass -File .\start-simulator.ps1
 ```
 

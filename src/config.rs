@@ -13,6 +13,8 @@ const MAX_PHYSICS_TICK_DIVISOR_OVERRIDE: u32 = 16;
 const PREVIEW_ENABLED_ENV: &str = "DAEDALUS_PREVIEW_ENABLED";
 const PREVIEW_MAX_HZ_ENV: &str = "DAEDALUS_PREVIEW_MAX_HZ";
 const MAX_PREVIEW_HZ_OVERRIDE: f64 = 240.0;
+pub const MAX_PROJECTILE_FIRE_RATE_HZ: f32 = 20.0;
+const MIN_PROJECTILE_COOLDOWN_S: f32 = 1.0 / MAX_PROJECTILE_FIRE_RATE_HZ;
 
 #[derive(Resource, Deserialize, Reflect, Clone)]
 #[reflect(Resource)]
@@ -393,6 +395,15 @@ impl SimulationConfig {
         if let Some(cooldown_s) = env_f32("DAEDALUS_PROJECTILE_COOLDOWN_S") {
             self.projectile.cooldown = cooldown_s;
         }
+        self.projectile.cooldown = enforce_projectile_fire_rate_limit(self.projectile.cooldown);
+    }
+}
+
+fn enforce_projectile_fire_rate_limit(cooldown_s: f32) -> f32 {
+    if cooldown_s.is_finite() && cooldown_s > 0.0 {
+        cooldown_s.max(MIN_PROJECTILE_COOLDOWN_S)
+    } else {
+        MIN_PROJECTILE_COOLDOWN_S
     }
 }
 
@@ -722,7 +733,8 @@ fn preserve_startup_physics_selectors(current: &PhysicsConfig, reloaded: &mut Ph
 mod tests {
     use super::{
         MAX_PHYSICS_SUBSTEPS_OVERRIDE, MAX_PHYSICS_TICK_DIVISOR_OVERRIDE, MAX_PREVIEW_HZ_OVERRIDE,
-        PhysicsConfig, PreviewConfig, parse_env_bool, parse_physics_substeps,
+        MAX_PROJECTILE_FIRE_RATE_HZ, PhysicsConfig, PreviewConfig,
+        enforce_projectile_fire_rate_limit, parse_env_bool, parse_physics_substeps,
         parse_physics_tick_divisor, parse_preview_max_hz, preserve_startup_physics_selectors,
         resolve_physics_tick_divisor,
     };
@@ -816,5 +828,18 @@ mod tests {
             None
         );
         assert_eq!(parse_preview_max_hz("invalid"), None);
+    }
+
+    #[test]
+    fn projectile_fire_rate_is_hard_limited_to_twenty_hertz() {
+        let minimum_cooldown = 1.0 / MAX_PROJECTILE_FIRE_RATE_HZ;
+        assert_eq!(enforce_projectile_fire_rate_limit(0.001), minimum_cooldown);
+        assert_eq!(enforce_projectile_fire_rate_limit(0.05), minimum_cooldown);
+        assert_eq!(enforce_projectile_fire_rate_limit(0.1), 0.1);
+        assert_eq!(enforce_projectile_fire_rate_limit(0.0), minimum_cooldown);
+        assert_eq!(
+            enforce_projectile_fire_rate_limit(f32::NAN),
+            minimum_cooldown
+        );
     }
 }

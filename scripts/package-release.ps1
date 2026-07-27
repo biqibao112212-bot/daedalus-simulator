@@ -17,6 +17,8 @@ if ($dirty.Count -ne 0) {
 }
 $sourceCommit = (git -C $root rev-parse HEAD).Trim()
 $version = (Get-Content -LiteralPath (Join-Path $root 'VERSION') -Raw).Trim()
+& (Join-Path $PSScriptRoot 'check-compatibility.ps1')
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 $target = [IO.Path]::GetFullPath((Join-Path $OutputRoot $version)).TrimEnd('\')
 $output = [IO.Path]::GetFullPath($OutputRoot).TrimEnd('\')
 $zip = "$target.zip"
