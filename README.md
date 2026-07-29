@@ -12,6 +12,12 @@
 
 </div>
 
+## 来源与维护声明
+
+本仓库是由 **3SE 战队**持续维护、适配和改进的 Daedalus 模拟器版本，基于 [Blackjack200/bevy_robomaster_simulator](https://github.com/Blackjack200/bevy_robomaster_simulator) 的公开开源工作发展而来。3SE 的工作包括将模拟器整理为独立发布仓库、维护公共 SDK 与版本契约、完善场景控制、性能与发布流程，以及针对自身研发需求的持续工程改进。
+
+原始工作、作者署名和开源许可证均应被保留；本仓库不将上游工作表述为 3SE 的独立原创。关于衍生版本的完整归属说明见 [NOTICE.md](NOTICE.md)，具体改动可通过 Git 历史和 Release 记录追溯。
+
 ## 正式仓库与发布
 
 本仓库是模拟器、公共 SDK 和正式 Release 的唯一源码所有者。自瞄与打符不再复制模拟器源码，只消费带版本的 `DaedalusSimSdk` 和发布包。
@@ -190,8 +196,10 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\package-release.ps
 
 ## 📝 项目信息
 
-* **作者**：Blackjack200
-* **团队**：Actor&Thinker 战队
+* **原始作者**：Blackjack200
+* **原始团队**：Actor&Thinker 战队
+* **当前维护与改进**：3SE 战队
+* **上游项目**：[Blackjack200/bevy_robomaster_simulator](https://github.com/Blackjack200/bevy_robomaster_simulator)
 * **技术栈**：Rust · Bevy · ROS2(r2r) · Talos IPC
 * **交流方式**：GitHub Issues / Pull Requests
 * **开源协议**：AGPL v3
