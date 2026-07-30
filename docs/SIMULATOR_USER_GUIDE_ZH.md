@@ -88,7 +88,9 @@ Windows 可双击 `setup.cmd`。Linux 推荐解压 `linux-x86_64.tar.gz` 后运�
 ```
 
 Linux 使用 Vulkan。Windows 高性能模式默认 DX12，可视模式默认 Vulkan。wgpu 在所选
-后端中自动选择高性能 GPU，用户无需选择 NVIDIA/AMD/Intel 专用 SDK。
+后端中自动选择高性能 GPU，用户无需选择 NVIDIA/AMD/Intel 专用 SDK。Linux 高性能模式
+不初始化 Winit，因此纯计算节点不需要 X11、Wayland 或 Xvfb；Linux 可视模式仍需要有效
+的桌面显示会话。
 
 启动后，实际 GPU 信息写入：
 

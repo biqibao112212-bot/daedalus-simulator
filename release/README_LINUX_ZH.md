@@ -59,6 +59,7 @@ export PATH="$HOME/.local/bin:$PATH"
 | glibc、`libudev.so.1`、`libasound.so.2` | 必需 | 安装器通过 `ldd` 检查 |
 | Vulkan loader | 必需 | 通常由 `libvulkan1` 提供 |
 | Vulkan 驱动 | 必需 | 实时取图建议使用硬件 GPU；llvmpipe 仅用于启动诊断 |
+| X11/Wayland | 仅可视模式需要 | 高性能无窗口模式可直接运行在无 `DISPLAY` 的计算节点 |
 | Windows/WSL | 不需要 | Linux 包原生运行 |
 | CUDA/TensorRT/模型 | 模拟器不需要 | 仅用户自己的自瞄程序可能需要 |
 
@@ -87,6 +88,9 @@ daedalus-simulator
 # 可视模式
 daedalus-simulator-visible
 ```
+
+服务器没有桌面环境时使用高性能无窗口模式，不需要安装 Xvfb；可视模式需要有效的
+`DISPLAY` 或 Wayland 会话。
 
 便携运行：
 

@@ -23,17 +23,19 @@ mod ros2;
 mod talos;
 
 use avian3d::prelude::*;
+use bevy::app::ScheduleRunnerPlugin;
 use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
 use bevy::prelude::*;
 use bevy::render::settings::{InstanceFlags, RenderCreation, WgpuSettings, WgpuSettingsPriority};
 use bevy::render::{RenderPlugin, RenderSystems};
 use bevy::window::{ExitCondition, PresentMode, WindowPosition, WindowResolution};
-use bevy::winit::WinitSettings;
+use bevy::winit::{WinitPlugin, WinitSettings};
 use bevy_inspector_egui::bevy_egui::{EguiPlugin, EguiPrimaryContextPass};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use clap::Parser;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::time::Duration;
 
 use crate::auto_gen::AutoGenPlugin;
 use crate::capture::{
@@ -376,6 +378,10 @@ fn performance_ui_disabled() -> bool {
         .unwrap_or(false)
 }
 
+fn use_headless_schedule_runner(disable_performance_ui: bool) -> bool {
+    disable_performance_ui && cfg!(target_os = "linux")
+}
+
 #[cfg(feature = "talos")]
 fn should_enable_talos_plugin(app: &App) -> bool {
     #[cfg(feature = "ros2")]
@@ -452,22 +458,32 @@ fn main() {
         PresentMode::AutoNoVsync
     });
     let mut app = App::new();
-    // The simulator must keep advancing at full speed when a benchmark window is unfocused.
-    app.insert_resource(WinitSettings::continuous());
-    app.add_plugins((
-        DefaultPlugins
-            .set(WindowPlugin {
-                primary_window: primary_window_for_mode(disable_performance_ui, present_mode),
-                exit_condition: window_exit_condition_for_mode(disable_performance_ui),
-                ..default()
-            })
-            .set(AssetPlugin {
-                file_path: simulator_asset_folder(),
-                ..default()
-            })
-            .set(render_plugin_for_platform()),
-        physics_plugins_from_config(&config),
-    ));
+    let default_plugins = DefaultPlugins
+        .set(WindowPlugin {
+            primary_window: primary_window_for_mode(disable_performance_ui, present_mode),
+            exit_condition: window_exit_condition_for_mode(disable_performance_ui),
+            ..default()
+        })
+        .set(AssetPlugin {
+            file_path: simulator_asset_folder(),
+            ..default()
+        })
+        .set(render_plugin_for_platform());
+    if use_headless_schedule_runner(disable_performance_ui) {
+        // A release performance process must run on compute nodes that have a
+        // Vulkan adapter but no X11/Wayland session. Winit always constructs a
+        // Linux event loop, even when WindowPlugin has no primary window, so
+        // replace its runner with Bevy's platform-independent schedule loop.
+        app.add_plugins(default_plugins.disable::<WinitPlugin>());
+        app.add_plugins(ScheduleRunnerPlugin::run_loop(Duration::ZERO));
+    } else {
+        // The visible simulator must keep advancing when its window is
+        // unfocused, so retain Winit and request continuous updates. Windows
+        // performance mode also retains its previously accepted Winit runner.
+        app.insert_resource(WinitSettings::continuous());
+        app.add_plugins(default_plugins);
+    }
+    app.add_plugins(physics_plugins_from_config(&config));
     app.add_plugins(RuntimeCapabilitiesPlugin);
     configure_physics_runtime(&mut app, &config);
 
@@ -688,7 +704,7 @@ mod tests {
     use super::{
         FixedPhysicsStepGate, FixedPhysicsTickDivider, PhysicsScheduleMode,
         configure_physics_runtime, fixed_time_from_config, physics_schedule_mode,
-        primary_window_for_mode, window_exit_condition_for_mode,
+        primary_window_for_mode, use_headless_schedule_runner, window_exit_condition_for_mode,
     };
 
     #[test]
@@ -699,6 +715,15 @@ mod tests {
             window_exit_condition_for_mode(true),
             ExitCondition::DontExit
         ));
+    }
+
+    #[test]
+    fn only_linux_performance_mode_replaces_the_winit_runner() {
+        assert!(!use_headless_schedule_runner(false));
+        assert_eq!(
+            use_headless_schedule_runner(true),
+            cfg!(target_os = "linux")
+        );
     }
 
     #[test]

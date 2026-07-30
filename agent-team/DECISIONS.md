@@ -77,3 +77,8 @@
     cross-platform fallback. Remote AutoDL acceptance downloads the exact
     GitHub Release asset through AutoDL's documented GitHub acceleration
     service instead of copying artifacts over the SSH control channel.
+21. Linux performance mode is truly display-server independent: it disables
+    Bevy's Winit plugin and uses a zero-delay `ScheduleRunnerPlugin` loop while
+    retaining the RenderPlugin for off-screen Vulkan capture. Linux visible
+    mode and the already accepted Windows runner behavior continue to use
+    Winit. Requiring Xvfb for the public headless launcher is not acceptable.
