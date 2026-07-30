@@ -382,6 +382,15 @@ fn use_headless_schedule_runner(disable_performance_ui: bool) -> bool {
     disable_performance_ui && cfg!(target_os = "linux")
 }
 
+fn headless_virtual_time() -> Time<Virtual> {
+    // Bevy's 250 ms default can force as many as 62 fixed 250 Hz physics
+    // ticks after one slow frame. On compute nodes that creates a self-
+    // sustaining catch-up spiral in which rendering never recovers. A 16 ms
+    // ceiling bounds one update to four fixed ticks while preserving normal
+    // real-time behavior whenever the runner sustains at least 62.5 Hz.
+    Time::<Virtual>::from_max_delta(Duration::from_millis(16))
+}
+
 #[cfg(feature = "talos")]
 fn should_enable_talos_plugin(app: &App) -> bool {
     #[cfg(feature = "ros2")]
@@ -475,6 +484,7 @@ fn main() {
         // Linux event loop, even when WindowPlugin has no primary window, so
         // replace its runner with Bevy's platform-independent schedule loop.
         app.add_plugins(default_plugins.disable::<WinitPlugin>());
+        app.insert_resource(headless_virtual_time());
         app.add_plugins(ScheduleRunnerPlugin::run_loop(Duration::ZERO));
     } else {
         // The visible simulator must keep advancing when its window is
@@ -698,13 +708,14 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use avian3d::prelude::{Physics, PhysicsTime};
-    use bevy::prelude::{App, Time};
+    use bevy::prelude::{App, Time, Virtual};
     use bevy::window::{ExitCondition, PresentMode};
 
     use super::{
         FixedPhysicsStepGate, FixedPhysicsTickDivider, PhysicsScheduleMode,
-        configure_physics_runtime, fixed_time_from_config, physics_schedule_mode,
-        primary_window_for_mode, use_headless_schedule_runner, window_exit_condition_for_mode,
+        configure_physics_runtime, fixed_time_from_config, headless_virtual_time,
+        physics_schedule_mode, primary_window_for_mode, use_headless_schedule_runner,
+        window_exit_condition_for_mode,
     };
 
     #[test]
@@ -724,6 +735,12 @@ mod tests {
             use_headless_schedule_runner(true),
             cfg!(target_os = "linux")
         );
+    }
+
+    #[test]
+    fn headless_runner_bounds_fixed_step_catch_up() {
+        let time: Time<Virtual> = headless_virtual_time();
+        assert_eq!(time.max_delta(), std::time::Duration::from_millis(16));
     }
 
     #[test]

@@ -73,6 +73,10 @@ Version 1.1.0 was published before AutoDL acceptance and exposed a Linux
 headless Winit crash; its release has zero downloads and will be marked
 superseded. Version 1.1.1 is the patch candidate: Linux performance mode now
 runs without X11/Wayland, while SDK 1.1.0 / ABI revision 2 remains unchanged.
+The first RTX 3090 SDK run then exposed a 250 Hz fixed-step catch-up spiral
+(2.85 delivered FPS) and a related low-frame-rate command-expiry defect. Both
+root causes are fixed and covered by focused tests; exact-binary rebuild and
+server remeasurement are in progress.
 
 ## Remaining gates
 

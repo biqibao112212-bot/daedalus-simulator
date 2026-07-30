@@ -96,13 +96,15 @@ impl Plugin for NetworkBridgePlugin {
         app.init_resource::<LatestNetworkGimbalCommand>()
             .add_systems(Startup, setup_network_bridge)
             .add_systems(
-                Update,
-                drain_network_gimbal_commands
-                    .run_if(|enabled: Res<SubscribeAutoAim>| enabled.load(Ordering::Acquire)),
-            )
-            .add_systems(
                 FixedUpdate,
-                apply_latest_network_gimbal_command
+                // Drain immediately before applying in the same fixed tick.
+                // Draining in Update made a command wait one frame and expire
+                // on machines running below the 250 ms safety timeout.
+                (
+                    drain_network_gimbal_commands,
+                    apply_latest_network_gimbal_command,
+                )
+                    .chain()
                     .run_if(|enabled: Res<SubscribeAutoAim>| enabled.load(Ordering::Acquire)),
             );
     }

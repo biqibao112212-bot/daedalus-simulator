@@ -82,3 +82,8 @@
     retaining the RenderPlugin for off-screen Vulkan capture. Linux visible
     mode and the already accepted Windows runner behavior continue to use
     Winit. Requiring Xvfb for the public headless launcher is not acceptable.
+22. Linux headless mode overrides Bevy's 250 ms virtual-time maximum delta with
+    16 ms. This prevents one slow frame from scheduling up to 62 catch-up steps
+    at the simulator's 250 Hz fixed rate and entering a persistent low-frame-rate
+    spiral. Network gimbal commands are drained and applied, in that order, in
+    the same `FixedUpdate`; command freshness must not depend on main-frame rate.
