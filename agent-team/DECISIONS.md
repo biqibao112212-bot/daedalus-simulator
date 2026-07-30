@@ -71,7 +71,9 @@
     frameworks, or models. A GUI Setup.exe/MSI is not claimed without a
     maintained installer toolchain.
 20. Linux releases publish `tar.gz` as the primary end-user archive so Unix
-    executable mode bits survive extraction; ZIP remains a cross-platform
-    fallback. Remote AutoDL acceptance downloads the exact GitHub Release asset
-    through AutoDL's documented GitHub acceleration service instead of copying
-    artifacts over the SSH control channel.
+    executable mode bits survive extraction; archive generation normalizes
+    directories and launchers to `0755` and ordinary payload files to `0644`
+    even when packaging from a Windows-mounted WSL worktree. ZIP remains a
+    cross-platform fallback. Remote AutoDL acceptance downloads the exact
+    GitHub Release asset through AutoDL's documented GitHub acceleration
+    service instead of copying artifacts over the SSH control channel.

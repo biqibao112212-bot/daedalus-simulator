@@ -132,7 +132,38 @@ manifest = {
 PY
 
 (cd "$TARGET_DIR" && zip -qr "$ZIP_PATH" .)
-(cd "$TARGET_DIR" && tar -czf "$TAR_GZ_PATH" .)
+python3 - "$TARGET_DIR" "$TAR_GZ_PATH" <<'PY'
+import pathlib
+import sys
+import tarfile
+
+target = pathlib.Path(sys.argv[1])
+archive_path = pathlib.Path(sys.argv[2])
+executables = {
+    pathlib.PurePosixPath("bin/daedalus"),
+    pathlib.PurePosixPath("install-linux.sh"),
+    pathlib.PurePosixPath("start-simulator.sh"),
+}
+
+def normalized(member: tarfile.TarInfo) -> tarfile.TarInfo:
+    relative = pathlib.PurePosixPath(member.name.removeprefix("./"))
+    member.uid = 0
+    member.gid = 0
+    member.uname = "root"
+    member.gname = "root"
+    if member.isdir():
+        member.mode = 0o755
+    elif member.issym():
+        member.mode = 0o777
+    elif relative in executables:
+        member.mode = 0o755
+    else:
+        member.mode = 0o644
+    return member
+
+with tarfile.open(archive_path, "w:gz", format=tarfile.PAX_FORMAT) as archive:
+    archive.add(target, arcname=".", recursive=True, filter=normalized)
+PY
 echo "release_dir=$TARGET_DIR"
 echo "release_zip=$ZIP_PATH"
 echo "release_tar_gz=$TAR_GZ_PATH"
