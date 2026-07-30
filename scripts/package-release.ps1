@@ -94,6 +94,7 @@ Copy-Item -LiteralPath `
     (Join-Path $root 'docs\SDK_API_REFERENCE_ZH.md'),
     (Join-Path $root 'docs\RELEASE_PROGRESS_ZH.md'),
     (Join-Path $root 'benchmarks\1.1.0\performance-short-2026-07-26.json'),
+    (Join-Path $root 'benchmarks\1.1.1\performance-autodl-rtx3090-2026-07-30.json'),
     (Join-Path $root 'sdk\README.md') `
     -Destination (Join-Path $target 'docs')
 Copy-Item -LiteralPath (Join-Path $root 'sdk\contract.json') -Destination (Join-Path $target 'docs\sdk-contract.json')

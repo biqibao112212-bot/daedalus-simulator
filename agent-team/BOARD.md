@@ -73,10 +73,12 @@ Version 1.1.0 was published before AutoDL acceptance and exposed a Linux
 headless Winit crash; its release has zero downloads and will be marked
 superseded. Version 1.1.1 is the patch candidate: Linux performance mode now
 runs without X11/Wayland, while SDK 1.1.0 / ABI revision 2 remains unchanged.
-The first RTX 3090 SDK run then exposed a 250 Hz fixed-step catch-up spiral
-(2.85 delivered FPS) and a related low-frame-rate command-expiry defect. Both
-root causes are fixed and covered by focused tests; exact-binary rebuild and
-server remeasurement are in progress.
+The first RTX 3090 SDK run exposed a 250 Hz fixed-step catch-up spiral (2.85
+delivered FPS) and a related low-frame-rate command-expiry defect. Both root
+causes are fixed and covered by focused tests. Exact RC2 remeasurement passed:
+723 frames in 20.007 seconds (36.138 FPS, 214.393 MiB/s), 722/722 successful
+exact-frame gimbal timestamp matches, tracked command feedback, all scene ACKs,
+and zero TCP timeout on the RTX 3090 Vulkan adapter.
 
 ## Remaining gates
 

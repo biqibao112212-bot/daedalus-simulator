@@ -67,6 +67,13 @@ a real-time performance promise: fixed 1440x1080 RGB delivery and a complete
 live auto-aim loop require a suitable hardware Vulkan adapter. Seeing a GPU in
 `nvidia-smi` alone does not prove that the Vulkan loader can use it.
 
+The 1.1.1 package additionally passed a hardware-GPU acceptance run on AutoDL
+Ubuntu 22.04 with an RTX 3090 and NVIDIA 580.76.05. With no display server it
+sustained 36.138 RGBA32 frames/s and 214.393 MiB/s for 20 seconds, with exact
+timestamp matches for every successful per-frame gimbal lookup, tracked-command
+feedback, scene-control acknowledgements, and no TCP timeout. This is a
+machine-specific Xeon/Vulkan baseline, not a universal minimum FPS guarantee.
+
 Release binaries embed their simulation configuration and disable config hot
 reload, local keyboard/mouse mutation, debug/auto-generation modes, dataset
 output, ground-truth publication, and managed inference bridges. Only visible

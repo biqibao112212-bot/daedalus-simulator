@@ -1,12 +1,32 @@
-# Daedalus Simulator 1.0.1 构建、运行与性能基线
+# Daedalus Simulator 1.1.1 构建、运行与性能基线
 
 - 适用仓库/分支：`daedalus-simulator/main`
 - 本机固定目录：`D:\仿真\repos\daedalus-simulator`
-- 正式 Release：`D:\仿真\releases\daedalus-simulator\1.0.1`
-- 公共 SDK：`DaedalusSimSdk 1.0.0`，`SHM v7 ABI r1`
+- 正式 Release：`D:\仿真\releases\daedalus-simulator\1.1.1`
+- 公共 SDK：`DaedalusSimSdk 1.1.0`，`SHM v7 ABI r2`
 
-本文是模拟器性能配置和公开基线的权威文档。机器可读结果见
-[`benchmarks/1.0.0/performance-2026-07-18.json`](benchmarks/1.0.0/performance-2026-07-18.json)。
+本文是模拟器性能配置和公开基线的权威文档。1.1.1 Linux GPU 验收的机器可读结果见
+[`benchmarks/1.1.1/performance-autodl-rtx3090-2026-07-30.json`](benchmarks/1.1.1/performance-autodl-rtx3090-2026-07-30.json)；
+旧版数据仅作历史参考。
+
+## 1.1.1 Linux RTX 3090 验收（2026-07-30）
+
+Linux x86_64 RC2 完整包（实现提交 `5bd4a56`）在 AutoDL Ubuntu 22.04、Xeon Gold 6330、
+RTX 3090、驱动 580.76.05 上通过验收。服务器没有 `DISPLAY`、Wayland 或 Xvfb；Vulkan
+使用 NVIDIA `libEGL_nvidia.so.0` 无显示 ICD。发布包经 GitHub Release 签名地址和 AutoDL
+加速通道下载，SHA256 校验后使用包内安装器安装，安装后二进制与包内文件逐字节一致。
+
+发行 SDK 消费者预热 3 秒并连续采样 20.007 秒：收到 723 帧 1440×1080 RGBA32 图像，
+实收 36.138 FPS、214.393 MiB/s，TCP 超时为 0。722 次同帧云台查询全部与图像时间戳
+一致；最新云台状态确认命令 ID 1 已应用，场景 `ping/create_session/status` 均取得 ACK。
+一帧同帧历史查询在采样瞬间未取得稳定快照，消费者按接口约定丢弃该帧。
+
+GPU 54 个样本的利用率平均 13.185%、最大 24%，显存最大 947 MiB、功耗平均 85.27 W；
+模拟器进程约使用 329% CPU，因此该服务器结果主要受 Xeon 单核/物理调度约束，不是
+RTX 3090 的渲染上限。它比下方 Windows/i9/RTX 4060 并发短测低约 57.2%，但两台机器的
+CPU、系统、后端和并发负载都不同，不能据此推导 Linux 比 Windows 固定慢 57.2%。本结果
+证明的是该完整 Linux 包在真实 NVIDIA GPU 上可稳定完成自瞄数据闭环，不是跨平台峰值
+排行榜。
 
 ## 1.1.0 发布候选短测（2026-07-26）
 
@@ -26,11 +46,12 @@ Windows x86_64 正式包（source `6883879`）在 RTX 4060 Laptop / DX12 上通�
 
 ## 固定基线
 
-- 图像：RGB24，`1440×1080`，单帧 4,665,600 字节；
-- 物理：250 Hz，单 substep；
+- 当前 TCP 图像：RGBA32，`1440×1080`，单帧 6,220,800 字节；
+- 物理控制时基：250 Hz，当前 Avian 配置每步 8 个 substep；
 - 高性能采集上限：200 Hz；
 - Windows 渲染后端：高性能模式使用 DX12；可视验收模式使用 Vulkan；
-- Windows/WSL 图像数据面：TCP 5602，latest-only；
+- Linux 渲染后端：Vulkan；高性能模式不需要显示服务器；
+- Windows/Linux 图像数据面：TCP 5602，latest-only；
 - 元数据、曝光位姿和真值：SDK IPC；
 - 云台命令：UDP 5601；场景控制：UDP 5603；
 - 只使用 Release 构建测性能，禁止用 Debug 帧率代替。

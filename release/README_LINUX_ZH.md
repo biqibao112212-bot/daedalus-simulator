@@ -77,6 +77,18 @@ ldd bin/daedalus | grep 'not found'
 vulkaninfo --summary
 ```
 
+### AutoDL / 无桌面 NVIDIA 服务器
+
+若 `nvidia-smi` 正常、但 Vulkan 在无 `DISPLAY` 环境找不到显卡，AutoDL 镜像中的默认
+NVIDIA ICD 可能仍指向依赖 X11 的 `libGLX_nvidia.so.0`。请按 AutoDL 官方 Vulkan 文档把
+无显示 ICD 指向 `libEGL_nvidia.so.0`，不要为此替换模拟器或推理模型：
+
+<https://api.autodl.com/docs/vulkan/>
+
+从 GitHub 下载较慢时可使用 AutoDL 官方学术加速通道：
+
+<https://www.autodl.com/docs/network_turbo/>
+
 ## 启动
 
 安装后：

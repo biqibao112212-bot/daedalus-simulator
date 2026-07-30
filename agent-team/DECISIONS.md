@@ -87,3 +87,8 @@
     at the simulator's 250 Hz fixed rate and entering a persistent low-frame-rate
     spiral. Network gimbal commands are drained and applied, in that order, in
     the same `FixedUpdate`; command freshness must not depend on main-frame rate.
+23. Command acknowledgement and exposure synchronization are separate SDK
+    concepts. `readGimbalStateForFrame(sequence)` supplies the exposure-time
+    angle/timestamp, while `readGimbalState()` supplies the latest
+    `last_applied_command_id`. Release acceptance must use each interface for
+    its declared role and start UDP control only after simulator readiness.

@@ -93,6 +93,7 @@ cp -- "$ROOT/SIMULATOR_PERFORMANCE.md" "$ROOT/SIMULATOR_TROUBLESHOOTING.md" \
   "$ROOT/docs/SIMULATOR_USER_GUIDE_ZH.md" "$ROOT/docs/SDK_API_REFERENCE_ZH.md" \
   "$ROOT/docs/RELEASE_PROGRESS_ZH.md" \
   "$ROOT/benchmarks/1.1.0/performance-short-2026-07-26.json" \
+  "$ROOT/benchmarks/1.1.1/performance-autodl-rtx3090-2026-07-30.json" \
   "$ROOT/sdk/README.md" "$TARGET_DIR/docs/"
 cp -- "$ROOT/sdk/contract.json" "$TARGET_DIR/docs/sdk-contract.json"
 cp -a -- "$SDK_INSTALL/." "$TARGET_DIR/sdk/"

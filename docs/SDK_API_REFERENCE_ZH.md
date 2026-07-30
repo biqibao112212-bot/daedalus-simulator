@@ -455,6 +455,11 @@ ClientResult<std::uint64_t> sendTracked(
 返回实际发送的 `command_id`。用 `readGimbalState().last_applied_command_id` 判断模拟器已
 处理到哪条命令，并用实际角度判断机械跟随结果。
 
+`readGimbalStateForFrame()`只回答“这张图曝光时云台在哪里”，不携带命令应用 ID；不要
+用它代替 `readGimbalState()`做命令 ACK。UDP 无连接，`sendTracked()`成功也不表示远端
+监听器已经启动。消费者应在收到第一帧或确认运行时能力文件就绪后开始控制循环，并持续
+发送最新目标。
+
 ```cpp
 UdpGimbalClient gimbal;
 UdpGimbalCommand command;
