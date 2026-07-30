@@ -69,9 +69,10 @@
 
 ## In progress
 
-Publishing version 1.1.0 to GitHub and validating the exact Linux package on an
-AutoDL Ubuntu 22.04 / RTX 3090 host. The Linux packager is being extended with
-a permission-preserving `tar.gz`; ZIP remains a fallback artifact.
+Version 1.1.0 was published before AutoDL acceptance and exposed a Linux
+headless Winit crash; its release has zero downloads and will be marked
+superseded. Version 1.1.1 is the patch candidate: Linux performance mode now
+runs without X11/Wayland, while SDK 1.1.0 / ABI revision 2 remains unchanged.
 
 ## Remaining gates
 
@@ -82,8 +83,8 @@ a permission-preserving `tar.gz`; ZIP remains a fallback artifact.
 
 ## Next steps
 
-1. Regenerate and verify Windows ZIP, Linux TAR.GZ, and Linux ZIP artifacts.
-2. Publish `simulator-v1.1.0` on GitHub and validate the Linux artifact through
+1. Build and verify the exact 1.1.1 Windows ZIP, Linux TAR.GZ, and Linux ZIP.
+2. Publish `simulator-v1.1.1` on GitHub and validate the Linux artifact through
    AutoDL's GitHub acceleration channel on an RTX 3090 host.
 3. Record the exact performance evidence and final release asset hashes.
 4. Add a branded GUI installer later only if the laboratory wants to maintain

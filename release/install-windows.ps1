@@ -6,7 +6,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$version = '1.1.0'
+$version = '1.1.1'
 $source = [IO.Path]::GetFullPath($PSScriptRoot).TrimEnd('\')
 if ([string]::IsNullOrWhiteSpace($InstallDir)) {
     $InstallDir = Join-Path $env:LOCALAPPDATA "DaedalusSimulator\$version"

@@ -5,7 +5,7 @@
 ## 当前版本
 
 - 分支：`release/simulator-multiplatform-x86`
-- 模拟器候选版本：`1.1.0`
+- 模拟器候选版本：`1.1.1`
 - SDK：`1.1.0`
 - Talos SHM：v7，ABI revision 2
 - 目标平台：Windows x86_64、Linux x86_64
@@ -43,8 +43,8 @@
 
 ### Windows 发行包验收（2026-07-26）
 
-- 正式目录：`D:\仿真\releases\daedalus-simulator\1.1.0\windows-x86_64`。
-- ZIP：`D:\仿真\releases\daedalus-simulator\1.1.0\windows-x86_64.zip`。
+- 正式目录：`D:\仿真\releases\daedalus-simulator\1.1.1\windows-x86_64`。
+- ZIP：`D:\仿真\releases\daedalus-simulator\1.1.1\windows-x86_64.zip`。
 - 从发行包目录启动后保持运行；TCP 5602、UDP 5601/5603 全部就绪。
 - Talos 元数据创建成功且大小为 76992 字节，无场景资源缺失。
 - wgpu 自动选择 `NVIDIA GeForce RTX 4060 Laptop GPU`、`Dx12`、独立 GPU，
@@ -63,7 +63,8 @@
 
 ### Linux 发行包验收（2026-07-26）
 
-- 正式目录：`D:\仿真\releases\daedalus-simulator\1.1.0\linux-x86_64`；ZIP 位于同级目录。
+- 正式目录：`D:\仿真\releases\daedalus-simulator\1.1.1\linux-x86_64`；推荐 TAR.GZ
+  和备用 ZIP 位于同级目录。
 - 二进制确认是 `ELF 64-bit LSB PIE x86-64`，动态依赖仅为常规 Linux 系统库，无 Windows
   DLL 或 WSL 专用依赖。
 - 在 Ubuntu 22.04 WSL2 中从包目录外启动成功；TCP 5602、UDP 5601/5603 和 76992 字节
