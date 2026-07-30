@@ -70,3 +70,8 @@
     wrappers. Installers never download GPU drivers, runtimes, inference
     frameworks, or models. A GUI Setup.exe/MSI is not claimed without a
     maintained installer toolchain.
+20. Linux releases publish `tar.gz` as the primary end-user archive so Unix
+    executable mode bits survive extraction; ZIP remains a cross-platform
+    fallback. Remote AutoDL acceptance downloads the exact GitHub Release asset
+    through AutoDL's documented GitHub acceleration service instead of copying
+    artifacts over the SSH control channel.

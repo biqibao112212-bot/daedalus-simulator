@@ -5,9 +5,21 @@ TensorRT 或 ONNX。Linux 用户不需要 Windows 或 WSL。
 
 ## 一分钟安装
 
-完整解压 ZIP 后执行：
+推荐下载 `linux-x86_64.tar.gz`，它会保留 Linux 可执行权限：
 
 ```bash
+mkdir daedalus-simulator-1.1.0
+tar -xzf linux-x86_64.tar.gz -C daedalus-simulator-1.1.0
+cd daedalus-simulator-1.1.0
+./install-linux.sh
+```
+
+如果下载的是备用 ZIP：
+
+```bash
+mkdir daedalus-simulator-1.1.0
+unzip linux-x86_64.zip -d daedalus-simulator-1.1.0
+cd daedalus-simulator-1.1.0
 chmod +x install-linux.sh start-simulator.sh
 ./install-linux.sh
 ```

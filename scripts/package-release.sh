@@ -29,6 +29,7 @@ done
 command -v git >/dev/null || die "git is required"
 command -v python3 >/dev/null || die "python3 is required to generate the release manifest"
 command -v zip >/dev/null || die "zip is required"
+command -v tar >/dev/null || die "tar is required"
 
 # A Windows-created worktree has a .git pointer containing a Windows path.
 # Native Linux Git cannot resolve that pointer from WSL, so use git.exe only
@@ -48,6 +49,7 @@ VERSION="$(tr -d '[:space:]' < "$ROOT/VERSION")"
 PACKAGE_ROOT="$OUTPUT_ROOT/$VERSION"
 TARGET_DIR="$PACKAGE_ROOT/$PACKAGE_ID"
 ZIP_PATH="$PACKAGE_ROOT/$PACKAGE_ID.zip"
+TAR_GZ_PATH="$PACKAGE_ROOT/$PACKAGE_ID.tar.gz"
 
 if [[ "$SKIP_BUILD" == 0 ]]; then
   "$ROOT/scripts/build-release.sh"
@@ -58,14 +60,16 @@ SOURCE_COMMIT="$("$GIT_BIN" -C "$GIT_ROOT" rev-parse HEAD)"
 [[ -f "$ROOT/LICENSE" ]] || die "repository LICENSE is missing"
 [[ -f "$ROOT/release/INTERNAL_LAB_USE_NOTICE.md" ]] || die "internal-use notice is missing"
 
-if [[ "$FORCE" == 0 && ( -e "$TARGET_DIR" || -e "$ZIP_PATH" ) ]]; then
+if [[ "$FORCE" == 0 && ( -e "$TARGET_DIR" || -e "$ZIP_PATH" || -e "$TAR_GZ_PATH" ) ]]; then
   die "Release already exists; use --force to replace it"
 fi
 if [[ "$FORCE" == 1 ]]; then
   case "$TARGET_DIR" in "$OUTPUT_ROOT"/*) ;; *) die "unsafe package target: $TARGET_DIR" ;; esac
   case "$ZIP_PATH" in "$OUTPUT_ROOT"/*) ;; *) die "unsafe package zip: $ZIP_PATH" ;; esac
+  case "$TAR_GZ_PATH" in "$OUTPUT_ROOT"/*) ;; *) die "unsafe package tar.gz: $TAR_GZ_PATH" ;; esac
   rm -rf -- "$TARGET_DIR"
   rm -f -- "$ZIP_PATH"
+  rm -f -- "$TAR_GZ_PATH"
 fi
 
 SDK_INSTALL="$ROOT/build/release/$PACKAGE_ID/sdk-install"
@@ -128,5 +132,7 @@ manifest = {
 PY
 
 (cd "$TARGET_DIR" && zip -qr "$ZIP_PATH" .)
+(cd "$TARGET_DIR" && tar -czf "$TAR_GZ_PATH" .)
 echo "release_dir=$TARGET_DIR"
 echo "release_zip=$ZIP_PATH"
+echo "release_tar_gz=$TAR_GZ_PATH"

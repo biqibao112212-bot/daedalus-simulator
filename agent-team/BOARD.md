@@ -69,8 +69,9 @@
 
 ## In progress
 
-No active release gate. Version 1.1.0 is ready for internal-laboratory
-distribution.
+Publishing version 1.1.0 to GitHub and validating the exact Linux package on an
+AutoDL Ubuntu 22.04 / RTX 3090 host. The Linux packager is being extended with
+a permission-preserving `tar.gz`; ZIP remains a fallback artifact.
 
 ## Remaining gates
 
@@ -81,7 +82,9 @@ distribution.
 
 ## Next steps
 
-1. Distribute the platform ZIP matching the user's operating system.
-2. Ask recipients to read root `README_ZH.md` before installation.
-3. Add a branded GUI installer later only if the laboratory wants to maintain
+1. Regenerate and verify Windows ZIP, Linux TAR.GZ, and Linux ZIP artifacts.
+2. Publish `simulator-v1.1.0` on GitHub and validate the Linux artifact through
+   AutoDL's GitHub acceleration channel on an RTX 3090 host.
+3. Record the exact performance evidence and final release asset hashes.
+4. Add a branded GUI installer later only if the laboratory wants to maintain
    an Inno Setup, NSIS, or MSI toolchain.

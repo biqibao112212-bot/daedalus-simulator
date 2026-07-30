@@ -43,7 +43,12 @@ Release packaging requires a clean committed worktree. The output layout is:
 <output-root>/<version>/windows-x86_64.zip
 <output-root>/<version>/linux-x86_64/
 <output-root>/<version>/linux-x86_64.zip
+<output-root>/<version>/linux-x86_64.tar.gz
 ```
+
+The Linux `tar.gz` archive is the primary end-user artifact because it
+preserves executable mode bits. The Linux ZIP is retained as a convenient
+fallback for browsing and transfer from Windows hosts.
 
 ```powershell
 .\scripts\package-release.ps1 -Platform windows -Arch x86_64
