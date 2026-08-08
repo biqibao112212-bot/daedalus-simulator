@@ -12,6 +12,12 @@
     Release profile, TCP transport, and at least 100 Hz in both main update and
     capture submit. Any later change to performance-relevant simulator,
     configuration, release, SDK, assets, or Cargo files invalidates it.
+0b. Version 1.2.1 keeps SDK 1.2.0, ABI revision 2, protocol 2 and all ports
+    unchanged. On Windows, UDP `ConnectionReset` and `ConnectionRefused` while
+    receiving Scene Control are recoverable because they can be delayed ICMP
+    responses to an ACK sent after a retrying client closed its old ephemeral
+    socket. The transport must log (rate-limited) and continue; fatal receive
+    failures still stop the worker.
 
 1. Work is isolated in `D:\仿真\isolated\daedalus-simulator-multiplatform-x86`
    on branch `release/simulator-multiplatform-x86`; the canonical `main`

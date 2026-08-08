@@ -2,6 +2,14 @@
 
 ## Current status
 
+- 1.2.1 Windows Release candidate (commit `d43cab11fd22036cf2ae881784765a05bbd7720e`)
+  repairs the Scene Control v2 UDP worker: delayed Windows ICMP replies now
+  produce a rate-limited recoverable `ConnectionReset`/`ConnectionRefused`
+  warning instead of terminating the worker. The focused Rust regression suite
+  passed (4/4), the native Windows SDK Release suite passed (7/7), and the
+  clean-checkout performance evidence reports 177.951 Hz main update and
+  176.951 Hz capture submit over 20 seconds. Raw logs remain under
+  `D:\仿真\runtime\simulator-performance-v1.2.1\20260808T094714Z`.
 - Observation-rate diagnosis (2026-08-08): the reported approximately 4 Hz
   source cadence was produced by the unoptimised `target\\debug\\daedalus.exe`,
   not a formal Release. With the same Windows DX12, headless, absolute
