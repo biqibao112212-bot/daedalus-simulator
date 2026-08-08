@@ -2,6 +2,18 @@
 
 ## Current status
 
+- Native Shooting Range target-in-view acceptance (2026-08-08): final Windows
+  1.2.1 Release, target 3, continuous truth-gimbal target lock and 114.592
+  deg/s target spin produced a directly captured 1440x1080 RGBA32 frame with
+  the vehicle and armor plates visible. The 30-second native Windows
+  TensorRT/Stage3 end-to-end run processed 4,229 frames at 140.967 FPS; source
+  capture interval p50/p95/p99 was 6.526/12.810/23.906 ms and bridge
+  completion was 6.100/15.700/27.180 ms. Raw frame, distribution plot, JSONL,
+  logs and report are retained under `D:\仿真\runtime\shooting-range-target-in-view-1.2.1-20260808T101100Z`
+  and `D:\仿真\runtime\windows-autoaim-e2e-stage3-1.2.1-target-in-view-20260808T101300Z`.
+  The engine completed 4,970 detector jobs but accepted no targets; this is a
+  consumer model-domain limitation, not a simulator visibility or throughput
+  failure.
 - 1.2.1 Windows Release (commit `d43cab11fd22036cf2ae881784765a05bbd7720e`)
   repairs the Scene Control v2 UDP worker: delayed Windows ICMP replies now
   produce a rate-limited recoverable `ConnectionReset`/`ConnectionRefused`
