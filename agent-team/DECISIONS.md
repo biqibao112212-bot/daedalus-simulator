@@ -1,5 +1,18 @@
 # Daedalus Simulator release decisions
 
+0. Performance acceptance and consumer observation-rate diagnosis must never
+   use `target\\debug\\daedalus.exe` as a substitute for a Release binary. The
+   2026-08-08 controlled comparison measured 4 Hz from the debug binary versus
+   184.856 Hz main update / 164.872 Hz capture from the existing release-profile
+   target binary under the same DX12 headless performance configuration. The
+   outstanding task is a clean, committed v1.2.0 Release rebuild and rerun;
+   until then no regression in the v1.2.0 source is proven.
+0a. Release packaging is gated by version-matched, clean-checkout performance
+    evidence from `scripts/measure-performance.ps1`. The evidence must show
+    Release profile, TCP transport, and at least 100 Hz in both main update and
+    capture submit. Any later change to performance-relevant simulator,
+    configuration, release, SDK, assets, or Cargo files invalidates it.
+
 1. Work is isolated in `D:\仿真\isolated\daedalus-simulator-multiplatform-x86`
    on branch `release/simulator-multiplatform-x86`; the canonical `main`
    checkout is never switched or written by this task.
@@ -92,3 +105,13 @@
     angle/timestamp, while `readGimbalState()` supplies the latest
     `last_applied_command_id`. Release acceptance must use each interface for
     its declared role and start UDP control only after simulator readiness.
+24. The approved radius experiment is implemented on the latest 1.1.1 release
+    branch, never on the old main/1.0.x line and never by overwriting the frozen
+    1.1.1 package. The development release is 1.2.0 / SDK 1.2.0 with Scene
+    Control v2. `set_range_target_geometry` scales only the four armor roots'
+    horizontal local positions, uses an absolute stock baseline, requires a
+    stationary target, and resets to stock on reset/new session.
+25. The consumer lock stays unchanged until a clean 1.2.0 source commit,
+    native CMake/CTest SDK validation, formal package manifest/hashes, and
+    runtime acceptance are complete. Dirty binaries are development evidence,
+    not a consumer Release contract.

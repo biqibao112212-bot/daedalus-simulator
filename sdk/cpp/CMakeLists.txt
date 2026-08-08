@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(DaedalusSimSdk VERSION 1.1.0 LANGUAGES CXX)
+project(DaedalusSimSdk VERSION 1.2.0 LANGUAGES CXX)
 
 # MSVC emits one program database per target. /FS serializes access when
 # CMake builds multiple translation units in parallel.

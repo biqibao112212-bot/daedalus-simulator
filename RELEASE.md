@@ -34,6 +34,36 @@ Both build paths use
 `cargo build --locked --release --features talos,distribution-release`, run
 the SDK CTest suite, and install the SDK into a platform-specific build tree.
 
+## Mandatory performance gate
+
+Every simulator source change that can affect runtime throughput, and every
+new release version, requires a fresh local GPU measurement before packaging.
+Run only the optimised Release-profile binary; Debug binaries are categorically
+invalid as performance evidence:
+
+```powershell
+.\scripts\measure-performance.ps1 -DurationSeconds 20
+```
+
+The command requires `target\release\daedalus.exe`, TCP image transport, and
+at least 100 Hz for both `main_update_hz` and `capture_copy_submit_hz`. For a
+formal package, run it from a clean committed checkout, promote the resulting
+`performance-evidence.json` to `benchmarks/<VERSION>/performance-release.json`,
+and retain the raw run directory. Both package scripts validate that evidence
+and reject stale, dirty, Debug-profile, wrong-version, or sub-threshold data.
+If `Cargo.toml`, `Cargo.lock`, `src`, `assets`, `config.performance.toml`,
+`release`, or `sdk` changes after the evidence source commit, the benchmark
+must be repeated before packaging.
+
+For local source commits, enable the tracked hook once per worktree:
+
+```powershell
+git config core.hooksPath .githooks
+```
+
+It rebuilds and measures Release automatically when staged files can affect
+throughput. The package gate remains mandatory even if the local hook ran.
+
 ## Package
 
 Release packaging requires a clean committed worktree. The output layout is:

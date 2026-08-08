@@ -1,5 +1,5 @@
 {
-  "sdk_version": "1.1.0",
+  "sdk_version": "1.2.0",
   "shm_magic": "0x54414C05",
   "shm_version": 7,
   "sdk_abi_revision": 2,
@@ -13,7 +13,7 @@
   "tcp_image_protocol": 1,
   "tcp_image_port": 5602,
   "udp_command_port": 5601,
-  "scene_control_protocol": 1,
+  "scene_control_protocol": 2,
   "scene_control_port": 5603,
   "runtime_capabilities_file": "daedalus-runtime-capabilities-v1.json",
   "fixed_calibration_file": "camera-calibration.json",
@@ -24,6 +24,7 @@
     "reset_scene",
     "set_scene",
     "set_range_target_motion",
+    "set_range_target_geometry",
     "set_rune_state"
   ],
   "capabilities": [

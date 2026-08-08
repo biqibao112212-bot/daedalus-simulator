@@ -2,6 +2,24 @@
 
 ## Current status
 
+- Observation-rate diagnosis (2026-08-08): the reported approximately 4 Hz
+  source cadence was produced by the unoptimised `target\\debug\\daedalus.exe`,
+  not a formal Release. With the same Windows DX12, headless, absolute
+  `config.performance.toml` settings, that debug binary remained at 4 Hz even
+  after the intended one physics substep applied. The existing
+  `target\\release\\daedalus.exe` measured 184.856 Hz main update, 164.872 Hz
+  capture submit, and 161.874 Hz TCP send over 20.192 s. Raw development
+  evidence is retained under `D:\仿真\runtime\simulator-*-compare-20260808`;
+  it is not Release evidence because the checkout is dirty.
+- The immediate consumer-side remedy is operational: benchmark/development
+  capture must use an optimised Release build compatible with the v1.2.0
+  scene-control work. Before a new consumer lock or performance claim, build
+  and measure the exact committed v1.2.0 Release from a clean checkout.
+- Release-only performance gate is being established: `measure-performance.ps1`
+  refuses Debug paths and measures the source/capture stages at a 100 Hz floor;
+  both package scripts validate clean, version-matched evidence and reject a
+  release if performance-relevant files changed after that evidence.
+
 - Isolation established: the protected simulator checkout remains clean on
   `main`; all branch work is in the separate worktree.
 - Platform matrix and package layout are implemented for Windows/Linux
@@ -68,6 +86,18 @@
   release; an idle-GPU measurement remains optional follow-up.
 
 ## In progress
+
+## Approved 1.2.0 geometry-control work (2026-08-07)
+
+- User approval received to modify the simulator using the latest formal 1.1.1
+  baseline; old 1.0.x assumptions are not used for the implementation.
+- Scene Control v2 and `set_range_target_geometry` are implemented in the
+  working tree. Geometry changes are stationary-only, absolute relative to
+  stock, bounded to 0.75..1.25, and reset on scene reset/new session.
+- Rust workspace checks/tests pass. CMake is unavailable in this environment,
+  so the C++ SDK test remains a release-environment gate.
+- Frozen 1.1.1 artifacts remain untouched. Do not update consumer locks until
+  a clean 1.2.0 commit, package manifest, hashes, and acceptance evidence exist.
 
 Version 1.1.0 was published before AutoDL acceptance and exposed a Linux
 headless Winit crash; its release has zero downloads and will be marked

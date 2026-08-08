@@ -5,19 +5,21 @@ ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 OUTPUT_ROOT=""
 SKIP_BUILD=0
 FORCE=0
+PERFORMANCE_EVIDENCE=""
 PACKAGE_ID="linux-x86_64"
 TARGET="x86_64-unknown-linux-gnu"
 
 die() { echo "package-release.sh: $*" >&2; exit 1; }
 usage() {
   cat <<'EOF'
-Usage: ./scripts/package-release.sh [--output-root PATH] [--skip-build] [--force]
+Usage: ./scripts/package-release.sh [--output-root PATH] [--performance-evidence PATH] [--skip-build] [--force]
 EOF
 }
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --output-root) [[ $# -ge 2 ]] || die "--output-root requires a value"; OUTPUT_ROOT="$2"; shift 2 ;;
+    --performance-evidence) [[ $# -ge 2 ]] || die "--performance-evidence requires a value"; PERFORMANCE_EVIDENCE="$2"; shift 2 ;;
     --skip-build) SKIP_BUILD=1; shift ;;
     --force) FORCE=1; shift ;;
     --help|-h) usage; exit 0 ;;
@@ -57,6 +59,8 @@ fi
 
 SOURCE_COMMIT="$("$GIT_BIN" -C "$GIT_ROOT" rev-parse HEAD)"
 [[ -z "$("$GIT_BIN" -C "$GIT_ROOT" status --porcelain -- .)" ]] || die "Release packaging requires a clean committed worktree."
+[[ -n "$PERFORMANCE_EVIDENCE" ]] || PERFORMANCE_EVIDENCE="$ROOT/benchmarks/$VERSION/performance-release.json"
+python3 "$ROOT/scripts/check-performance-evidence.py" --root "$ROOT" --evidence "$PERFORMANCE_EVIDENCE" --version "$VERSION"
 [[ -f "$ROOT/LICENSE" ]] || die "repository LICENSE is missing"
 [[ -f "$ROOT/release/INTERNAL_LAB_USE_NOTICE.md" ]] || die "internal-use notice is missing"
 
@@ -83,6 +87,7 @@ cp -a -- "$ROOT/assets" "$TARGET_DIR/assets"
 cp -- "$ROOT/release/release.json" "$ROOT/release/platform-matrix.json" \
   "$ROOT/release/camera-calibration.json" "$TARGET_DIR/"
 cp -- "$ROOT/release/start-simulator.sh" "$TARGET_DIR/start-simulator.sh"
+cp -- "$PERFORMANCE_EVIDENCE" "$TARGET_DIR/docs/performance-release.json"
 cp -- "$ROOT/release/README_LINUX_ZH.md" "$TARGET_DIR/README_ZH.md"
 cp -- "$ROOT/release/install-linux.sh" "$TARGET_DIR/install-linux.sh"
 chmod +x "$TARGET_DIR/start-simulator.sh" "$TARGET_DIR/install-linux.sh"
@@ -91,6 +96,7 @@ cp -- "$ROOT/release/INTERNAL_LAB_USE_NOTICE.md" "$TARGET_DIR/INTERNAL_LAB_USE_N
 cp -- "$ROOT/SIMULATOR_PERFORMANCE.md" "$ROOT/SIMULATOR_TROUBLESHOOTING.md" \
   "$ROOT/RELEASE.md" "$ROOT/release/PLATFORM_SUPPORT.md" "$ROOT/release/LEGAL_RELEASE_GATE.md" \
   "$ROOT/docs/SIMULATOR_USER_GUIDE_ZH.md" "$ROOT/docs/SDK_API_REFERENCE_ZH.md" \
+  "$ROOT/docs/SCENARIO_CONTROL.md" \
   "$ROOT/docs/RELEASE_PROGRESS_ZH.md" \
   "$ROOT/benchmarks/1.1.0/performance-short-2026-07-26.json" \
   "$ROOT/benchmarks/1.1.1/performance-autodl-rtx3090-2026-07-30.json" \

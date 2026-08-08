@@ -16,6 +16,7 @@ use crate::components::{
     SubscribeAutoAim,
 };
 use crate::integrated_auto_aim::IntegratedAutoAimBridge;
+use crate::robomaster::prelude::ArmorRoot;
 use crate::setup::{
     AutoAimSceneMode, AutoAimSceneState, ShootingRangeTarget, ShootingRangeTargetKind,
 };
@@ -23,6 +24,8 @@ use crate::statistic::ProjectileStatistics;
 
 const RANGE_TARGET_MAX_LINEAR_SPAN_M: f32 = 8.0;
 const RANGE_TARGET_DEFAULT_LINEAR_SPAN_M: f32 = 8.0;
+const RANGE_TARGET_MIN_RADIAL_SCALE: f32 = 0.75;
+const RANGE_TARGET_MAX_RADIAL_SCALE: f32 = 1.25;
 const RANGE_TARGET_BOUNDARY_EPSILON_M: f32 = 1e-3;
 const TRUTH_GIMBAL_ENV: &str = "DAEDALUS_RANGE_TRUTH_GIMBAL_TARGET_NUMBER";
 const TRUTH_GIMBAL_SOLVE_EPSILON_RAD: f32 = 1e-5;
@@ -122,6 +125,8 @@ pub struct RangeTargetMotionSettings {
     pub linear_span_m: f32,
     pub spin_deg_s: f32,
     pub travel_sign: f32,
+    /// Horizontal armor-root scale relative to stock target geometry.
+    pub radial_scale: f32,
 }
 
 impl Default for RangeTargetMotionSettings {
@@ -133,6 +138,7 @@ impl Default for RangeTargetMotionSettings {
             linear_span_m: RANGE_TARGET_DEFAULT_LINEAR_SPAN_M,
             spin_deg_s: 0.0,
             travel_sign: 1.0,
+            radial_scale: 1.0,
         }
     }
 }
@@ -178,6 +184,7 @@ impl ShootingRangeControlState {
             3 => &mut self.armor_3,
             _ => return Err("target must be 1 or 3"),
         };
+        let radial_scale = settings.radial_scale;
         *settings = RangeTargetMotionSettings {
             mode,
             direction_deg,
@@ -185,8 +192,37 @@ impl ShootingRangeControlState {
             linear_span_m,
             spin_deg_s,
             travel_sign: 1.0,
+            radial_scale,
         };
         Ok(())
+    }
+
+    pub(crate) fn set_target_geometry(
+        &mut self,
+        target: u8,
+        radial_scale: f32,
+    ) -> Result<(), &'static str> {
+        if !radial_scale.is_finite()
+            || !(RANGE_TARGET_MIN_RADIAL_SCALE..=RANGE_TARGET_MAX_RADIAL_SCALE)
+                .contains(&radial_scale)
+        {
+            return Err("radial_scale must be finite and within [0.75, 1.25]");
+        }
+        let settings = match target {
+            1 => &mut self.armor_1,
+            3 => &mut self.armor_3,
+            _ => return Err("target must be 1 or 3"),
+        };
+        if settings.mode != RangeTargetMotionMode::Stationary {
+            return Err("target must be stationary before geometry changes");
+        }
+        settings.radial_scale = radial_scale;
+        Ok(())
+    }
+
+    pub(crate) fn reset_target_geometry(&mut self) {
+        self.armor_1.radial_scale = 1.0;
+        self.armor_3.radial_scale = 1.0;
     }
 }
 
@@ -229,6 +265,10 @@ fn apply_motion_env(settings: &mut RangeTargetMotionSettings, prefix: &str) {
     }
     if let Some(spin_deg_s) = env_f32(&format!("{prefix}SPIN_DEG_S")) {
         settings.spin_deg_s = spin_deg_s;
+    }
+    if let Some(radial_scale) = env_f32(&format!("{prefix}RADIAL_SCALE")) {
+        settings.radial_scale =
+            radial_scale.clamp(RANGE_TARGET_MIN_RADIAL_SCALE, RANGE_TARGET_MAX_RADIAL_SCALE);
     }
 
     if !mode_was_set {
@@ -1878,6 +1918,101 @@ pub fn apply_shooting_range_target_motion(
     wall_poses.retain(|entity, _| targets.contains(*entity));
 }
 
+/// Baseline position of one armor root in its shooting-range target's local
+/// frame.  Keeping this value makes repeated geometry commands absolute
+/// relative to stock geometry instead of compounding the previous scale.
+#[derive(Component, Clone, Copy, Debug)]
+pub(crate) struct RangeTargetArmorBaseline {
+    target_local: Vec3,
+}
+
+/// Apply a radial scale to the four armor centers without scaling the vehicle
+/// body, armor dimensions, or the target's rigid-body motion.  The system runs
+/// after transform propagation so the first frame after an ACK contains the
+/// updated hierarchy and the ground-truth collector observes the same geometry
+/// as rendering and collision.
+pub fn apply_shooting_range_target_geometry(
+    state: Res<ShootingRangeControlState>,
+    children: Query<&Children>,
+    mut targets: Query<(Entity, &mut ShootingRangeTarget, &GlobalTransform)>,
+    armor_data: Query<
+        (
+            Entity,
+            &GlobalTransform,
+            &ChildOf,
+            Option<&RangeTargetArmorBaseline>,
+        ),
+        With<ArmorRoot>,
+    >,
+    parent_globals: Query<&GlobalTransform>,
+    mut armor_transforms: Query<&mut Transform, With<ArmorRoot>>,
+    mut commands: Commands,
+) {
+    for (target_entity, mut target, target_global) in &mut targets {
+        let radial_scale = match target.kind {
+            ShootingRangeTargetKind::Armor3 => state.armor_3.radial_scale,
+            ShootingRangeTargetKind::Armor1 => state.armor_1.radial_scale,
+        };
+        if target.applied_geometry_scale.is_finite()
+            && (target.applied_geometry_scale - radial_scale).abs() <= 1e-6
+        {
+            continue;
+        }
+
+        let target_inverse = target_global.affine().inverse();
+        let mut plans = Vec::with_capacity(4);
+        for armor_entity in children.iter_descendants(target_entity) {
+            let Ok((_, armor_global, parent, baseline)) = armor_data.get(armor_entity) else {
+                continue;
+            };
+            let baseline_local = baseline
+                .map(|baseline| baseline.target_local)
+                .unwrap_or_else(|| target_inverse.transform_point3(armor_global.translation()));
+            let desired_local = Vec3::new(
+                baseline_local.x * radial_scale,
+                baseline_local.y,
+                baseline_local.z * radial_scale,
+            );
+            let desired_world = target_global.affine().transform_point3(desired_local);
+            let Ok(parent_global) = parent_globals.get(parent.parent()) else {
+                plans.clear();
+                break;
+            };
+            let local_translation = parent_global
+                .affine()
+                .inverse()
+                .transform_point3(desired_world);
+            plans.push((
+                armor_entity,
+                local_translation,
+                baseline.is_none(),
+                baseline_local,
+            ));
+        }
+
+        // Target #3 has four armor roots.  Refuse partial application so a
+        // scene-loading race cannot leave truth, collision, and rendering out
+        // of sync.  The target remains pending and will be retried next frame.
+        if plans.len() != 4 {
+            continue;
+        }
+
+        for (armor_entity, local_translation, needs_baseline, baseline_local) in plans {
+            if needs_baseline {
+                commands
+                    .entity(armor_entity)
+                    .insert(RangeTargetArmorBaseline {
+                        target_local: baseline_local,
+                    });
+            }
+            if let Ok(mut transform) = armor_transforms.get_mut(armor_entity) {
+                transform.translation = local_translation;
+            }
+        }
+        target.applied_geometry_scale = radial_scale;
+    }
+}
+
 fn advance_range_target_wall_pose(
     wall_pose: &mut RangeTargetWallPose,
     settings: &mut RangeTargetMotionSettings,
@@ -2455,6 +2590,21 @@ mod tests {
 
         assert_eq!(state.armor_3.mode, RangeTargetMotionMode::Stationary);
         assert_eq!(state.armor_1.mode, RangeTargetMotionMode::Spin);
+    }
+
+    #[test]
+    fn radial_geometry_is_absolute_bounded_and_resets() {
+        let mut state = ShootingRangeControlState::default();
+        assert!(state.set_target_geometry(3, 0.8).is_ok());
+        assert_eq!(state.armor_3.radial_scale, 0.8);
+        assert!(state.set_target_geometry(3, 0.7).is_err());
+        assert!(state.set_target_geometry(3, 1.3).is_err());
+
+        state.armor_3.mode = RangeTargetMotionMode::Spin;
+        assert!(state.set_target_geometry(3, 1.0).is_err());
+        state.reset_target_geometry();
+        assert_eq!(state.armor_3.radial_scale, 1.0);
+        assert_eq!(state.armor_1.radial_scale, 1.0);
     }
 
     #[test]

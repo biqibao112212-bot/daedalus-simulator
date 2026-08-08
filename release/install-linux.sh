@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-VERSION=1.1.1
+VERSION=1.2.0
 SOURCE_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 PREFIX="${HOME:?HOME is required}/.local/opt/daedalus-simulator/$VERSION"
 BIN_DIR="$HOME/.local/bin"

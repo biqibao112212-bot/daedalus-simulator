@@ -12,7 +12,7 @@
 namespace daedalus::sim::sdk::v1 {
 
 inline constexpr const char* kSceneControlProtocol =
-    "daedalus.scene-control/1";
+    "daedalus.scene-control/2";
 
 enum class SceneControlStatus {
   Ok,
@@ -52,6 +52,11 @@ struct RangeTargetMotion {
   float spin_deg_s = 0.0F;
 };
 
+struct RangeTargetGeometry {
+  std::uint8_t target = 3;
+  float radial_scale = 1.0F;
+};
+
 struct RuneState {
   RuneMode mode = RuneMode::Off;
   std::vector<std::uint8_t> pending_targets;
@@ -61,6 +66,8 @@ struct RuneState {
 [[nodiscard]] ClientResult<std::string> encodeSetSceneArgs(SceneMode mode);
 [[nodiscard]] ClientResult<std::string> encodeRangeTargetMotionArgs(
     const RangeTargetMotion& motion);
+[[nodiscard]] ClientResult<std::string> encodeRangeTargetGeometryArgs(
+    const RangeTargetGeometry& geometry);
 [[nodiscard]] ClientResult<std::string> encodeRuneStateArgs(
     const RuneState& state);
 
@@ -93,6 +100,10 @@ class SceneControlClient {
       const std::string& args_json);
   [[nodiscard]] ClientResult<SceneControlResponse> setRangeTargetMotion(
       const RangeTargetMotion& motion);
+  [[nodiscard]] ClientResult<SceneControlResponse> setRangeTargetGeometry(
+      const std::string& args_json);
+  [[nodiscard]] ClientResult<SceneControlResponse> setRangeTargetGeometry(
+      const RangeTargetGeometry& geometry);
   [[nodiscard]] ClientResult<SceneControlResponse> setRuneState(
       const std::string& args_json);
   [[nodiscard]] ClientResult<SceneControlResponse> setRuneState(

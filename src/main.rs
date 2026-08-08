@@ -74,9 +74,10 @@ use crate::systems::{
 use crate::systems::{
     FrequencyMetrics, MainScheduleTiming, PhysicsScheduleTiming, ShootingRangeControlState,
     ShootingRangeDebugPanelState, ShootingRangeDebugProcessState, ShootingRangeTruthGimbalConfig,
-    ShootingRangeTruthGimbalStats, apply_shooting_range_target_motion,
-    apply_shooting_range_truth_gimbal, handle_scene_mode_button_interactions,
-    manage_shooting_range_debug_process, update_scene_mode_button_panel,
+    ShootingRangeTruthGimbalStats, apply_shooting_range_target_geometry,
+    apply_shooting_range_target_motion, apply_shooting_range_truth_gimbal,
+    handle_scene_mode_button_interactions, manage_shooting_range_debug_process,
+    update_scene_mode_button_panel,
 };
 use crate::telemetry::ProjectileTelemetry;
 
@@ -633,6 +634,10 @@ fn main() {
             )
                 .chain()
                 .before(TransformSystems::Propagate),
+        )
+        .add_systems(
+            PostUpdate,
+            apply_shooting_range_target_geometry.after(TransformSystems::Propagate),
         )
         .add_systems(
             PostUpdate,

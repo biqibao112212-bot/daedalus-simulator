@@ -10,6 +10,16 @@
 
 ## Mission
 
+## Approved current change (2026-08-07)
+
+The latest formal baseline is simulator 1.1.1, source commit
+`2a8470204a9d3bf3ffd3ac646f985900d54471be`, on
+`release/simulator-multiplatform-x86`. The approved development candidate is
+1.2.0 / SDK 1.2.0. It adds Scene Control v2 geometry control that scales only
+the four armor-root horizontal positions for shooting-range targets. The
+frozen 1.1.1 package remains untouched; consumer locks wait for clean release
+and acceptance gates.
+
 Define and implement an internal-laboratory x86_64 release flow for Windows and Linux.
 Each target must build its own Rust binary and C++ SDK, run target-platform
 tests, and produce a platform-specific package with a SHA256 manifest.

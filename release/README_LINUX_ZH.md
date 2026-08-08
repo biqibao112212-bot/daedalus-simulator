@@ -1,4 +1,4 @@
-# Daedalus 模拟器 1.1.1（Linux x86_64）
+# Daedalus 模拟器 1.2.0（Linux x86_64）
 
 这是面向实验室成员的已编译模拟器，不包含模拟器源码，也不包含自瞄模型、CUDA、
 TensorRT 或 ONNX。Linux 用户不需要 Windows 或 WSL。
@@ -8,18 +8,18 @@ TensorRT 或 ONNX。Linux 用户不需要 Windows 或 WSL。
 推荐下载 `linux-x86_64.tar.gz`，它会保留 Linux 可执行权限：
 
 ```bash
-mkdir daedalus-simulator-1.1.1
-tar -xzf linux-x86_64.tar.gz -C daedalus-simulator-1.1.1
-cd daedalus-simulator-1.1.1
+mkdir daedalus-simulator-1.2.0
+tar -xzf linux-x86_64.tar.gz -C daedalus-simulator-1.2.0
+cd daedalus-simulator-1.2.0
 ./install-linux.sh
 ```
 
 如果下载的是备用 ZIP：
 
 ```bash
-mkdir daedalus-simulator-1.1.1
-unzip linux-x86_64.zip -d daedalus-simulator-1.1.1
-cd daedalus-simulator-1.1.1
+mkdir daedalus-simulator-1.2.0
+unzip linux-x86_64.zip -d daedalus-simulator-1.2.0
+cd daedalus-simulator-1.2.0
 chmod +x install-linux.sh start-simulator.sh
 ./install-linux.sh
 ```
@@ -27,7 +27,7 @@ chmod +x install-linux.sh start-simulator.sh
 默认安装位置：
 
 ```text
-~/.local/opt/daedalus-simulator/1.1.1
+~/.local/opt/daedalus-simulator/1.2.0
 ```
 
 默认创建两个命令：
@@ -46,7 +46,7 @@ export PATH="$HOME/.local/bin:$PATH"
 自定义安装位置：
 
 ```bash
-./install-linux.sh --prefix /path/to/daedalus/1.1.1
+./install-linux.sh --prefix /path/to/daedalus/1.2.0
 ```
 
 该安装方式不需要 root；只有安装缺失的系统依赖时可能需要 `sudo`。
@@ -122,7 +122,7 @@ daedalus-simulator-visible
 ```bash
 sudo apt install build-essential cmake
 cmake -S . -B build \
-  -DCMAKE_PREFIX_PATH="$HOME/.local/opt/daedalus-simulator/1.1.1/sdk"
+  -DCMAKE_PREFIX_PATH="$HOME/.local/opt/daedalus-simulator/1.2.0/sdk"
 cmake --build build --parallel
 ```
 
@@ -151,7 +151,7 @@ target_link_libraries(my_autoaim PRIVATE DaedalusSimSdk::DaedalusSimSdk)
 默认安装可执行：
 
 ```bash
-rm -rf -- "$HOME/.local/opt/daedalus-simulator/1.1.1"
+rm -rf -- "$HOME/.local/opt/daedalus-simulator/1.2.0"
 rm -f -- "$HOME/.local/bin/daedalus-simulator" \
   "$HOME/.local/bin/daedalus-simulator-visible"
 ```

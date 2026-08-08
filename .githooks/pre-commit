@@ -1,12 +1,47 @@
-#!/bin/sh
-set -e
+#!/usr/bin/env bash
+set -euo pipefail
 
-echo "Running cargo fmt --check..."
-cargo fmt -- --check
-if [ $? -ne 0 ]; then
-    echo ""
-    echo "❌ Rust code is not formatted. Please run 'cargo fmt'."
-    exit 1
+ROOT="$(git rev-parse --show-toplevel)"
+PERFORMANCE_PATHS='^(Cargo\.toml|Cargo\.lock|src/|assets/|config\.performance\.toml|release/|sdk/)'
+
+if command -v cargo >/dev/null 2>&1; then
+  CARGO=cargo
+elif command -v cargo.exe >/dev/null 2>&1; then
+  CARGO=cargo.exe
+elif [[ -x "${USERPROFILE:-}/.cargo/bin/cargo.exe" ]]; then
+  CARGO="${USERPROFILE}/.cargo/bin/cargo.exe"
+else
+  echo 'pre-commit: cargo is required for formatting and Release performance validation.' >&2
+  exit 1
 fi
 
-echo "✅ All checks passed. Commit allowed."
+echo "Running cargo fmt --check..."
+if ! "$CARGO" fmt -- --check; then
+  echo ""
+  echo "Rust code is not formatted. Please run 'cargo fmt'." >&2
+  exit 1
+fi
+
+STAGED="$(git diff --cached --name-only)"
+if ! grep -Eq "$PERFORMANCE_PATHS" <<<"$STAGED"; then
+  exit 0
+fi
+
+# A benchmark that includes unstaged performance-relevant source cannot prove
+# the staged commit, so force the author to stage or separate those changes.
+UNSTAGED="$(git diff --name-only)"
+if grep -Eq "$PERFORMANCE_PATHS" <<<"$UNSTAGED"; then
+  echo 'pre-commit: performance-relevant unstaged changes detected; stage or separate them before measuring.' >&2
+  exit 1
+fi
+
+if command -v powershell.exe >/dev/null 2>&1; then
+  PS=powershell.exe
+elif command -v pwsh >/dev/null 2>&1; then
+  PS=pwsh
+else
+  echo 'pre-commit: PowerShell is required for the Release performance gate.' >&2
+  exit 1
+fi
+
+"$PS" -NoProfile -ExecutionPolicy Bypass -File "$ROOT/scripts/measure-performance.ps1" -Build -DurationSeconds 20

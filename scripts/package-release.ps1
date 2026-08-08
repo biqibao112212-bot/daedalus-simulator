@@ -7,6 +7,7 @@ param(
     [string]$RustTarget,
     [string]$OutputRoot,
     [string]$SdkInstallRoot,
+    [string]$PerformanceEvidencePath,
     [switch]$Force,
     [switch]$SkipBuild
 )
@@ -48,6 +49,11 @@ if ($dirty.Count -ne 0) {
     throw 'Release packaging requires a clean committed worktree.'
 }
 $sourceCommit = (git -C $root rev-parse HEAD).Trim()
+if ([string]::IsNullOrWhiteSpace($PerformanceEvidencePath)) { $PerformanceEvidencePath = Join-Path $root "benchmarks\$version\performance-release.json" }
+$python = Get-Command python -ErrorAction SilentlyContinue
+if ($null -eq $python) { throw 'Release packaging requires Python to validate performance evidence.' }
+& $python.Source (Join-Path $PSScriptRoot 'check-performance-evidence.py') --root $root --evidence $PerformanceEvidencePath --version $version
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 $repositoryLicense = Join-Path $root 'LICENSE'
 $internalUseNotice = Join-Path $root 'release\INTERNAL_LAB_USE_NOTICE.md'
 if (-not (Test-Path -LiteralPath $repositoryLicense)) { throw "Repository license is missing: $repositoryLicense" }
@@ -67,6 +73,7 @@ if (-not (Test-Path -LiteralPath $SdkInstallRoot)) { throw "SDK install tree is 
 
 New-Item -ItemType Directory -Force -Path $target,(Join-Path $target 'bin'),(Join-Path $target 'docs'),(Join-Path $target 'sdk') | Out-Null
 Copy-Item -LiteralPath $binary -Destination (Join-Path $target 'bin\daedalus.exe')
+Copy-Item -LiteralPath $PerformanceEvidencePath -Destination (Join-Path $target 'docs\performance-release.json')
 Get-ChildItem -LiteralPath (Join-Path $root "target\$RustTarget\release\deps") -Filter '*.dll' -File -ErrorAction SilentlyContinue |
     Copy-Item -Destination (Join-Path $target 'bin')
 Copy-Item -LiteralPath (Join-Path $root 'assets') -Destination (Join-Path $target 'assets') -Recurse
@@ -92,6 +99,7 @@ Copy-Item -LiteralPath `
     (Join-Path $root 'release\LEGAL_RELEASE_GATE.md'),
     (Join-Path $root 'docs\SIMULATOR_USER_GUIDE_ZH.md'),
     (Join-Path $root 'docs\SDK_API_REFERENCE_ZH.md'),
+    (Join-Path $root 'docs\SCENARIO_CONTROL.md'),
     (Join-Path $root 'docs\RELEASE_PROGRESS_ZH.md'),
     (Join-Path $root 'benchmarks\1.1.0\performance-short-2026-07-26.json'),
     (Join-Path $root 'benchmarks\1.1.1\performance-autodl-rtx3090-2026-07-30.json'),

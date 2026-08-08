@@ -15,7 +15,7 @@ use crate::robomaster::prelude::{
 use crate::setup::{AutoAimSceneMode, AutoAimSceneState, ShootingRangeTarget};
 use crate::systems::{RangeTargetMotionMode, ShootingRangeControlState};
 
-const PROTOCOL: &str = "daedalus.scene-control/1";
+const PROTOCOL: &str = "daedalus.scene-control/2";
 const DEFAULT_BIND: &str = "127.0.0.1:5603";
 const MAX_COMMANDS_PER_FRAME: usize = 64;
 
@@ -77,7 +77,7 @@ impl SceneControlTransport {
                     let _ = socket.send_to(&response.bytes, response.peer);
                 }
             })?;
-        info!("Scene control v1 listening on udp://{local_addr}");
+        info!("Scene control v2 listening on udp://{local_addr}");
         Ok(Self {
             incoming,
             outgoing,
@@ -154,7 +154,7 @@ impl Plugin for SceneControlPlugin {
                 app.insert_resource(transport);
             }
             Err(error) => {
-                error!("Scene control v1 failed to bind UDP socket: {error}");
+                error!("Scene control v2 failed to bind UDP socket: {error}");
             }
         }
     }
@@ -221,6 +221,7 @@ pub fn receive_scene_control_commands(
             } else {
                 runtime.session_id = Some(request.session_id.clone());
                 runtime.pending_scene = None;
+                range_state.reset_target_geometry();
                 send_ok(
                     &transport,
                     datagram.peer,
@@ -309,6 +310,7 @@ pub fn receive_scene_control_commands(
                     );
                 } else {
                     let expected_generation = scene_state.generation().saturating_add(1);
+                    range_state.reset_target_geometry();
                     scene_state.request(mode);
                     runtime.pending_scene = Some(PendingSceneResponse {
                         peer: datagram.peer,
@@ -334,6 +336,7 @@ pub fn receive_scene_control_commands(
                 }
                 let expected_generation = scene_state.generation().saturating_add(1);
                 let expected_mode = scene_state.current;
+                range_state.reset_target_geometry();
                 scene_state.force_rebuild_current();
                 runtime.pending_scene = Some(PendingSceneResponse {
                     peer: datagram.peer,
@@ -359,6 +362,31 @@ pub fn receive_scene_control_commands(
                         &request,
                         runtime.frame_seq,
                         "range target motion applied",
+                    ),
+                    Err(message) => send_status(
+                        &transport,
+                        datagram.peer,
+                        &request,
+                        ResponseStatus::InvalidRequest,
+                        runtime.frame_seq,
+                        message,
+                    ),
+                }
+            }
+            "set_range_target_geometry" => {
+                let result =
+                    parse_range_geometry(&request.args).and_then(|(target, radial_scale)| {
+                        range_state
+                            .set_target_geometry(target, radial_scale)
+                            .map_err(str::to_string)
+                    });
+                match result {
+                    Ok(()) => send_ok(
+                        &transport,
+                        datagram.peer,
+                        &request,
+                        runtime.frame_seq,
+                        "range target geometry applied",
                     ),
                     Err(message) => send_status(
                         &transport,
@@ -540,6 +568,15 @@ fn parse_range_motion(
     ))
 }
 
+fn parse_range_geometry(args: &Map<String, Value>) -> Result<(u8, f32), String> {
+    let target = args
+        .get("target")
+        .and_then(Value::as_u64)
+        .and_then(|value| u8::try_from(value).ok())
+        .ok_or_else(|| "args.target must be uint64 1 or 3".to_string())?;
+    Ok((target, f32_arg(args, "radial_scale")?))
+}
+
 fn target_indices(args: &Map<String, Value>, key: &str) -> Result<Vec<usize>, String> {
     let values = args
         .get(key)
@@ -680,7 +717,7 @@ mod tests {
     #[test]
     fn parses_valid_ping_request() {
         let request = parse_request(
-            br#"{"protocol":"daedalus.scene-control/1","command_id":7,"session_id":"s","op":"ping","args":{}}"#,
+            br#"{"protocol":"daedalus.scene-control/2","command_id":7,"session_id":"s","op":"ping","args":{}}"#,
         )
         .unwrap();
         assert_eq!(request.command_id, 7);
@@ -708,6 +745,13 @@ mod tests {
         }))
         .unwrap();
         assert!(parse_range_motion(&range).is_ok());
+
+        let geometry = serde_json::from_value::<Map<String, Value>>(serde_json::json!({
+            "target": 3,
+            "radial_scale": 1.2
+        }))
+        .unwrap();
+        assert_eq!(parse_range_geometry(&geometry).unwrap(), (3, 1.2));
 
         let rune = serde_json::from_value::<Map<String, Value>>(serde_json::json!({
             "mode": "large",

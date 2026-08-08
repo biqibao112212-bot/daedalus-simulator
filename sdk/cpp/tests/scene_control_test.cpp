@@ -7,7 +7,7 @@ using namespace daedalus::sim::sdk::v1;
 int main() {
   const auto request = buildSceneControlRequest(
       42, "session-\"a", "set_scene", "{\"scene\":\"range\"}");
-  if (!request || request.value->find("daedalus.scene-control/1") ==
+  if (!request || request.value->find("daedalus.scene-control/2") ==
                       std::string::npos ||
       request.value->find("session-\\\"a") == std::string::npos ||
       request.value->find("\"op\":\"set_scene\"") == std::string::npos) {
@@ -16,7 +16,7 @@ int main() {
   if (buildSceneControlRequest(1, "s", "ping", "[]")) return 2;
 
   const std::string response =
-      "{\"protocol\":\"daedalus.scene-control/1\",\"command_id\":42,"
+      "{\"protocol\":\"daedalus.scene-control/2\",\"command_id\":42,"
       "\"session_id\":\"session-a\",\"status\":\"ok\","
       "\"applied_frame_seq\":99,\"timestamp_ns\":123456,"
       "\"message\":\"ready\"}";
@@ -44,10 +44,17 @@ int main() {
   motion.linear_speed_mps = 1.5F;
   const auto range = encodeRangeTargetMotionArgs(motion);
   if (!range || range.value->find("linear_and_spin") == std::string::npos) return 7;
+  RangeTargetGeometry geometry{};
+  geometry.target = 3;
+  geometry.radial_scale = 1.2F;
+  const auto geometry_args = encodeRangeTargetGeometryArgs(geometry);
+  if (!geometry_args || geometry_args.value->find("1.2") == std::string::npos) {
+    return 8;
+  }
   RuneState rune{};
   rune.mode = RuneMode::Large;
   rune.pending_targets = {2};
   rune.activated_targets = {0, 4};
-  if (!encodeRuneStateArgs(rune)) return 8;
+  if (!encodeRuneStateArgs(rune)) return 9;
   return 0;
 }

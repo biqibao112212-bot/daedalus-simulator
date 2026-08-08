@@ -37,7 +37,7 @@ foreach ($capability in $requiredCapabilities) {
         throw "SDK contract is missing required capability: $capability"
     }
 }
-if ($contract.scene_control_protocol -ne 1 -or $contract.scene_control_port -ne 5603) {
+if ($contract.scene_control_protocol -ne 2 -or $contract.scene_control_port -ne 5603) {
     throw 'SDK scene-control protocol/port contract is invalid.'
 }
 if ($sdkHeader -notmatch ('kSdkVersion\s*=\s*"' + [regex]::Escape($contract.sdk_version) + '"') -or

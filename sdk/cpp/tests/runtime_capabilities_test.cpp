@@ -14,7 +14,7 @@ int main() {
     std::ofstream output(path, std::ios::binary | std::ios::trunc);
     output << R"({
       "schema_version": 1,
-      "product_version": "1.1.0",
+      "product_version": "1.2.0",
       "distribution_locked": true,
       "adapter_selection": "wgpu-high-performance",
       "render_backend": "Vulkan",

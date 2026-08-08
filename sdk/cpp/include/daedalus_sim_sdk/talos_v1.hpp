@@ -5,7 +5,7 @@
 
 namespace daedalus::sim::sdk::v1 {
 
-inline constexpr const char *kSdkVersion = "1.1.0";
+inline constexpr const char *kSdkVersion = "1.2.0";
 inline constexpr std::uint32_t kShmMagic = 0x54414C05;
 inline constexpr std::uint32_t kShmVersion = 7;
 inline constexpr std::uint32_t kSdkAbiRevision = 2;

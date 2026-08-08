@@ -257,6 +257,21 @@ ClientResult<std::string> encodeRangeTargetMotionArgs(
   return ClientResult<std::string>::success(json.str());
 }
 
+ClientResult<std::string> encodeRangeTargetGeometryArgs(
+    const RangeTargetGeometry& geometry) {
+  if ((geometry.target != 1 && geometry.target != 3) ||
+      !std::isfinite(geometry.radial_scale) ||
+      geometry.radial_scale < 0.75F || geometry.radial_scale > 1.25F) {
+    return ClientResult<std::string>::failure(
+        ClientError::InvalidArgument,
+        "invalid range target geometry radial_scale");
+  }
+  std::ostringstream json;
+  json << "{\"target\":" << static_cast<unsigned>(geometry.target)
+       << ",\"radial_scale\":" << geometry.radial_scale << '}';
+  return ClientResult<std::string>::success(json.str());
+}
+
 ClientResult<std::string> encodeRuneStateArgs(const RuneState& state) {
   const char* mode = state.mode == RuneMode::Small
                          ? "small"
@@ -440,6 +455,17 @@ ClientResult<SceneControlResponse> SceneControlClient::setRangeTargetMotion(
   if (!args) return ClientResult<SceneControlResponse>::failure(
       args.status.error, args.status.message);
   return setRangeTargetMotion(*args.value);
+}
+ClientResult<SceneControlResponse> SceneControlClient::setRangeTargetGeometry(
+    const std::string& args_json) {
+  return request("set_range_target_geometry", args_json);
+}
+ClientResult<SceneControlResponse> SceneControlClient::setRangeTargetGeometry(
+    const RangeTargetGeometry& geometry) {
+  const auto args = encodeRangeTargetGeometryArgs(geometry);
+  if (!args) return ClientResult<SceneControlResponse>::failure(
+      args.status.error, args.status.message);
+  return setRangeTargetGeometry(*args.value);
 }
 ClientResult<SceneControlResponse> SceneControlClient::setRuneState(
     const std::string& args_json) {

@@ -1,7 +1,7 @@
 {
   "product": "daedalus-simulator",
-  "version": "1.1.1",
-  "sdk_version": "1.1.0",
+  "version": "1.2.0",
+  "sdk_version": "1.2.0",
   "shm_version": 7,
   "sdk_abi_revision": 2,
   "image": {
@@ -32,7 +32,7 @@
   "default_image_transport": "tcp",
   "tcp_image_port": 5602,
   "udp_command_port": 5601,
-  "scene_control_protocol": 1,
+  "scene_control_protocol": 2,
   "scene_control_port": 5603,
   "distribution_profile": "internal-lab",
   "distribution_locked": true,

@@ -42,6 +42,9 @@ pub struct ShootingRangeTarget {
     pub control_index: usize,
     pub kind: ShootingRangeTargetKind,
     pub origin: Vec3,
+    /// Last radial geometry scale applied to this target's armor roots.
+    /// `NaN` means that the geometry has not been initialized yet.
+    pub applied_geometry_scale: f32,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -1178,6 +1181,7 @@ fn spawn_shooting_range_targets(
                 control_index: index,
                 kind: target.kind,
                 origin: position,
+                applied_geometry_scale: f32::NAN,
             },
         ));
         if shooting_range_target_is_active(target) {

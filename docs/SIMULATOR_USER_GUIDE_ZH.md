@@ -22,7 +22,7 @@ SDK 1.1 支持构建完整的自瞄闭环：
 | 项目 | 契约 |
 | --- | --- |
 | 模拟器 | 1.1.1 |
-| SDK | 1.1.0 |
+| SDK | 1.2.0 |
 | 操作系统 | Windows x86_64、Linux x86_64 |
 | 图像 | 默认 TCP RGBA32，1440×1080，latest-only；帧头也支持 RGB24 |
 | 元数据 | Talos SHM v7，ABI revision 2 |
