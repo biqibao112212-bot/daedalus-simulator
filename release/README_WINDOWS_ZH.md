@@ -1,4 +1,4 @@
-# Daedalus 模拟器 1.2.0（Windows x86_64）
+# Daedalus 模拟器 1.2.1（Windows x86_64）
 
 这是面向实验室成员的已编译模拟器，不包含模拟器源码，也不包含自瞄模型、CUDA、
 TensorRT 或 ONNX。只运行模拟器不需要 Rust、CMake、Visual Studio 或 WSL。
@@ -10,7 +10,7 @@ TensorRT 或 ONNX。只运行模拟器不需要 Rust、CMake、Visual Studio 或
 3. 默认安装到：
 
    ```text
-   %LOCALAPPDATA%\DaedalusSimulator\1.2.0
+   %LOCALAPPDATA%\DaedalusSimulator\1.2.1
    ```
 
 4. 安装器会创建开始菜单项目：
@@ -22,7 +22,7 @@ TensorRT 或 ONNX。只运行模拟器不需要 Rust、CMake、Visual Studio 或
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\install-windows.ps1 `
-  -InstallDir D:\Apps\DaedalusSimulator\1.2.0 -Force
+  -InstallDir D:\Apps\DaedalusSimulator\1.2.1 -Force
 ```
 
 ## 运行所需依赖

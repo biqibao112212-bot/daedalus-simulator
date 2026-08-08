@@ -6,7 +6,7 @@ use std::net::{SocketAddr, UdpSocket};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread::{self, JoinHandle};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use crate::robomaster::prelude::{
     ManualPowerRuneControlState, PowerRune, PowerRuneMechanism, RUNE_TARGET_COUNT, RuneMode,
@@ -54,6 +54,7 @@ impl SceneControlTransport {
             .name("daedalus-scene-control-udp".to_string())
             .spawn(move || {
                 let mut buffer = vec![0_u8; 65_507];
+                let mut last_recoverable_error_log = Instant::now() - Duration::from_secs(1);
                 while !worker_stop.load(Ordering::Acquire) {
                     while let Ok(response) = outgoing_rx.try_recv() {
                         let _ = socket.send_to(&response.bytes, response.peer);
@@ -65,12 +66,20 @@ impl SceneControlTransport {
                                 bytes: buffer[..len].to_vec(),
                             });
                         }
-                        Err(error)
-                            if matches!(
-                                error.kind(),
-                                std::io::ErrorKind::WouldBlock | std::io::ErrorKind::TimedOut
-                            ) => {}
-                        Err(_) => break,
+                        Err(error) if is_idle_udp_receive_error(&error) => {}
+                        Err(error) if is_recoverable_udp_receive_error(&error) => {
+                            if last_recoverable_error_log.elapsed() >= Duration::from_secs(1) {
+                                warn!(
+                                    "Scene control UDP receive recovered from {}: {error}",
+                                    error.kind()
+                                );
+                                last_recoverable_error_log = Instant::now();
+                            }
+                        }
+                        Err(error) => {
+                            error!("Scene control UDP worker stopped after receive error: {error}");
+                            break;
+                        }
                     }
                 }
                 while let Ok(response) = outgoing_rx.try_recv() {
@@ -85,6 +94,26 @@ impl SceneControlTransport {
             worker: Some(worker),
         })
     }
+}
+
+fn is_idle_udp_receive_error(error: &std::io::Error) -> bool {
+    matches!(
+        error.kind(),
+        std::io::ErrorKind::WouldBlock | std::io::ErrorKind::TimedOut
+    )
+}
+
+/// Windows reports a delayed ICMP port-unreachable response as ConnectionReset or
+/// ConnectionRefused on the bound UDP socket.  A client retry may close its old
+/// ephemeral socket before the simulator sends an ACK, so neither condition makes
+/// the long-lived scene-control transport unusable.
+fn is_recoverable_udp_receive_error(error: &std::io::Error) -> bool {
+    matches!(
+        error.kind(),
+        std::io::ErrorKind::Interrupted
+            | std::io::ErrorKind::ConnectionReset
+            | std::io::ErrorKind::ConnectionRefused
+    )
 }
 
 impl Drop for SceneControlTransport {
@@ -760,5 +789,24 @@ mod tests {
         }))
         .unwrap();
         assert!(parse_rune_state(&rune).is_ok());
+    }
+
+    #[test]
+    fn preserves_udp_worker_for_delayed_ack_receive_errors() {
+        for kind in [
+            std::io::ErrorKind::Interrupted,
+            std::io::ErrorKind::ConnectionReset,
+            std::io::ErrorKind::ConnectionRefused,
+        ] {
+            assert!(is_recoverable_udp_receive_error(&std::io::Error::from(
+                kind
+            )));
+        }
+        assert!(!is_recoverable_udp_receive_error(&std::io::Error::from(
+            std::io::ErrorKind::PermissionDenied
+        )));
+        assert!(is_idle_udp_receive_error(&std::io::Error::from(
+            std::io::ErrorKind::TimedOut
+        )));
     }
 }
