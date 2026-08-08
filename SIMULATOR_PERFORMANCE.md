@@ -1,13 +1,23 @@
-# Daedalus Simulator 1.1.1 构建、运行与性能基线
+# Daedalus Simulator 1.2.1 构建、运行与性能基线
 
 - 适用仓库/分支：`daedalus-simulator/main`
 - 本机固定目录：`D:\仿真\repos\daedalus-simulator`
-- 正式 Release：`D:\仿真\releases\daedalus-simulator\1.1.1`
-- 公共 SDK：`DaedalusSimSdk 1.1.0`，`SHM v7 ABI r2`
+- 当前正式 Windows Release：`D:\仿真\releases\daedalus-simulator\1.2.1\windows-x86_64`
+- 公共 SDK：`DaedalusSimSdk 1.2.0`，`SHM v7 ABI r2`
 
-本文是模拟器性能配置和公开基线的权威文档。1.1.1 Linux GPU 验收的机器可读结果见
-[`benchmarks/1.1.1/performance-autodl-rtx3090-2026-07-30.json`](benchmarks/1.1.1/performance-autodl-rtx3090-2026-07-30.json)；
-旧版数据仅作历史参考。
+本文是模拟器性能配置和公开基线的权威文档。当前 Windows Release 1.2.1 的机器可读基线见
+[`benchmarks/1.2.1/performance-release.json`](benchmarks/1.2.1/performance-release.json)；旧版 Linux/WSL 数据仅作历史参考，不能作为当前 Windows 原生自瞄 B 采集口径。
+
+## 当前 Windows 原生采集基线（1.2.1，2026-08-08）
+
+所有新的自瞄 B 采集必须使用 Windows Release 模拟器、Windows 原生 TensorRT 桥、localhost TCP RGBA32 1440×1080 与任务专用 `D:\仿真\runtime` 目录。禁止使用 WSL、`/mnt/d` 文件映射、文件三缓冲轮询或 Debug 模拟器作为默认链路或性能证据。
+
+| 范围 | 条件 | 结果 |
+| --- | --- | ---: |
+| 模拟器源/渲染/采集 | Release、DX12、无预览、TCP、无消费者 | `main_update_hz` 177.951 Hz；`capture_copy_submit_hz` 176.951 Hz |
+| 自瞄 B 完整链路 | Windows 原生桥、Windows TensorRT、Stage3 JSONL、靶场目标 3 连续真值云台锁定、自转 114.592°/s | 4,229 帧/30 s，即 140.967 FPS；Stage3 4,970 行 |
+
+完整链路的源采集间隔 p50/p95/p99 为 6.526/12.810/23.906 ms，桥完成间隔为 6.100/15.700/27.180 ms。靶场 TCP 原始帧确认目标 3 与装甲板位于视野内。原始帧、逐帧 JSONL、分布图、日志索引与复现命令保存于 `D:\仿真\runtime\SHOOTING_RANGE_TARGET_IN_VIEW_PERFORMANCE_1.2.1_20260808.md`。当前 engine 对该渲染目标仍返回零接受检测；这限制检测准确率结论，但不影响可见目标下的采集吞吐结论。
 
 ## 1.1.1 Linux RTX 3090 验收（2026-07-30）
 
@@ -75,7 +85,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\package-release.ps
 ### 默认：高性能模式
 
 ```powershell
-Set-Location D:\仿真\releases\daedalus-simulator\1.0.1
+Set-Location D:\仿真\releases\daedalus-simulator\1.2.1\windows-x86_64
 powershell -NoProfile -ExecutionPolicy Bypass -File .\start-simulator.ps1
 ```
 
@@ -87,7 +97,7 @@ debug 子进程，但离屏 Talos 相机仍持续渲染、readback 并向消费�
 ### 可视验收模式
 
 ```powershell
-Set-Location D:\仿真\releases\daedalus-simulator\1.0.1
+Set-Location D:\仿真\releases\daedalus-simulator\1.2.1\windows-x86_64
 powershell -NoProfile -ExecutionPolicy Bypass -File .\start-simulator.ps1 -Visible
 ```
 
@@ -110,7 +120,7 @@ Set-Location D:\仿真\repos\aim-stack
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\run-autoaim-b.ps1
 ```
 
-启动器会同时启动正式模拟器 Release 和 WSL 自瞄 B。TensorRT 属于消费者推理后端，不由模拟器自动加载；启动器默认设置 `AIM_SIM_WITH_VIVSIONN_TRT=ON`，使用 `D:\仿真\models\engines\armor.engine`。首次运行或缓存清理后会自动按正式 SDK 重建桥接器。
+当前联合基线使用正式模拟器 Release 和 Windows 原生自瞄 B。TensorRT 属于消费者推理后端，不由模拟器自动加载；消费者应使用其 Windows engine 与原生 `aim_sim_windows_auto_aim_bridge.exe`。WSL 联合链路仅为历史资料，不能作为新的自瞄 B 采集入口。
 
 ## 2026-07-18 当前实测
 
@@ -174,7 +184,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\run-autoaim-b.ps1
 
 ### 历史结果为什么不同
 
-旧实验曾得到纯模拟器约 199.79 Hz，以及 B + TensorRT 约 140.81/139.41 Hz。它们使用了不同的文件/TCP组合、统计窗口或后台负载，只保留为历史最佳参考，不能替代上表当前基线。尤其 Windows/WSL 不得使用文件三缓冲图像模式：旧长测只有约 0.49 个有效输入/秒，因此自瞄 B 固定使用 TCP。
+旧实验曾得到纯模拟器约 199.79 Hz，以及 B + TensorRT 约 140.81/139.41 Hz。它们使用了不同的文件/TCP组合、统计窗口或后台负载，只保留为历史最佳参考，不能替代上表当前基线。尤其自瞄 B 不得使用文件三缓冲图像模式：旧 Windows/WSL 长测只有约 0.49 个有效输入/秒；当前完全 Windows 链路固定使用 TCP。
 
 ## 复现检查表
 

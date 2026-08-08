@@ -111,9 +111,12 @@ SDK `readRuntimeCapabilities()` API.
 
 CUDA/TensorRT inference is owned by the consumer bridge. Different inference
 versions are selected by rebuilding that consumer against its own CUDA/TensorRT
-profile; the simulator package and SDK contract do not change. The existing
-recorded baseline is Windows simulator + WSL consumer bridge with CUDA 12.8 and
-TensorRT 10.9.0.34. Other profiles require an independent joint validation.
+profile; the simulator package and SDK contract do not change. The current
+recorded baseline is the Windows 1.2.1 Release plus the native Windows
+consumer bridge and its Windows TensorRT engine: target-in-view Stage3
+end-to-end throughput was 140.967 FPS for 30 seconds. WSL consumer bridges are
+historical migration paths, not the current Release acceptance or collection
+configuration. Other profiles require an independent joint validation.
 
 See `release/PLATFORM_SUPPORT.md` for the full platform matrix and release
 acceptance gates.

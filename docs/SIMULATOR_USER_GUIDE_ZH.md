@@ -1,4 +1,6 @@
-# Daedalus 模拟器使用手册（初版）
+# Daedalus 模拟器使用手册（Windows Release 1.2.1）
+
+> 当前自瞄 B 采集标准：使用 `D:\仿真\releases\daedalus-simulator\1.2.1\windows-x86_64`、Windows 原生消费者、TCP RGBA32 1440×1080 与 `simulator.lock.json`。WSL、`/mnt/d` 和文件三缓冲仅为历史兼容资料，不得作为新采集入口。目标在视野内的 Windows 原生 Stage3 基线为 140.967 FPS；复现和边界见 `D:\仿真\runtime\SHOOTING_RANGE_TARGET_IN_VIEW_PERFORMANCE_1.2.1_20260808.md`。
 
 ## 1. 产品目的
 
@@ -21,7 +23,7 @@ SDK 1.1 支持构建完整的自瞄闭环：
 
 | 项目 | 契约 |
 | --- | --- |
-| 模拟器 | 1.1.1 |
+| 模拟器 | 1.2.1 |
 | SDK | 1.2.0 |
 | 操作系统 | Windows x86_64、Linux x86_64 |
 | 图像 | 默认 TCP RGBA32，1440×1080，latest-only；帧头也支持 RGB24 |

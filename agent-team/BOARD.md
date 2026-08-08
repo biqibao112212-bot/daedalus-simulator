@@ -2,6 +2,13 @@
 
 ## Current status
 
+- Public-document synchronization (2026-08-08): `SIMULATOR_PERFORMANCE.md`,
+  `docs/SIMULATOR_USER_GUIDE_ZH.md`, and `RELEASE.md` now name Windows Release
+  1.2.1 as the active consumer baseline: Windows simulator + native Windows
+  bridge + TCP RGBA32. They publish the target-in-view Stage3 result and mark
+  WSL bridges as historical-only. The immutable 1.2.1 package is not rewritten;
+  these source documents are the tracked public guidance for subsequent
+  releases and consumer branches.
 - Native Shooting Range target-in-view acceptance (2026-08-08): final Windows
   1.2.1 Release, target 3, continuous truth-gimbal target lock and 114.592
   deg/s target spin produced a directly captured 1440x1080 RGBA32 frame with
