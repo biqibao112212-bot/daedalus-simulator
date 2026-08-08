@@ -15,10 +15,15 @@
   capture must use an optimised Release build compatible with the v1.2.0
   scene-control work. Before a new consumer lock or performance claim, build
   and measure the exact committed v1.2.0 Release from a clean checkout.
-- Release-only performance gate is being established: `measure-performance.ps1`
+- Release-only performance gate is established: `measure-performance.ps1`
   refuses Debug paths and measures the source/capture stages at a 100 Hz floor;
   both package scripts validate clean, version-matched evidence and reject a
   release if performance-relevant files changed after that evidence.
+- Windows 1.2.0 was packaged from `1f43b697705903173ced51f7da5de06f8fde0f1d`:
+  SDK Release build and all 7 CTest tests passed; the packaged manifest's 50
+  file hashes matched; performance evidence recorded 168.157 Hz main update
+  and capture submit; and a DX12 / RTX 4060 Laptop GPU smoke run published
+  runtime capabilities from the final package directory.
 
 - Isolation established: the protected simulator checkout remains clean on
   `main`; all branch work is in the separate worktree.
