@@ -179,3 +179,9 @@
     planar IPPE validates the real asset's non-coplanar marker geometry with a
     published `0.025 px` RMS / `0.125 mm` equivalent default bound; it is not
     a substitute for or approximation of the exact rendered corner labels.
+36. The accepted Windows x86_64 `1.3.0` package is immutable at
+    `D:\仿真\releases\daedalus-simulator\1.3.0\windows-x86_64`, manifest
+    source commit `2bce032ebcc55bfc4cfa0e6e793802a55ea22c70`. The failed
+    width/height and partial-Z4 packages remain separately retained as
+    protected evidence. Consumers receive the accepted package, schema, and
+    SDK; they do not receive labels, raw frames, or private Agent Team context.

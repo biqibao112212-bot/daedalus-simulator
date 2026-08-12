@@ -65,6 +65,20 @@ evidence only.
 
 ## Current evidence boundary
 
+- Accepted Windows package: `D:\仿真\releases\daedalus-simulator\1.3.0\windows-x86_64`.
+  Its manifest source commit is `2bce032ebcc55bfc4cfa0e6e793802a55ea22c70`.
+- Clean performance evidence is `benchmarks/1.3.0/performance-release.json`,
+  bound to implementation commit `1ba59ad`; it records `171.190 Hz` main and
+  `163.228 Hz` capture submit with distribution mode and exporter disabled.
+- Protected accepted package-runtime evidence is retained under
+  `D:\仿真\runtime\corner-label-1.3.0-release-*-final*`; the opt-in retry
+  received 525 TCP frames, exported 1,756 labels over 439 complete Z4
+  exposures, retained target/rune counts at zero, and validated free-IPPE at
+  `0.000866109666 px` / `4.44063144e-6 m` maximum.
+- Failed package attempts are separately preserved under
+  `D:\仿真\releases\daedalus-simulator\failed-evidence`; Linux remains an
+  unrun target-native Release gate.
+
 - Worktree implementation tests: Rust distribution-release `195/195` and
   `talos-ipc 7/7` passed.
 - Dirty-tree native development build: MSVC Release binary built; SDK CTest

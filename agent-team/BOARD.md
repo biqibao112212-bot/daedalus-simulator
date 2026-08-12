@@ -2,77 +2,39 @@
 
 ## Current status
 
-- User approval for `SIMULATOR_CHANGE_APPROVAL_REQUIRED` was received after
-  review of consumer proposal `e721b26`.
-- Work started from clean branch `release/simulator-multiplatform-x86` at
-  `48b9437c389c2911e0a135cf1d727e36a68317ab`.
-- Simulator `1.2.1`, SDK `1.2.0`, SHM v7 / ABI revision 2, TCP/UDP ports, and
-  the distribution ground-truth lock are frozen compatibility baselines.
-- Implementation, schema/contracts, bilingual documentation, packaging gates,
-  and reproducible TCP/free-IPPE experiment tooling are present in the working
-  tree as simulator/SDK `1.3.0`.
-- Development validation passed: Rust `195/195`, talos-ipc `7/7`, native MSVC
-  SDK CTest `7/7`, compatibility/JSON/script checks, default-off runtime, and
-  a real TCP label/IPPE experiment.
-- Strict workspace clippy with `-D warnings` is not green at the frozen
-  baseline: reproduction is
-  `cargo clippy --locked --features talos,distribution-release --all-targets -- -D warnings`;
-  it stops first on pre-existing `crates/exact` range-loop and `talos-ipc`
-  derivable-Default lint debt. The new exporter-specific type/argument
-  complexity lint sites are explicitly scoped and do not redefine the Release
-  build/test gates.
-
-## In progress
-
-Implementation is committed at `988cc11` and the clean Windows x86_64
-distribution build has passed Rust `195/195`, native SDK CTest `7/7`, and the
-public compatibility gate. Clean-commit performance evidence is committed with
-the Release metadata: distribution mode, exporter disabled, `207.210 Hz` main
-update and `190.275 Hz` capture submit. The next operation is a new-directory
-Windows `1.3.0` package followed by default-off and opt-in package-runtime
-acceptance; do not claim Linux acceptance from this Windows gate. After the
-marker-dimension fix, regenerated clean evidence is bound to `41ec49d` and
-records `173.296 Hz` main update / `155.369 Hz` capture submit.
-The final complete-Z4 clean measurement is bound to `1ba59ad` and records
-`171.190 Hz` main update / `163.228 Hz` capture submit.
-
-The first protected package attempt was retained under
-`D:\仿真\releases\daedalus-simulator\failed-evidence\1.3.0-width-height-swapped-20260812T0648Z`:
-the package validator caught a width/height metadata transposition before
-Release acceptance. A narrow exporter fix now derives dimensions from the
-long/short pair of true marker edges irrespective of screen-corner orientation;
-it invalidates prior performance/package evidence and must be committed,
-remeasured, and repackaged before proceeding.
-
-A second protected package attempt proved the corrected physical dimensions but
-also exposed that individual non-projectable armors could leave partial Z4
-rows in an exposure. The exporter now drops that entire target exposure
-fail-closed, and the validator documents the real non-coplanar-marker planar
-IPPE closure bound (`0.025 px` / `0.125 mm`). This invalidates the second
-package too; preserve it as failed evidence and regenerate every formal gate.
+- Windows x86_64 Release `1.3.0` is accepted from manifest source commit
+  `2bce032ebcc55bfc4cfa0e6e793802a55ea22c70` at
+  `D:\仿真\releases\daedalus-simulator\1.3.0\windows-x86_64`.
+- The 55-file manifest was independently rehashed, contains no protected
+  capture payload, and identifies simulator/SDK `1.3.0`, SHM v7, ABI r2.
+- Clean evidence for implementation commit `1ba59ad` measured `171.190 Hz`
+  main update and `163.228 Hz` capture submit with the exporter disabled.
+- Native Rust distribution tests passed `196/196`; Windows SDK CTest passed
+  `7/7`; compatibility checks preserve ports 5601/5602/5603 and online truth
+  lock semantics.
+- Package runtime acceptance passed. Default-off emitted no JSONL and the
+  public SDK observed `target_count=0/rune_count=0`. Opt-in received 525 real
+  TCP frames and exported 1,756 rows for 439 complete Z4 exposures; strict
+  validation found 1,664 uniform and 92 excluded rows, with max free-IPPE
+  closure `0.000866109666 px` / `4.44063144e-06 m`.
 
 ## Freeze and blockers
 
 - Never overwrite or mutate any existing formal Release, especially `1.2.1`.
-- Do not edit the consumer repository or its version lock.
-- Do not write a label unless TCP image identity and exposure truth match
-  strictly; ambiguity is a dropped label, not a best-effort row.
-- Formal `1.3.0` packaging waits for an implementation commit, a clean tree,
-  native SDK tests, fresh version-matched performance evidence, and manifest
-  verification.
+- The accepted Windows package is immutable. Labels, TCP identity ledgers, raw
+  RGBA, successful/failed experiment sessions, and prior failed packages are
+  protected assets and remain retained.
+- Linux native build/runtime/package acceptance remains a separate target-native
+  gate; this Windows delivery makes no Linux Release claim.
 
 ## Ordered next steps
 
-1. Commit the complete-Z4 and evidenced planar-IPPE validator fixes after the
-   mandatory performance hook, then regenerate clean performance evidence.
-2. Package only to the absent `1.3.0/windows-x86_64` target, then verify every
-   manifest hash and protected-capture exclusion.
-3. Run package default-off distribution-lock and opt-in TCP/label acceptance.
-4. Record release result, run retention, and finish clean without pushing.
+1. Consumers may pin the accepted public `1.3.0` Release/SDK and independently
+   validate its schema and distribution lock.
+2. Run Linux target-native acceptance before publishing a Linux package claim.
 
 ## Validation still required
 
-- The package and its runtime acceptance remain unproven until the new,
-  manifest-verified Release is built from this committed evidence.
-- Linux native build/runtime/package acceptance remains a separate
-  target-native gate if no Linux x86_64 runner is used in this task.
+- No Windows release validation remains outstanding.
+- Strict workspace clippy remains pre-existing frozen-baseline debt and is not
+  a Release gate: `crates/exact` range-loop and `talos-ipc` derivable-Default.
