@@ -24,16 +24,13 @@
 
 ## In progress
 
-The scoped implementation is staged but not committed. The mandatory
-pre-commit Release-performance gate built the exact Windows distribution
-binary successfully, then rejected the commit because `main_update_hz` and
-`capture_copy_submit_hz` were `36.932`, below the `100 Hz` floor. Evidence is
-retained at
-`D:\仿真\runtime\simulator-performance\20260811T165041Z\performance-evidence.json`.
-At the same time, unrelated PID 20416 (`nightreign`) occupied about 92--93% of
-the GPU 3D engine; historical same-machine baselines are 168--186 Hz. Do not
-terminate that user process, bypass the hook, commit, or package until the
-isolated gate can be rerun without the external GPU contender.
+Implementation is committed at `988cc11` and the clean Windows x86_64
+distribution build has passed Rust `195/195`, native SDK CTest `7/7`, and the
+public compatibility gate. Clean-commit performance evidence is committed with
+the Release metadata: distribution mode, exporter disabled, `207.210 Hz` main
+update and `190.275 Hz` capture submit. The next operation is a new-directory
+Windows `1.3.0` package followed by default-off and opt-in package-runtime
+acceptance; do not claim Linux acceptance from this Windows gate.
 
 ## Freeze and blockers
 
@@ -47,19 +44,15 @@ isolated gate can be rerun without the external GPU contender.
 
 ## Ordered next steps
 
-1. Wait for the unrelated GPU workload to end, then rerun the mandatory
-   pre-commit gate unchanged.
-2. Commit the implementation only if the unchanged `100 Hz` thresholds pass.
-3. From that exact clean commit, run Release build/performance/package gates
-   into a new `1.3.0` directory only; verify hashes and runtime behavior.
-4. Run the retention pass and finish with a clean worktree or a concrete gate
-   failure report.
+1. Commit clean performance evidence and current release context.
+2. Package only to the absent `1.3.0/windows-x86_64` target, then verify every
+   manifest hash and protected-capture exclusion.
+3. Run package default-off distribution-lock and opt-in TCP/label acceptance.
+4. Record release result, run retention, and finish clean without pushing.
 
 ## Validation still required
 
-- Implementation/runtime gates above are development evidence only until the
-  implementation is committed.
-- Clean-commit Windows x86_64 Release build, performance gate, new-directory
-  packaging, manifest hashes, and protected-asset retention.
+- The package and its runtime acceptance remain unproven until the new,
+  manifest-verified Release is built from this committed evidence.
 - Linux native build/runtime/package acceptance remains a separate
   target-native gate if no Linux x86_64 runner is used in this task.

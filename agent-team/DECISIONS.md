@@ -157,3 +157,10 @@
     Frequency-only acceptance telemetry uses
     `TALOS_PERFORMANCE_EVIDENCE_JSON`; it does not relax the distribution
     `DAEDALUS_*` allowlist or expose target truth.
+33. Windows 1.3.0 formal performance evidence is bound to clean implementation
+    commit `988cc11eff8180f02423dbfcde414d88058d4686`, the exact MSVC
+    `talos,distribution-release` binary SHA256
+    `df6b109d87f7808e4b8e2d4429bdba755650c5b86b87df83660a3f5c78111efa`,
+    and a disabled exporter. The 20-second measurement reached 207.210 Hz
+    main update and 190.275 Hz capture submit; it is the package gate, while
+    protected opt-in label experiments remain separate acceptance evidence.
