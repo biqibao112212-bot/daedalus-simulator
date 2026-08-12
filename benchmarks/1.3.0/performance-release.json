@@ -5,22 +5,22 @@
   "rust_target": "x86_64-pc-windows-msvc",
   "features": ["talos", "distribution-release"],
   "corner_labels_enabled": false,
-  "binary_sha256": "aa1ad5320b390d5525835d8e98a327ff28a65f29d738ccb8c0297d28efc12a43",
-  "started_utc": "20260812T065140Z",
+  "binary_sha256": "ada363209e4244cef2ec26f6f174aed793777f5e43cbb943beaa73fa7d7f039f",
+  "started_utc": "20260812T070513Z",
   "duration_seconds": 20,
-  "source_commit": "41ec49dfa460aec5b1f176b59a946d7a4ab23d1b",
+  "source_commit": "1ba59ad59e07b3d06b5d9a3485876ad2b747a74a",
   "source_dirty": false,
   "binary_path": "D:\\仿真\\repos\\daedalus-simulator\\target\\x86_64-pc-windows-msvc\\release\\daedalus.exe",
   "config_path": "D:\\仿真\\repos\\daedalus-simulator\\config.performance.toml",
   "metrics": {
-    "elapsed_s": 14.642,
+    "elapsed_s": 15.921,
     "talos_image_transport": "tcp",
-    "main_update_hz": 173.296,
-    "capture_copy_submit_hz": 155.369,
-    "physics_step_hz": 249.984,
+    "main_update_hz": 171.190,
+    "capture_copy_submit_hz": 163.228,
+    "physics_step_hz": 250.814,
     "talos_tcp_image_sent_hz": 0.000,
     "talos_tcp_image_connect_total": 0,
     "talos_tcp_image_sent_total": 0,
-    "talos_tcp_image_replaced_total": 1995
+    "talos_tcp_image_replaced_total": 2267
   }
 }

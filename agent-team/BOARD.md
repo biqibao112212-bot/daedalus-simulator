@@ -33,6 +33,8 @@ Windows `1.3.0` package followed by default-off and opt-in package-runtime
 acceptance; do not claim Linux acceptance from this Windows gate. After the
 marker-dimension fix, regenerated clean evidence is bound to `41ec49d` and
 records `173.296 Hz` main update / `155.369 Hz` capture submit.
+The final complete-Z4 clean measurement is bound to `1ba59ad` and records
+`171.190 Hz` main update / `163.228 Hz` capture submit.
 
 The first protected package attempt was retained under
 `D:\仿真\releases\daedalus-simulator\failed-evidence\1.3.0-width-height-swapped-20260812T0648Z`:
