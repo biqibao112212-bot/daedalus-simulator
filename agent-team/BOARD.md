@@ -32,6 +32,14 @@ update and `190.275 Hz` capture submit. The next operation is a new-directory
 Windows `1.3.0` package followed by default-off and opt-in package-runtime
 acceptance; do not claim Linux acceptance from this Windows gate.
 
+The first protected package attempt was retained under
+`D:\仿真\releases\daedalus-simulator\failed-evidence\1.3.0-width-height-swapped-20260812T0648Z`:
+the package validator caught a width/height metadata transposition before
+Release acceptance. A narrow exporter fix now derives dimensions from the
+long/short pair of true marker edges irrespective of screen-corner orientation;
+it invalidates prior performance/package evidence and must be committed,
+remeasured, and repackaged before proceeding.
+
 ## Freeze and blockers
 
 - Never overwrite or mutate any existing formal Release, especially `1.2.1`.
@@ -44,7 +52,8 @@ acceptance; do not claim Linux acceptance from this Windows gate.
 
 ## Ordered next steps
 
-1. Commit clean performance evidence and current release context.
+1. Commit the audited marker-dimension fix after the mandatory performance
+   hook, then regenerate clean performance evidence.
 2. Package only to the absent `1.3.0/windows-x86_64` target, then verify every
    manifest hash and protected-capture exclusion.
 3. Run package default-off distribution-lock and opt-in TCP/label acceptance.

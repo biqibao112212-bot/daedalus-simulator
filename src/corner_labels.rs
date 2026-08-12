@@ -688,9 +688,18 @@ fn measured_plate_size(points: [[f64; 3]; 4]) -> (f64, f64) {
         ((left[0] - right[0]).powi(2) + (left[1] - right[1]).powi(2) + (left[2] - right[2]).powi(2))
             .sqrt()
     };
-    let width = (distance(points[0], points[3]) + distance(points[1], points[2])) * 0.5;
-    let height = (distance(points[0], points[1]) + distance(points[3], points[2])) * 0.5;
-    (width, height)
+    // `bl,tl,tr,br` is a *screen* canonical order. Depending on the camera
+    // viewpoint, its vertical screen edges can be either physical marker
+    // width or physical marker height. Preserve the audited physical naming
+    // by deriving the two opposing-edge spans and choosing the long pair as
+    // small-armor width (the actual asset is non-square).
+    let span_a = (distance(points[0], points[1]) + distance(points[2], points[3])) * 0.5;
+    let span_b = (distance(points[0], points[3]) + distance(points[1], points[2])) * 0.5;
+    if span_a >= span_b {
+        (span_a, span_b)
+    } else {
+        (span_b, span_a)
+    }
 }
 
 fn motion_signature(
@@ -979,6 +988,21 @@ mod tests {
         let (width, height) = measured_plate_size(record.plate_geometry.object_corners_armor_m);
         assert!((width - 0.1338).abs() < 1.0e-4);
         assert!((height - 0.0539).abs() < 1.0e-4);
+
+        // Regression: the public bl,tl,tr,br order must not use the old
+        // edge pairing and swap width with height when a plate faces another
+        // camera direction.
+        assert!(width > height);
+
+        let rotated_screen_order = [
+            record.plate_geometry.object_corners_armor_m[1],
+            record.plate_geometry.object_corners_armor_m[2],
+            record.plate_geometry.object_corners_armor_m[3],
+            record.plate_geometry.object_corners_armor_m[0],
+        ];
+        let (rotated_width, rotated_height) = measured_plate_size(rotated_screen_order);
+        assert!((rotated_width - width).abs() < 1.0e-9);
+        assert!((rotated_height - height).abs() < 1.0e-9);
     }
 
     #[test]

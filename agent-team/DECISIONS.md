@@ -164,3 +164,11 @@
     and a disabled exporter. The 20-second measurement reached 207.210 Hz
     main update and 190.275 Hz capture submit; it is the package gate, while
     protected opt-in label experiments remain separate acceptance evidence.
+34. Release validation exposed that screen-canonical `bl,tl,tr,br` ordering
+    cannot identify a physical marker's long axis: a plate may face the camera
+    such that the screen-vertical edge is the physical width. Exported
+    `measured_width_m` and `measured_height_m` therefore derive from the
+    long/short opposing-edge spans of the true quadrilateral, not fixed index
+    pairs. The rejected first package and ZIP are retained as protected failed
+    evidence rather than overwritten; all subsequent 1.3.0 evidence must be
+    regenerated after this fix.
