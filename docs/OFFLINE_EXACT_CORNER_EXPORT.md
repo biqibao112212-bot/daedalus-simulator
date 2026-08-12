@@ -38,6 +38,12 @@ Those asset quads measure approximately 133.77 x 53.89 mm, are non-rectangular/
 non-coplanar by about 4-5 micrometres, and are tilted approximately 15 degrees.
 The row publishes both nominal dimensions and the actual four
 `object_corners_armor_m`; an exact free-IPPE closure must use the latter.
+The marker is preserved as authored (about 4--5 um non-coplanar), so generic
+planar OpenCV IPPE is an independent closure check rather than an algebraic
+inverse at grazing/out-of-frame views. The supplied validator defaults to a
+`0.025 px` RMS / `0.125 mm` equivalent bound; use stricter
+`--max-reprojection-px` or `--max-equivalent-error-m` values only for a
+restricted capture geometry with supporting evidence.
 
 The #1 Shooting Range target uses `HERO.glb` and approximately 228.77 x 53.89
 mm large armor. It is intentionally outside schema v1 and is never mislabeled

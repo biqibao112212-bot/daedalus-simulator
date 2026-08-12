@@ -172,3 +172,10 @@
     pairs. The rejected first package and ZIP are retained as protected failed
     evidence rather than overwritten; all subsequent 1.3.0 evidence must be
     regenerated after this fix.
+35. Schema v1 treats a labeled target exposure as atomic Z4 supervision. If
+    any one of the four #3 small armors fails real projection or screen-order
+    validation, the exporter writes no rows for that target exposure. This
+    fail-closed policy prevents consumers from receiving partial slots. Generic
+    planar IPPE validates the real asset's non-coplanar marker geometry with a
+    published `0.025 px` RMS / `0.125 mm` equivalent default bound; it is not
+    a substitute for or approximation of the exact rendered corner labels.

@@ -32,6 +32,10 @@ schema v1 只导出 Shooting Range 当前活动的 #3 靶车小装甲板。公�
 真实四边形约 133.77×53.89 mm，存在约 4–5 μm 的非严格矩形/非共面误差，倾角约 15°。
 每行同时写 nominal 尺寸和真实 `object_corners_armor_m`；free-IPPE 的 exact 闭合必须使用
 后者，不能为了得到 135×55 而构造理想矩形。
+marker 保留资产原始约 4–5 μm 的非严格共面形状，因此掠视或出画视角中的通用平面 OpenCV
+IPPE 是独立闭合检查，而非代数逆。随包 validator 默认 RMS/等效米制上限为
+`0.025 px` / `0.125 mm`；只有对具有证据支持的受限采集几何，才应通过
+`--max-reprojection-px` 或 `--max-equivalent-error-m` 收紧阈值。
 
 Shooting Range #1 使用 `HERO.glb`，其大装甲约 228.77×53.89 mm，明确不属于 schema v1，
 不会被伪标为 135×55。

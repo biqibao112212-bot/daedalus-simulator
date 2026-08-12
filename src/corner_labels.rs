@@ -471,6 +471,7 @@ pub fn extract_corner_label_data(
         let linear_ros = M_ALIGN_MAT3 * target.linear_velocity;
         let angular_ros = M_ALIGN_MAT3 * target.angular_velocity;
 
+        let mut target_records = Vec::with_capacity(4);
         for (relative_slot, armor) in target.armors.iter().enumerate() {
             let world_points = armor
                 .marker_points
@@ -528,7 +529,7 @@ pub fn extract_corner_label_data(
             } else {
                 "out_of_frame"
             };
-            records.push(CornerLabelRecord {
+            target_records.push(CornerLabelRecord {
                 schema_version: CORNER_LABEL_SCHEMA_VERSION.to_string(),
                 producer_epoch: 0,
                 frame_seq: frame_stamp.frame_seq,
@@ -566,6 +567,14 @@ pub fn extract_corner_label_data(
                 future_truth_included: false,
             });
         }
+
+        // Schema v1 is a strict Z4 training contract. A single marker that is
+        // behind the camera, non-finite, or screen-degenerate makes this
+        // target exposure ambiguous for consumers; drop the whole exposure
+        // rather than serializing a misleading partial target.
+        if complete_z4_records(&target_records) {
+            records.extend(target_records);
+        }
     }
     extracted
         .motion
@@ -578,6 +587,16 @@ pub fn extract_corner_label_data(
             records,
         });
     }
+}
+
+fn complete_z4_records(records: &[CornerLabelRecord]) -> bool {
+    records.len() == 4
+        && records.iter().all(|record| record.target_number == 3)
+        && records
+            .iter()
+            .map(|record| record.relative_slot)
+            .collect::<HashSet<_>>()
+            == HashSet::from([0, 1, 2, 3])
 }
 
 fn find_ancestor_target(
@@ -1003,6 +1022,26 @@ mod tests {
         let (rotated_width, rotated_height) = measured_plate_size(rotated_screen_order);
         assert!((rotated_width - width).abs() < 1.0e-9);
         assert!((rotated_height - height).abs() < 1.0e-9);
+    }
+
+    #[test]
+    fn labels_fail_closed_when_an_exposure_is_not_complete_z4() {
+        let base = sample_record();
+        let complete = (0..4)
+            .map(|relative_slot| {
+                let mut record = base.clone();
+                record.relative_slot = relative_slot;
+                record
+            })
+            .collect::<Vec<_>>();
+        assert!(complete_z4_records(&complete));
+
+        let partial = complete[..3].to_vec();
+        assert!(!complete_z4_records(&partial));
+
+        let mut duplicate_slot = complete.clone();
+        duplicate_slot[3].relative_slot = 2;
+        assert!(!complete_z4_records(&duplicate_slot));
     }
 
     #[test]

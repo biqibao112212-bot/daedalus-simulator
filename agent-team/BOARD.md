@@ -42,6 +42,13 @@ long/short pair of true marker edges irrespective of screen-corner orientation;
 it invalidates prior performance/package evidence and must be committed,
 remeasured, and repackaged before proceeding.
 
+A second protected package attempt proved the corrected physical dimensions but
+also exposed that individual non-projectable armors could leave partial Z4
+rows in an exposure. The exporter now drops that entire target exposure
+fail-closed, and the validator documents the real non-coplanar-marker planar
+IPPE closure bound (`0.025 px` / `0.125 mm`). This invalidates the second
+package too; preserve it as failed evidence and regenerate every formal gate.
+
 ## Freeze and blockers
 
 - Never overwrite or mutate any existing formal Release, especially `1.2.1`.
@@ -54,8 +61,8 @@ remeasured, and repackaged before proceeding.
 
 ## Ordered next steps
 
-1. Commit the audited marker-dimension fix after the mandatory performance
-   hook, then regenerate clean performance evidence.
+1. Commit the complete-Z4 and evidenced planar-IPPE validator fixes after the
+   mandatory performance hook, then regenerate clean performance evidence.
 2. Package only to the absent `1.3.0/windows-x86_64` target, then verify every
    manifest hash and protected-capture exclusion.
 3. Run package default-off distribution-lock and opt-in TCP/label acceptance.
