@@ -4,6 +4,7 @@ use std::sync::OnceLock;
 use crate::config::SimulationConfig;
 
 const RELEASE_MODE_ENV: &str = "DAEDALUS_RELEASE_MODE";
+const CORNER_LABELS_ENV: &str = "DAEDALUS_CORNER_LABELS_JSONL";
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ReleaseMode {
@@ -29,6 +30,12 @@ pub fn prepare_environment() {
         .unwrap_or(ReleaseMode::Performance);
     let _ = RELEASE_MODE.set(mode);
 
+    // This is the only caller-provided DAEDALUS_* value retained by a
+    // distribution build. It controls a write-only, offline sidecar whose
+    // rows are committed only after the matching TCP image is fully sent; it
+    // does not relax the online ground-truth lock.
+    let corner_labels_path = std::env::var_os(CORNER_LABELS_ENV).filter(|value| !value.is_empty());
+
     // DAEDALUS_* variables are development controls. A distribution build
     // removes all caller-provided values before setting the small, fixed set
     // needed by the public runtime contract.
@@ -45,6 +52,9 @@ pub fn prepare_environment() {
     set_env("DAEDALUS_TALOS_IMAGE_TRANSPORT", "tcp");
     set_env("DAEDALUS_TALOS_TCP_BIND", "127.0.0.1:5602");
     set_env("DAEDALUS_AUTO_AIM_ON_START", "1");
+    if let Some(path) = corner_labels_path {
+        set_env_os(CORNER_LABELS_ENV, path);
+    }
     set_env("WGPU_POWER_PREF", "high");
     // Distribution builds always let wgpu select the adapter. The launcher may
     // select a supported backend, but a caller cannot pin an unvalidated GPU.
@@ -99,6 +109,12 @@ fn set_env(key: &str, value: &str) {
     unsafe { std::env::set_var(key, value) };
 }
 
+fn set_env_os(key: &str, value: OsString) {
+    // SAFETY: this module is invoked before Bevy or any simulator worker
+    // thread starts, so the process environment is still single-threaded.
+    unsafe { std::env::set_var(key, value) };
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -108,5 +124,12 @@ mod tests {
         if !cfg!(feature = "distribution-release") {
             assert!(!is_locked());
         }
+    }
+
+    #[cfg(feature = "distribution-release")]
+    #[test]
+    fn distribution_build_is_locked_even_with_offline_export_compiled() {
+        assert!(is_locked());
+        assert_eq!(CORNER_LABELS_ENV, "DAEDALUS_CORNER_LABELS_JSONL");
     }
 }

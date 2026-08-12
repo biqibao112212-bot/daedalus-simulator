@@ -1,68 +1,79 @@
-# Daedalus Simulator release branch context
+# Daedalus Simulator project context
 
 - Protocol: `agent-team-fixed/v2`
-- Repository: `daedalus-simulator`
-- Branch: `release/simulator-multiplatform-x86`
-- Isolated worktree: `D:\仿真\isolated\daedalus-simulator-multiplatform-x86`
-- Protected main checkout: `D:\仿真\repos\daedalus-simulator` (`main`)
-- Last fully accepted implementation baseline: `6883879`
-- Product candidate: simulator `1.1.1`, SDK `1.1.0`, SHM v7 / ABI revision 2
+- Repository: `D:\仿真\repos\daedalus-simulator`
+- Active branch: `release/simulator-multiplatform-x86`
+- Frozen implementation baseline at task start: `48b9437c389c2911e0a135cf1d727e36a68317ab`
+- Frozen formal release: simulator `1.2.1`, SDK `1.2.0`, SHM v7 / ABI revision 2
+- Approved development target: simulator `1.3.0`, adding an offline exact-corner label export without changing the real-time SDK ABI
 
-## Mission
+## Ownership and boundaries
 
-## Approved current change (2026-08-07)
+This repository exclusively owns the Rust simulator, rendered and rigid-body
+geometry, scene controls, image capture, simulator truth, public SDK/contracts,
+packaging, and formal Release artifacts.
 
-The latest formal baseline is simulator 1.1.1, source commit
-`2a8470204a9d3bf3ffd3ac646f985900d54471be`, on
-`release/simulator-multiplatform-x86`. The approved development candidate is
-1.2.0 / SDK 1.2.0. It adds Scene Control v2 geometry control that scales only
-the four armor-root horizontal positions for shooting-range targets. The
-frozen 1.1.1 package remains untouched; consumer locks wait for clean release
-and acceptance gates.
+The consumer repository is read-only and out of scope. Do not copy simulator
+implementation into it or read its private Agent Team context. Cross-repository
+information is published only through versioned schemas, contracts, SDKs,
+Release manifests, and consumer locks.
 
-Define and implement an internal-laboratory x86_64 release flow for Windows and Linux.
-Each target must build its own Rust binary and C++ SDK, run target-platform
-tests, and produce a platform-specific package with a SHA256 manifest.
+The formal `1.2.1` Release under
+`D:\仿真\releases\daedalus-simulator\1.2.1` is immutable. Models, labels,
+raw captures, datasets, and every formal Release are protected assets.
 
-## Owned scope
+## Approved offline-label capability
 
-This branch owns simulator build scripts, release metadata, launchers, SDK
-packaging, platform documentation, and release validation. The public runtime
-contract remains `release/release.json` plus `sdk/contract.json`.
+The offline exact-corner JSONL exporter is explicit opt-in and disabled by
+default. Every written row must be joined fail-closed to the same exposure as
+the real TCP image by `(producer_epoch, frame_seq, timestamp_ns)`. Corners come
+from the simulator's actual rendered/rigid-body geometry and exposure camera,
+never from detections, hand labels, motion commands, future truth, or a consumer
+approximation. Distribution builds keep online ground truth locked with
+`target_count=0`; labels are a sidecar file and never an online detector/PnP/
+predictor input.
 
-The supported public surface is scene control, RGB image transport, fixed
-read-only calibration, gimbal command/actual-state feedback, and runtime GPU
-capabilities. Inference models and vision-result upload are outside the
-simulator release.
+## Public dependency references
 
-## Platform contract
+- Approved consumer proposal: independent Git reference
+  `e721b26:modules/autoaim/docs/corner_repair_image_training_data_proposal.md`
+- Runtime Release contract: `release/release.json`
+- SDK contract: `sdk/contract.json`
+- Camera calibration: `release/camera-calibration.json`
+- Scene Control: `docs/SCENARIO_CONTROL.md`
+- Offline exact-corner contracts:
+  `docs/OFFLINE_EXACT_CORNER_EXPORT.md`,
+  `docs/OFFLINE_EXACT_CORNER_EXPORT_ZH.md`, and
+  `sdk/schemas/offline-exact-corners-v1.schema.json`
+- Release/performance gates: `RELEASE.md`, `SIMULATOR_PERFORMANCE.md`
 
-- Windows: `x86_64-pc-windows-msvc`, `daedalus.exe`, DX12 performance default,
-  Vulkan visible default.
-- Linux: `x86_64-unknown-linux-gnu`, `daedalus`, Vulkan performance and visible
-  defaults. The internal-lab release gate accepts software Vulkan startup and
-  IPC diagnostics without a discrete GPU; real-time RGB performance is not
-  promised by that no-GPU acceptance scope.
-- `i686`, ARM, and other targets are outside this release.
-- GPU drivers are system prerequisites and are never bundled.
-- CUDA/TensorRT/model/engine files are not simulator assets. Inference is owned
-  by the consumer bridge; the selected consumer build profile determines its
-  CUDA/TensorRT version.
-
-## Stable commands
+## Stable validation commands
 
 ```text
-scripts/build-release.ps1 -Platform windows -Arch x86_64
-scripts/build-release.sh
+cargo fmt --all -- --check
+cargo test --locked --features talos,distribution-release
+cargo clippy --locked --features talos,distribution-release --all-targets -- -D warnings
 scripts/check-compatibility.ps1
+scripts/build-release.ps1 -Platform windows -Arch x86_64
+scripts/measure-performance.ps1 -DurationSeconds 20
 scripts/package-release.ps1 -Platform windows -Arch x86_64
-scripts/package-release.sh
 ```
 
-Release claims require a clean committed tree and target-platform Rust/CMake
-validation. Do not modify the protected `main` checkout or formal release
-assets from this isolated branch without explicit intent.
+Compatibility, performance, and formal Release claims require the exact clean
+committed revision. Development builds and dirty-tree runs are implementation
+evidence only.
 
-The current distribution profile is `internal-lab`: non-commercial training
-and research inside the owning laboratory. It does not require a commercial
-license file. External/public distribution remains a separate review scope.
+## Current evidence boundary
+
+- Worktree implementation tests: Rust distribution-release `195/195` and
+  `talos-ipc 7/7` passed.
+- Dirty-tree native development build: MSVC Release binary built; SDK CTest
+  `7/7` passed. This is not formal Release evidence.
+- Protected dirty-tree runtime experiment:
+  `D:\仿真\runtime\corner-label-1.3.0-dev-20260811T162716Z`.
+  It received 268 real TCP frames, exported 1064 rows for 266 exposures,
+  proved online `target_count=0/rune_count=0`, contained both certified and
+  excluded motion rows, and closed free-IPPE at maximum
+  `0.000682232101 px` / `2.74679494e-6 m` equivalent error.
+- Formal performance, package, manifest, and package-runtime evidence must be
+  regenerated after the implementation commit from a clean tree.

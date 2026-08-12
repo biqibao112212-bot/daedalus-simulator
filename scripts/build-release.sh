@@ -16,6 +16,7 @@ command -v cmake >/dev/null || die "cmake is required"
 command -v ctest >/dev/null || die "ctest is required"
 
 mkdir -p "$BUILD_ROOT"
+cargo test --locked --features talos,distribution-release --bin daedalus
 cargo build --locked --release --features talos,distribution-release --target "$TARGET"
 
 cmake -S "$ROOT/sdk/cpp" -B "$SDK_BUILD" \

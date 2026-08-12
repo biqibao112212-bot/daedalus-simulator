@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Reject a release package when its performance evidence is stale or invalid."""
 import argparse
+import hashlib
 import json
 import subprocess
 from pathlib import Path
@@ -23,10 +24,16 @@ except (OSError, json.JSONDecodeError) as exc:
     fail(f"cannot read evidence {evidence_path}: {exc}")
 if evidence.get('schema') != 'daedalus-performance-v1': fail('unsupported evidence schema')
 if evidence.get('profile') != 'release': fail('evidence was not collected from a Release profile')
+if evidence.get('rust_target') != 'x86_64-pc-windows-msvc': fail('Windows Release evidence must use x86_64-pc-windows-msvc')
+if set(evidence.get('features') or []) != {'talos', 'distribution-release'}: fail('evidence must use talos + distribution-release features')
+if evidence.get('corner_labels_enabled') is not False: fail('baseline Release performance evidence must keep corner-label export disabled')
 if evidence.get('version') != args.version: fail(f"evidence version {evidence.get('version')!r} does not match VERSION {args.version!r}")
 if evidence.get('source_dirty') is not False: fail('formal Release evidence must be collected from a clean committed checkout')
 binary_path = Path(str(evidence.get('binary_path', '')))
 if binary_path.parent.name.lower() != 'release': fail(f"evidence binary is not under a release directory: {binary_path}")
+if not binary_path.is_file(): fail(f"evidence binary is missing: {binary_path}")
+binary_sha256 = hashlib.sha256(binary_path.read_bytes()).hexdigest()
+if evidence.get('binary_sha256') != binary_sha256: fail('evidence binary hash does not match the measured Release binary')
 metrics = evidence.get('metrics') or {}
 for key, minimum in (('main_update_hz', args.minimum_main_update_hz), ('capture_copy_submit_hz', args.minimum_capture_submit_hz)):
     try: value = float(metrics[key])

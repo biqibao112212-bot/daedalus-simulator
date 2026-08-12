@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(DaedalusSimSdk VERSION 1.2.0 LANGUAGES CXX)
+project(DaedalusSimSdk VERSION 1.3.0 LANGUAGES CXX)
 
 # MSVC emits one program database per target. /FS serializes access when
 # CMake builds multiple translation units in parallel.
@@ -96,6 +96,16 @@ if(BUILD_TESTING)
   )
   add_test(NAME daedalus_sim_sdk_runtime_capabilities_test
     COMMAND daedalus_sim_sdk_runtime_capabilities_test
+  )
+
+  # Manual runtime acceptance probe. It is built with the SDK test tree but is
+  # intentionally not a CTest because it requires a running distribution
+  # simulator and the exact TALOS_IPC_DIR from that run.
+  add_executable(daedalus_sim_sdk_distribution_lock_probe
+    tests/distribution_lock_probe.cpp
+  )
+  target_link_libraries(daedalus_sim_sdk_distribution_lock_probe PRIVATE
+    DaedalusSimSdk::DaedalusSimSdk
   )
 endif()
 

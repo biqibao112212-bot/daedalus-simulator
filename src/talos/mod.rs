@@ -8,4 +8,5 @@ mod ground_truth;
 mod plugin;
 pub(crate) mod tcp_image;
 
+pub(crate) use plugin::M_ALIGN_MAT3;
 pub use plugin::TalosPlugin;

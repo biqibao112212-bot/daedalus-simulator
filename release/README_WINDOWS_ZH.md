@@ -1,4 +1,4 @@
-# Daedalus 模拟器 1.2.1（Windows x86_64）
+# Daedalus 模拟器 1.3.0（Windows x86_64）
 
 这是面向实验室成员的已编译模拟器，不包含模拟器源码，也不包含自瞄模型、CUDA、
 TensorRT 或 ONNX。只运行模拟器不需要 Rust、CMake、Visual Studio 或 WSL。
@@ -10,7 +10,7 @@ TensorRT 或 ONNX。只运行模拟器不需要 Rust、CMake、Visual Studio 或
 3. 默认安装到：
 
    ```text
-   %LOCALAPPDATA%\DaedalusSimulator\1.2.1
+   %LOCALAPPDATA%\DaedalusSimulator\1.3.0
    ```
 
 4. 安装器会创建开始菜单项目：
@@ -22,7 +22,7 @@ TensorRT 或 ONNX。只运行模拟器不需要 Rust、CMake、Visual Studio 或
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\install-windows.ps1 `
-  -InstallDir D:\Apps\DaedalusSimulator\1.2.1 -Force
+  -InstallDir D:\Apps\DaedalusSimulator\1.3.0 -Force
 ```
 
 ## 运行所需依赖
@@ -65,7 +65,7 @@ Microsoft 官方 VC++ x64 Runtime：
 - 支持 C++17 的编译器。
 
 ```cmake
-find_package(DaedalusSimSdk 1.1 REQUIRED CONFIG)
+find_package(DaedalusSimSdk 1.3 REQUIRED CONFIG)
 target_link_libraries(my_autoaim PRIVATE DaedalusSimSdk::DaedalusSimSdk)
 ```
 
@@ -85,6 +85,8 @@ cmake --build build --config Release
 | `sdk/lib/` | Windows x64 SDK 库及 CMake package |
 | `docs/SIMULATOR_USER_GUIDE_ZH.md` | 完整中文使用手册和性能简报 |
 | `docs/SDK_API_REFERENCE_ZH.md` | 所有 SDK 函数、参数、返回值和示例 |
+| `docs/OFFLINE_EXACT_CORNER_EXPORT_ZH.md` | 默认关闭的离线同曝光角点导出合同与实验步骤 |
+| `schemas/offline-exact-corners-v1.schema.json` | exact-corner JSONL 机器可读 schema |
 | `docs/SIMULATOR_TROUBLESHOOTING.md` | 常见故障排查 |
 | `camera-calibration.json` | 固定只读相机内外参和曝光 |
 | `release.json` | 版本、端口和 ABI 契约 |
@@ -105,3 +107,8 @@ cmake --build build --config Release
 - 实际后端和显卡写入运行目录的 `daedalus-runtime-capabilities-v1.json`。
 
 更详细说明请从 `docs/SIMULATOR_USER_GUIDE_ZH.md` 开始阅读。
+
+离线训练标签必须显式使用
+`.\start-simulator.ps1 -CornerLabelsJsonl <安装目录之外的新绝对.jsonl路径>` 启用；它不会
+解锁 SDK 在线目标真值。采集与 free-IPPE 验收命令见
+`docs/OFFLINE_EXACT_CORNER_EXPORT_ZH.md`。

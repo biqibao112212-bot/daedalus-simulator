@@ -81,6 +81,13 @@ versus performance presentation mode and the IPC directory remain deployment
 choices. Camera calibration is fixed and read-only; no detection/PnP result
 upload API exists.
 
+Release 1.3.0 adds a write-only offline exact-corner sidecar. It is disabled by
+default, requires a new absolute JSONL path outside the installed Release tree,
+and commits rows only after the matching full TCP frame is written. It neither
+changes SHM v7 / ABI revision 2 / TCP protocol 1 nor exposes online target
+truth. The label, TCP identity ledger, raw frames, and capture manifest are
+protected assets outside the package.
+
 Before publishing a package, verify:
 
 1. The binary matches the target triple and the package contains no binary for
@@ -92,3 +99,5 @@ Before publishing a package, verify:
 5. The package contains no CUDA, TensorRT, ONNX, engine, or model assets.
 6. A consumer-side joint test proves the selected inference profile when one
    is required; simulator-only tests must not be presented as inference tests.
+7. The package contains the exact-corner schema/docs/validators but no JSONL,
+   raw frame, capture directory, or dataset payload.

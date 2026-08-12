@@ -275,6 +275,8 @@ pub fn publish_ground_truth_system(
     // but not simulator target truth. Publish an empty batch with the frame
     // identity so the 16-slot history remains a synchronization channel.
     if crate::distribution::is_locked() {
+        debug_assert_eq!(batch.target_count, 0);
+        debug_assert_eq!(batch.rune_count, 0);
         if let Ok(mut publisher) = ctx.publisher.try_lock() {
             publisher.publish_ground_truth(&batch, &exposure_state);
         }
@@ -494,5 +496,14 @@ mod tests {
         assert!(!armor_geometry_is_truth_eligible(1));
         assert!(!armor_geometry_is_truth_eligible(3));
         assert!(armor_geometry_is_truth_eligible(4));
+    }
+
+    #[cfg(feature = "distribution-release")]
+    #[test]
+    fn distribution_build_keeps_the_public_target_truth_batch_empty() {
+        assert!(crate::distribution::is_locked());
+        let batch = GroundTruthBatch::default();
+        assert_eq!(batch.target_count, 0);
+        assert_eq!(batch.rune_count, 0);
     }
 }

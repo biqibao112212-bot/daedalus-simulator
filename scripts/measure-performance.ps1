@@ -14,7 +14,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
-if ([string]::IsNullOrWhiteSpace($BinaryPath)) { $BinaryPath = Join-Path $root 'target\release\daedalus.exe' }
+if ([string]::IsNullOrWhiteSpace($BinaryPath)) { $BinaryPath = Join-Path $root 'target\x86_64-pc-windows-msvc\release\daedalus.exe' }
 if ([string]::IsNullOrWhiteSpace($ConfigPath)) { $ConfigPath = Join-Path $root 'config.performance.toml' }
 if ([string]::IsNullOrWhiteSpace($OutputDirectory)) { $OutputDirectory = Join-Path (Split-Path -Parent (Split-Path -Parent $root)) 'runtime\simulator-performance' }
 
@@ -31,7 +31,7 @@ if ($Build) {
         if (Test-Path -LiteralPath $cargoCandidate -PathType Leaf) { $cargo = Get-Item -LiteralPath $cargoCandidate }
     }
     if ($null -eq $cargo) { throw 'Release build requested but cargo was not found on PATH or under USERPROFILE\.cargo\bin.' }
-    & $cargo.Source build --locked --release --features talos
+    & $cargo.Source build --locked --release --features talos,distribution-release --target x86_64-pc-windows-msvc
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 if (-not (Test-Path -LiteralPath $BinaryPath -PathType Leaf)) { throw "Simulator executable is missing: $BinaryPath" }
@@ -44,14 +44,16 @@ $stdoutPath = Join-Path $runDirectory 'simulator.stdout.log'
 $stderrPath = Join-Path $runDirectory 'simulator.stderr.log'
 $ipcDirectory = Join-Path $runDirectory 'talos-ipc'
 $savedEnvironment = @{}
-foreach ($name in @('DAEDALUS_CONFIG', 'DAEDALUS_STATS_JSON', 'DAEDALUS_TALOS_IMAGE_TRANSPORT', 'DAEDALUS_TALOS_TCP_BIND', 'DAEDALUS_PERF_DISABLE_UI', 'TALOS_IPC_DIR', 'WGPU_BACKEND', 'WGPU_POWER_PREF')) { $savedEnvironment[$name] = [Environment]::GetEnvironmentVariable($name, 'Process') }
+foreach ($name in @('DAEDALUS_CONFIG', 'DAEDALUS_STATS_JSON', 'DAEDALUS_TALOS_IMAGE_TRANSPORT', 'DAEDALUS_TALOS_TCP_BIND', 'DAEDALUS_PERF_DISABLE_UI', 'DAEDALUS_CORNER_LABELS_JSONL', 'TALOS_PERFORMANCE_EVIDENCE_JSON', 'TALOS_IPC_DIR', 'WGPU_BACKEND', 'WGPU_POWER_PREF')) { $savedEnvironment[$name] = [Environment]::GetEnvironmentVariable($name, 'Process') }
 $process = $null
 try {
     $env:DAEDALUS_CONFIG = $ConfigPath
-    $env:DAEDALUS_STATS_JSON = $statsPath
+    Remove-Item Env:DAEDALUS_STATS_JSON -ErrorAction SilentlyContinue
+    $env:TALOS_PERFORMANCE_EVIDENCE_JSON = $statsPath
     $env:DAEDALUS_TALOS_IMAGE_TRANSPORT = 'tcp'
     $env:DAEDALUS_TALOS_TCP_BIND = '127.0.0.1:5602'
     $env:DAEDALUS_PERF_DISABLE_UI = '1'
+    Remove-Item Env:DAEDALUS_CORNER_LABELS_JSONL -ErrorAction SilentlyContinue
     $env:TALOS_IPC_DIR = $ipcDirectory
     $env:WGPU_BACKEND = 'dx12'
     $env:WGPU_POWER_PREF = 'high'
@@ -61,7 +63,7 @@ try {
     if ($process.HasExited) { throw "Simulator exited early with code $($process.ExitCode). See $stderrPath" }
     if (-not (Test-Path -LiteralPath $statsPath -PathType Leaf)) { throw "Simulator did not write frequency statistics: $statsPath" }
     $metrics = Get-Content -LiteralPath $statsPath -Raw -Encoding UTF8 | ConvertFrom-Json
-    $evidence = [ordered]@{ schema = 'daedalus-performance-v1'; version = (Get-Content -LiteralPath (Join-Path $root 'VERSION') -Raw).Trim(); profile = 'release'; started_utc = $stamp; duration_seconds = $DurationSeconds; source_commit = (git -C $root rev-parse HEAD).Trim(); source_dirty = @((git -C $root status --porcelain -- .)).Count -ne 0; binary_path = $BinaryPath; config_path = $ConfigPath; metrics = $metrics }
+    $evidence = [ordered]@{ schema = 'daedalus-performance-v1'; version = (Get-Content -LiteralPath (Join-Path $root 'VERSION') -Raw).Trim(); profile = 'release'; rust_target = 'x86_64-pc-windows-msvc'; features = @('talos', 'distribution-release'); corner_labels_enabled = $false; binary_sha256 = (Get-FileHash -LiteralPath $BinaryPath -Algorithm SHA256).Hash.ToLowerInvariant(); started_utc = $stamp; duration_seconds = $DurationSeconds; source_commit = (git -C $root rev-parse HEAD).Trim(); source_dirty = @((git -C $root status --porcelain -- .)).Count -ne 0; binary_path = $BinaryPath; config_path = $ConfigPath; metrics = $metrics }
     $evidencePath = Join-Path $runDirectory 'performance-evidence.json'
     $evidence | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $evidencePath -Encoding UTF8
     if ($metrics.talos_image_transport -ne 'tcp') { throw "Expected TCP image transport, got $($metrics.talos_image_transport)" }

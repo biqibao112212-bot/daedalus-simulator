@@ -4,6 +4,7 @@ use crate::components::{
     Controlled, InfantryChassis, InfantryGimbal, InfantryLaunchOffset, SubscribeAutoAim,
 };
 use crate::config::SimulationConfig;
+use crate::corner_labels::{CORNER_LABELS_ENV, CornerLabelJsonlWriter};
 use crate::systems::projectile_launch;
 use crate::talos::capture::{
     TalosCaptureContext, TalosCapturePlugin, TalosFrameStamp, TalosImageSink,
@@ -211,6 +212,42 @@ impl Plugin for TalosPlugin {
         };
 
         let producer_epoch = publisher.producer_epoch();
+        let requested_corner_labels = match std::env::var(CORNER_LABELS_ENV) {
+            Ok(path) => Some(path),
+            Err(std::env::VarError::NotPresent) => None,
+            Err(std::env::VarError::NotUnicode(_)) => {
+                error!(
+                    "{CORNER_LABELS_ENV} is not valid Unicode; Talos capture is disabled fail-closed"
+                );
+                return;
+            }
+        };
+        if requested_corner_labels.is_some()
+            && self.config.image_transport != TalosImageTransport::Tcp
+        {
+            error!(
+                "{CORNER_LABELS_ENV} requires the real TCP image transport; Talos capture is disabled"
+            );
+            return;
+        }
+        let corner_label_writer = match requested_corner_labels {
+            Some(path) => match CornerLabelJsonlWriter::create_new(path, producer_epoch) {
+                Ok(writer) => {
+                    info!(
+                        "Offline exact-corner labels enabled at {} (rows are committed only after the matching TCP image is fully sent)",
+                        writer.path().display()
+                    );
+                    Some(writer)
+                }
+                Err(error) => {
+                    error!(
+                        "Cannot enable {CORNER_LABELS_ENV}: {error}; Talos capture is disabled fail-closed"
+                    );
+                    return;
+                }
+            },
+            None => None,
+        };
         let (image_sink, frame_kind, texture_format, tcp_sender) = match self.config.image_transport
         {
             TalosImageTransport::File => {
@@ -226,6 +263,7 @@ impl Plugin for TalosPlugin {
             TalosImageTransport::Tcp => {
                 let mut sender_config =
                     TcpImageSenderConfig::new(self.config.tcp_bind_addr, producer_epoch);
+                sender_config.corner_label_writer = corner_label_writer.clone();
                 if let Some(timeout) = self.config.tcp_write_timeout_override {
                     sender_config.write_timeout = timeout;
                     info!(
@@ -271,6 +309,7 @@ impl Plugin for TalosPlugin {
             publisher: publisher.clone(),
             fov_y: self.config.fov_y,
             image_sink,
+            corner_labels_enabled: corner_label_writer.is_some(),
         };
 
         app.init_resource::<TalosFrameStamp>();

@@ -8,6 +8,7 @@ use crate::capture::{
     setup_capture_camera, setup_preview_window, sync_capture_camera,
 };
 use crate::components::{Controlled, InfantryGimbal, InfantryLaunchOffset, SubscribeAutoAim};
+use crate::corner_labels::{CornerLabelFrame, ExtractedCornerLabelData, extract_corner_label_data};
 use crate::dataset::prelude::DatasetSnapshotCreator;
 use crate::systems::{ChassisObservationFrame, GameplaySystems};
 use crate::talos::plugin::{to_ros_quat, to_ros_translation};
@@ -111,7 +112,7 @@ impl TalosCaptureCadence {
 }
 
 #[derive(Resource, Debug, Clone, Copy)]
-struct TalosCaptureActive(bool);
+pub(crate) struct TalosCaptureActive(pub(crate) bool);
 
 impl Default for TalosCaptureActive {
     fn default() -> Self {
@@ -195,6 +196,7 @@ struct TalosSnapshotSync {
     frame_seq: u64,
     timestamp_ns: u64,
     sink: TalosImageSink,
+    corner_labels: Option<CornerLabelFrame>,
 }
 
 impl SnapshotSync for TalosSnapshotSync {
@@ -218,6 +220,7 @@ impl SnapshotSync for TalosSnapshotSync {
             sink,
             frame_seq: self.frame_seq,
             timestamp_ns: self.timestamp_ns,
+            corner_labels: self.corner_labels,
         })
     }
 }
@@ -226,6 +229,7 @@ struct TalosSnapshot {
     sink: TalosSnapshotSink,
     frame_seq: u64,
     timestamp_ns: u64,
+    corner_labels: Option<CornerLabelFrame>,
 }
 
 enum TalosSnapshotSink {
@@ -277,12 +281,13 @@ impl SnapshotAsync for TalosSnapshot {
                     TALOS_PUBLISH_LOCK_DROPS.fetch_add(1, Ordering::Relaxed);
                 }
             },
-            TalosSnapshotSink::Tcp(publisher) => match publisher.submit_rgba32(
+            TalosSnapshotSink::Tcp(publisher) => match publisher.submit_rgba32_with_corner_labels(
                 frame.width,
                 frame.height,
                 self.frame_seq,
                 self.timestamp_ns,
                 frame.data,
+                self.corner_labels.take(),
             ) {
                 Ok(SubmitOutcome::Accepted | SubmitOutcome::Replaced | SubmitOutcome::Rejected) => {
                 }
@@ -312,8 +317,14 @@ impl SnapshotAsync for TalosSnapshot {
             return Err(data);
         }
 
-        match publisher.submit_rgba32_owned(width, height, self.frame_seq, self.timestamp_ns, data)
-        {
+        match publisher.submit_rgba32_owned_with_corner_labels(
+            width,
+            height,
+            self.frame_seq,
+            self.timestamp_ns,
+            data,
+            self.corner_labels.take(),
+        ) {
             Ok(SubmitOutcome::Accepted | SubmitOutcome::Replaced | SubmitOutcome::Rejected) => {
                 Ok(())
             }
@@ -359,6 +370,11 @@ impl GpuCaptureHandler for TalosSnapshotCreator {
             frame_seq: extracted.frame_seq,
             timestamp_ns: extracted.timestamp_ns,
             sink: self.sink.clone(),
+            corner_labels: world
+                .get_resource::<ExtractedCornerLabelData>()
+                .and_then(|labels| labels.frame.as_ref())
+                .filter(|labels| labels.matches(extracted.frame_seq, extracted.timestamp_ns))
+                .cloned(),
         }))
     }
 }
@@ -390,6 +406,7 @@ pub struct TalosCaptureContext {
     pub publisher: Arc<Mutex<ShmPublisher>>,
     pub fov_y: f32,
     pub(crate) image_sink: TalosImageSink,
+    pub(crate) corner_labels_enabled: bool,
 }
 
 pub struct TalosCapturePlugin {
@@ -538,11 +555,20 @@ impl Plugin for TalosCapturePlugin {
                     .before(RenderSystems::Render),
             );
 
-        app.sub_app_mut(RenderApp)
+        let render_app = app.sub_app_mut(RenderApp);
+        render_app
             .insert_resource(TalosCaptureContextShared(self.context.publisher.clone()))
             .insert_resource(self.context.clone())
             .insert_resource(ExtractedPoseData::default())
             .add_systems(ExtractSchedule, extract_pose_data);
+        if self.context.corner_labels_enabled {
+            render_app
+                .init_resource::<ExtractedCornerLabelData>()
+                .add_systems(
+                    ExtractSchedule,
+                    extract_corner_label_data.after(extract_pose_data),
+                );
+        }
     }
 }
 
@@ -687,11 +713,13 @@ mod tests {
             frame_seq: 1,
             timestamp_ns: 2,
             sink: TalosImageSink::Tcp(sender.publisher()),
+            corner_labels: None,
         };
         let file = TalosSnapshotSync {
             frame_seq: 1,
             timestamp_ns: 2,
             sink: TalosImageSink::File,
+            corner_labels: None,
         };
 
         assert!(tcp.accepts_owned_rgba());
@@ -720,6 +748,7 @@ mod tests {
             sink: TalosSnapshotSink::Tcp(sender.publisher()),
             frame_seq: 42,
             timestamp_ns: 123_456_789,
+            corner_labels: None,
         };
         snapshot.captured(CapturedFrame {
             kind: CapturedFrameKind::Rgba8,
@@ -764,6 +793,7 @@ mod tests {
             sink: TalosSnapshotSink::Tcp(sender.publisher()),
             frame_seq: 77,
             timestamp_ns: 987_654_321,
+            corner_labels: None,
         };
         assert!(snapshot.accepts_owned_rgba());
         snapshot
@@ -797,6 +827,7 @@ mod tests {
             sink: TalosSnapshotSink::Tcp(sender.publisher()),
             frame_seq: 88,
             timestamp_ns: 123,
+            corner_labels: None,
         };
         let data = vec![1, 2, 3, 4];
         let pointer = data.as_ptr() as usize;

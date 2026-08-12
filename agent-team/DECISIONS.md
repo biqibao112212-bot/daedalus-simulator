@@ -121,3 +121,39 @@
     native CMake/CTest SDK validation, formal package manifest/hashes, and
     runtime acceptance are complete. Dirty binaries are development evidence,
     not a consumer Release contract.
+26. Decision 1's old isolated-worktree location is superseded. Current release
+    work is owned by `D:\仿真\repos\daedalus-simulator` on
+    `release/simulator-multiplatform-x86`; the task must not switch to an
+    unrelated main branch or create a temporary worktree.
+27. Offline exact-corner rows travel as an internal sidecar with the exact GPU
+    capture/TCP frame. They are appended only after the existing TCP v1 header
+    and full payload complete a write to an active connection. Mailbox replace,
+    reject, no-client, partial-write, disconnect, and identity mismatch never
+    write a row. The TCP wire, SHM v7, ABI r2, and ports stay unchanged.
+28. Schema v1 exports only active Shooting Range #3 small armor. Nominal
+    135 x 55 mm is retained as a specification field, while exact projection
+    and free-IPPE use `vehicle.glb` marker vertices (asset SHA256
+    `1cc0a3cd1ab05bc9822b616271db3afb64d078e56b9bbf452a8acc6d9bad0a6f`),
+    measured about 133.77 x 53.89 mm and tilted about 15 degrees. The #1
+    HERO large armor is outside v1 rather than falsely relabeled.
+29. `motion_uniform` is a conservative training filter with a fixed 100 ms
+    guard and 1 mm endpoint epsilon. It freezes same-exposure ROS-odom linear
+    and angular velocities, marks initialization/state changes false, and
+    excludes deterministic reciprocal endpoints and both reversal
+    neighborhoods. It exports no future pose/command and always states
+    `future_truth_included=false`.
+30. The public offline schema/contract is a backward-compatible minor
+    capability, so simulator and SDK advance to 1.3.0 while SHM v7, ABI r2,
+    TCP protocol 1, Scene Control 2, and ports 5601/5602/5603 remain frozen.
+    Distribution online target/rune truth remains locked to zero even while
+    the explicit offline exporter is active.
+31. Labels, TCP identity ledgers, raw RGBA frames, experiment manifests, and
+    formal Releases are protected assets. Packaging carries only the schema,
+    bilingual contracts, collector, and validator and rejects JSONL/raw capture
+    payloads. Failed and successful development experiment sessions under
+    `D:\仿真\runtime\corner-label-1.3.0-dev-*` are retained rather than cleaned.
+32. Formal performance evidence must hash the exact
+    `talos,distribution-release` MSVC binary with offline export disabled.
+    Frequency-only acceptance telemetry uses
+    `TALOS_PERFORMANCE_EVIDENCE_JSON`; it does not relax the distribution
+    `DAEDALUS_*` allowlist or expose target truth.

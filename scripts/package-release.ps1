@@ -71,7 +71,7 @@ $binary = Join-Path $root "target\$RustTarget\release\daedalus.exe"
 if (-not (Test-Path -LiteralPath $binary)) { throw "Simulator executable is missing: $binary" }
 if (-not (Test-Path -LiteralPath $SdkInstallRoot)) { throw "SDK install tree is missing: $SdkInstallRoot" }
 
-New-Item -ItemType Directory -Force -Path $target,(Join-Path $target 'bin'),(Join-Path $target 'docs'),(Join-Path $target 'sdk') | Out-Null
+New-Item -ItemType Directory -Force -Path $target,(Join-Path $target 'bin'),(Join-Path $target 'docs'),(Join-Path $target 'schemas'),(Join-Path $target 'sdk') | Out-Null
 Copy-Item -LiteralPath $binary -Destination (Join-Path $target 'bin\daedalus.exe')
 Copy-Item -LiteralPath $PerformanceEvidencePath -Destination (Join-Path $target 'docs\performance-release.json')
 Get-ChildItem -LiteralPath (Join-Path $root "target\$RustTarget\release\deps") -Filter '*.dll' -File -ErrorAction SilentlyContinue |
@@ -100,11 +100,19 @@ Copy-Item -LiteralPath `
     (Join-Path $root 'docs\SIMULATOR_USER_GUIDE_ZH.md'),
     (Join-Path $root 'docs\SDK_API_REFERENCE_ZH.md'),
     (Join-Path $root 'docs\SCENARIO_CONTROL.md'),
+    (Join-Path $root 'docs\OFFLINE_EXACT_CORNER_EXPORT.md'),
+    (Join-Path $root 'docs\OFFLINE_EXACT_CORNER_EXPORT_ZH.md'),
     (Join-Path $root 'docs\RELEASE_PROGRESS_ZH.md'),
     (Join-Path $root 'benchmarks\1.1.0\performance-short-2026-07-26.json'),
     (Join-Path $root 'benchmarks\1.1.1\performance-autodl-rtx3090-2026-07-30.json'),
     (Join-Path $root 'sdk\README.md') `
     -Destination (Join-Path $target 'docs')
+Copy-Item -LiteralPath `
+    (Join-Path $root 'scripts\capture-corner-label-experiment.py'),
+    (Join-Path $root 'scripts\verify-corner-label-export.py') `
+    -Destination (Join-Path $target 'docs')
+Copy-Item -LiteralPath (Join-Path $root 'sdk\schemas\offline-exact-corners-v1.schema.json') `
+    -Destination (Join-Path $target 'schemas')
 Copy-Item -LiteralPath (Join-Path $root 'sdk\contract.json') -Destination (Join-Path $target 'docs\sdk-contract.json')
 Get-ChildItem -LiteralPath $SdkInstallRoot -Force | Copy-Item -Destination (Join-Path $target 'sdk') -Recurse -Force
 $forbiddenInferenceFiles = @(Get-ChildItem -LiteralPath $target -Recurse -File | Where-Object {
@@ -119,6 +127,14 @@ $forbiddenSourceFiles = @(Get-ChildItem -LiteralPath $target -Recurse -File | Wh
 })
 if ($forbiddenSourceFiles.Count -ne 0) {
     throw "Simulator package contains forbidden source/debug files: $($forbiddenSourceFiles.FullName -join ', ')"
+}
+
+$forbiddenCaptureFiles = @(Get-ChildItem -LiteralPath $target -Recurse -File | Where-Object {
+    $_.Extension -in @('.jsonl', '.npy', '.npz', '.raw', '.rgba') -or
+    $_.DirectoryName -match '(?i)[\\/](captures?|labels?|datasets?)([\\/]|$)'
+})
+if ($forbiddenCaptureFiles.Count -ne 0) {
+    throw "Simulator package contains protected labels or raw capture data: $($forbiddenCaptureFiles.FullName -join ', ')"
 }
 
 $entries = @(Get-ChildItem -LiteralPath $target -Recurse -File | Where-Object Name -ne 'release-manifest.json' | ForEach-Object {

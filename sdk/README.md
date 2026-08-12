@@ -1,4 +1,4 @@
-# Daedalus Simulator SDK 1.1
+# Daedalus Simulator SDK 1.3
 
 实验室发行版仅交付模拟器二进制；SDK 是消费者使用模拟器的受支持接口。SDK 不包含、
 管理或加载任何自瞄推理模型。
@@ -19,7 +19,7 @@
 
 ## 固定契约
 
-- SDK：`1.2.0`
+- SDK：`1.3.0`
 - Talos SHM：`v7`，ABI revision `2`
 - 默认 TCP 图像：RGBA32 `1440×1080`；旧 SHM 图像槽：RGB24
 - TCP 图像：`127.0.0.1:5602`
@@ -27,6 +27,9 @@
 - UDP 场景控制：`127.0.0.1:5603`（Scene Control v2）
 - 固定标定：发布根目录 `camera-calibration.json`
 - GPU 运行信息：`$TALOS_IPC_DIR/daedalus-runtime-capabilities-v1.json`
+- 离线 exact-corner：默认关闭；公共 schema 为
+  `schemas/offline-exact-corners-v1.schema.json`，完整说明见
+  `docs/OFFLINE_EXACT_CORNER_EXPORT_ZH.md`
 
 标定文件和 `readCameraInfo()` 均为只读。最终实机标定完成后，必须更新
 `calibration_id/revision` 和发布版本，不得在运行时修改。
@@ -53,7 +56,7 @@ cmake --install build/sim-sdk --prefix build/sim-sdk-install
 ```
 
 ```cmake
-find_package(DaedalusSimSdk 1.1 REQUIRED)
+find_package(DaedalusSimSdk 1.3 REQUIRED)
 target_link_libraries(my_consumer PRIVATE DaedalusSimSdk::DaedalusSimSdk)
 ```
 

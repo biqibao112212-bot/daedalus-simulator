@@ -81,7 +81,7 @@ BINARY="$ROOT/target/$TARGET/release/daedalus"
 [[ -x "$BINARY" ]] || die "missing executable: $BINARY"
 [[ -d "$SDK_INSTALL" ]] || die "missing SDK install tree: $SDK_INSTALL"
 
-mkdir -p "$TARGET_DIR/bin" "$TARGET_DIR/docs" "$TARGET_DIR/sdk"
+mkdir -p "$TARGET_DIR/bin" "$TARGET_DIR/docs" "$TARGET_DIR/schemas" "$TARGET_DIR/sdk"
 cp -- "$BINARY" "$TARGET_DIR/bin/daedalus"
 cp -a -- "$ROOT/assets" "$TARGET_DIR/assets"
 cp -- "$ROOT/release/release.json" "$ROOT/release/platform-matrix.json" \
@@ -97,10 +97,15 @@ cp -- "$ROOT/SIMULATOR_PERFORMANCE.md" "$ROOT/SIMULATOR_TROUBLESHOOTING.md" \
   "$ROOT/RELEASE.md" "$ROOT/release/PLATFORM_SUPPORT.md" "$ROOT/release/LEGAL_RELEASE_GATE.md" \
   "$ROOT/docs/SIMULATOR_USER_GUIDE_ZH.md" "$ROOT/docs/SDK_API_REFERENCE_ZH.md" \
   "$ROOT/docs/SCENARIO_CONTROL.md" \
+  "$ROOT/docs/OFFLINE_EXACT_CORNER_EXPORT.md" \
+  "$ROOT/docs/OFFLINE_EXACT_CORNER_EXPORT_ZH.md" \
   "$ROOT/docs/RELEASE_PROGRESS_ZH.md" \
   "$ROOT/benchmarks/1.1.0/performance-short-2026-07-26.json" \
   "$ROOT/benchmarks/1.1.1/performance-autodl-rtx3090-2026-07-30.json" \
   "$ROOT/sdk/README.md" "$TARGET_DIR/docs/"
+cp -- "$ROOT/scripts/capture-corner-label-experiment.py" \
+  "$ROOT/scripts/verify-corner-label-export.py" "$TARGET_DIR/docs/"
+cp -- "$ROOT/sdk/schemas/offline-exact-corners-v1.schema.json" "$TARGET_DIR/schemas/"
 cp -- "$ROOT/sdk/contract.json" "$TARGET_DIR/docs/sdk-contract.json"
 cp -a -- "$SDK_INSTALL/." "$TARGET_DIR/sdk/"
 chmod +x "$TARGET_DIR/start-simulator.sh" "$TARGET_DIR/bin/daedalus"
@@ -110,6 +115,12 @@ if find "$TARGET_DIR" -type f -printf '%f\n' | grep -Eiq '(cuda|cudnn|tensorrt|o
 fi
 if find "$TARGET_DIR" -type f \( -name '*.rs' -o -name '*.cpp' -o -name '*.cc' -o -name '*.cxx' -o -name '*.pdb' -o -name 'Cargo.toml' -o -name 'Cargo.lock' \) -print -quit | grep -q .; then
   die "simulator package contains forbidden source/debug files"
+fi
+if find "$TARGET_DIR" -type f \( -name '*.jsonl' -o -name '*.npy' -o -name '*.npz' -o -name '*.raw' -o -name '*.rgba' \) -print -quit | grep -q .; then
+  die "simulator package contains protected labels or raw capture data"
+fi
+if find "$TARGET_DIR" -type d | grep -Eiq '/(capture|captures|label|labels|dataset|datasets)$'; then
+  die "simulator package contains a protected capture/label data directory"
 fi
 
 python3 - "$TARGET_DIR" "$VERSION" "$SOURCE_COMMIT" "$PACKAGE_ID" "$TARGET" <<'PY'

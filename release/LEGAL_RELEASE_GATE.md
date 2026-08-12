@@ -11,7 +11,11 @@ The engineering gates are:
 2. target-native simulator and SDK builds;
 3. all SDK tests and compatibility checks pass;
 4. no simulator implementation source, debug symbols, inference models, or
-   editable simulator configuration is placed in the package.
+   editable simulator configuration is placed in the package;
+5. no JSONL label, raw frame, capture directory, dataset, or other protected
+   collection asset is placed in the package;
+6. the offline exact-corner export remains default-off and the online
+   distribution target/rune counts remain zero.
 
 Do not republish this internal package or provide it to another organization
 without a separate licensing and dependency review. This file documents the

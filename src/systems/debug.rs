@@ -66,7 +66,10 @@ pub fn export_debug_stats(
     frequency: Option<Res<FrequencyMetrics>>,
     mut last_write_s: Local<f32>,
 ) {
-    let Some(path) = std::env::var_os("DAEDALUS_STATS_JSON").map(PathBuf::from) else {
+    let Some(path) = std::env::var_os("TALOS_PERFORMANCE_EVIDENCE_JSON")
+        .or_else(|| std::env::var_os("DAEDALUS_STATS_JSON"))
+        .map(PathBuf::from)
+    else {
         return;
     };
 

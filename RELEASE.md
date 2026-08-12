@@ -30,8 +30,8 @@ and the system window/audio/Vulkan development packages:
 bash scripts/build-release.sh
 ```
 
-Both build paths use
-`cargo build --locked --release --features talos,distribution-release`, run
+Both build paths first run the Rust test suite with
+`talos,distribution-release`, then build the target-native Release binary, run
 the SDK CTest suite, and install the SDK into a platform-specific build tree.
 
 ## Mandatory performance gate
@@ -45,7 +45,9 @@ invalid as performance evidence:
 .\scripts\measure-performance.ps1 -DurationSeconds 20
 ```
 
-The command requires `target\release\daedalus.exe`, TCP image transport, and
+The command requires
+`target\x86_64-pc-windows-msvc\release\daedalus.exe`, the exact
+`talos,distribution-release` build, TCP image transport, and
 at least 100 Hz for both `main_update_hz` and `capture_copy_submit_hz`. For a
 formal package, run it from a clean committed checkout, promote the resulting
 `performance-evidence.json` to `benchmarks/<VERSION>/performance-release.json`,
@@ -54,6 +56,11 @@ and reject stale, dirty, Debug-profile, wrong-version, or sub-threshold data.
 If `Cargo.toml`, `Cargo.lock`, `src`, `assets`, `config.performance.toml`,
 `release`, or `sdk` changes after the evidence source commit, the benchmark
 must be repeated before packaging.
+
+The measurement harness uses the telemetry-only
+`TALOS_PERFORMANCE_EVIDENCE_JSON` path because distribution builds remove
+caller-supplied `DAEDALUS_*` development controls. This evidence output carries
+frequency/counter telemetry only; it does not unlock target truth or labels.
 
 For local source commits, enable the tracked hook once per worktree:
 
@@ -95,6 +102,12 @@ Editable TOML and simulator source are intentionally absent. Packaging is
 configured for non-commercial use inside the owning laboratory and carries
 the repository license plus `INTERNAL_LAB_USE_NOTICE.md`. External or public
 distribution requires a separate licensing and dependency review.
+
+Release 1.3.0 also packages the versioned offline exact-corner schema, English
+and Chinese contracts, TCP evidence collector, and free-IPPE validator. It
+never packages `.jsonl`, raw RGBA frames, label/capture datasets, or collection
+manifests. The opt-in is default-off and does not change the distribution SDK's
+empty online target/rune batches.
 
 ## GPU and inference boundary
 

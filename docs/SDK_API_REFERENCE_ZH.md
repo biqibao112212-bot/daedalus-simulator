@@ -1,4 +1,4 @@
-# Daedalus Simulator SDK 1.1 C++ API 函数参考
+# Daedalus Simulator SDK 1.3 C++ API 函数参考
 
 本文档面向使用模拟器完成自瞄训练的 C++ 开发者，说明每个受支持接口的用途、参数、
 返回值、时序和典型调用方式。完整运行流程、坐标系和发行包说明见
@@ -22,7 +22,7 @@
 cmake_minimum_required(VERSION 3.16)
 project(lab_autoaim LANGUAGES CXX)
 
-find_package(DaedalusSimSdk 1.1 REQUIRED CONFIG)
+find_package(DaedalusSimSdk 1.3 REQUIRED CONFIG)
 
 add_executable(lab_autoaim main.cpp)
 target_compile_features(lab_autoaim PRIVATE cxx_std_17)

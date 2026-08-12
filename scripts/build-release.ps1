@@ -24,6 +24,8 @@ if ($Platform -ne 'windows') {
 }
 
 if (-not $SkipSimulator) {
+    cargo test --locked --features talos,distribution-release --bin daedalus
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     cargo build --locked --release --features talos,distribution-release --target $RustTarget
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }

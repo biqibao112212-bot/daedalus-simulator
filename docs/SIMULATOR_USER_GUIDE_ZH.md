@@ -1,13 +1,16 @@
-# Daedalus 模拟器使用手册（Windows Release 1.2.1）
+# Daedalus 模拟器使用手册（Release 1.3.0）
 
-> 当前自瞄 B 采集标准：使用 `D:\仿真\releases\daedalus-simulator\1.2.1\windows-x86_64`、Windows 原生消费者、TCP RGBA32 1440×1080 与 `simulator.lock.json`。WSL、`/mnt/d` 和文件三缓冲仅为历史兼容资料，不得作为新采集入口。目标在视野内的 Windows 原生 Stage3 基线为 140.967 FPS；复现和边界见 `D:\仿真\runtime\SHOOTING_RANGE_TARGET_IN_VIEW_PERFORMANCE_1.2.1_20260808.md`。
+> 1.2.1 仍是冻结性能基线，目标在视野内的 Windows 原生 Stage3 记录为 140.967 FPS；
+> 1.3.0 新增默认关闭的离线同曝光 exact-corner 导出，不改变在线自瞄接口。新采集仍使用
+> Windows 原生消费者、TCP RGBA32 1440×1080 与版本锁；WSL、`/mnt/d` 和文件三缓冲仅为
+> 历史兼容资料。
 
 ## 1. 产品目的
 
 Daedalus 为自瞄开发者提供可重复运行的模拟环境。用户只获得模拟器二进制、场景资源和
 C++ SDK，不需要模拟器 Rust 源码，也不需要把自己的检测或推理模型交给模拟器。
 
-SDK 1.1 支持构建完整的自瞄闭环：
+SDK 1.3 支持构建完整的自瞄闭环：
 
 1. 获取带帧号和曝光时间戳的相机图像；
 2. 获取固定相机标定；
@@ -23,8 +26,8 @@ SDK 1.1 支持构建完整的自瞄闭环：
 
 | 项目 | 契约 |
 | --- | --- |
-| 模拟器 | 1.2.1 |
-| SDK | 1.2.0 |
+| 模拟器 | 1.3.0 |
+| SDK | 1.3.0 |
 | 操作系统 | Windows x86_64、Linux x86_64 |
 | 图像 | 默认 TCP RGBA32，1440×1080，latest-only；帧头也支持 RGB24 |
 | 元数据 | Talos SHM v7，ABI revision 2 |
@@ -46,6 +49,7 @@ daedalus-simulator/
 │  ├─ lib/                      当前操作系统的 SDK 库
 │  └─ lib/cmake/                CMake package
 ├─ docs/                        文档与 SDK 契约
+├─ schemas/                     离线导出的机器可读 schema
 ├─ camera-calibration.json      固定相机标定
 ├─ platform-matrix.json         平台/GPU 支持矩阵
 ├─ release.json                 Release 契约
@@ -100,10 +104,20 @@ Linux 使用 Vulkan。Windows 高性能模式默认 DX12，可视模式默认 Vu
 $TALOS_IPC_DIR/daedalus-runtime-capabilities-v1.json
 ```
 
+### 4.3 离线 exact-corner 训练数据
+
+该能力默认关闭，只能把标签写到安装/Release 目录之外的新绝对 `.jsonl` 文件。Windows
+使用 `-CornerLabelsJsonl`，Linux 使用 `--corner-labels-jsonl` 显式启用。SDK 在线
+`target_count` 与 `rune_count` 仍固定为 0，标签不会进入 detector、PnP 或预测器输入。
+
+同曝光联结、真实 marker 几何、`bl,tl,tr,br` 顺序、`motion_uniform` 反转保护、TCP 采集器
+及 free-IPPE 验收步骤见 `docs/OFFLINE_EXACT_CORNER_EXPORT_ZH.md`。JSONL、身份台账和原始帧
+都是受保护采集资产，不得放进安装目录或 Release 包。
+
 ## 5. 在自瞄工程中引入 SDK
 
 ```cmake
-find_package(DaedalusSimSdk 1.1 REQUIRED CONFIG)
+find_package(DaedalusSimSdk 1.3 REQUIRED CONFIG)
 target_link_libraries(my_autoaim PRIVATE DaedalusSimSdk::DaedalusSimSdk)
 ```
 

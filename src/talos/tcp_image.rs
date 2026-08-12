@@ -6,6 +6,9 @@ use std::sync::{Arc, Condvar, Mutex, OnceLock, Weak};
 use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
 
+use crate::corner_labels::{CornerLabelFrame, CornerLabelJsonlWriter};
+use bevy::log::error;
+
 pub const MAGIC: u32 = 0x5449_4d47;
 pub const VERSION: u16 = 1;
 pub const HEADER_BYTES: usize = 64;
@@ -219,6 +222,7 @@ impl TcpImageHeader {
 pub struct TcpImageFrame {
     pub header: TcpImageHeader,
     pub payload: Vec<u8>,
+    pub(crate) corner_labels: Option<CornerLabelFrame>,
 }
 
 /// Validation failure for an ownership-transfer frame. The original allocation
@@ -272,6 +276,7 @@ impl TcpImageFrame {
         Ok(Self {
             header,
             payload: payload.to_vec(),
+            corner_labels: None,
         })
     }
 
@@ -305,7 +310,11 @@ impl TcpImageFrame {
                 payload,
             ));
         }
-        Ok(Self { header, payload })
+        Ok(Self {
+            header,
+            payload,
+            corner_labels: None,
+        })
     }
 }
 
@@ -463,6 +472,7 @@ struct MailboxState {
 
 pub struct LatestFrameMailbox {
     producer_epoch: u64,
+    corner_label_writer: Option<Arc<CornerLabelJsonlWriter>>,
     state: Mutex<MailboxState>,
     wake: Condvar,
     stopping: AtomicBool,
@@ -471,12 +481,20 @@ pub struct LatestFrameMailbox {
 
 impl LatestFrameMailbox {
     pub fn new(producer_epoch: u64) -> Self {
+        Self::with_corner_label_writer(producer_epoch, None)
+    }
+
+    fn with_corner_label_writer(
+        producer_epoch: u64,
+        corner_label_writer: Option<Arc<CornerLabelJsonlWriter>>,
+    ) -> Self {
         assert_ne!(
             producer_epoch, 0,
             "TCP image producer epoch must be nonzero"
         );
         Self {
             producer_epoch,
+            corner_label_writer,
             state: Mutex::new(MailboxState::default()),
             wake: Condvar::new(),
             stopping: AtomicBool::new(false),
@@ -620,13 +638,54 @@ impl TcpImagePublisher {
         capture_timestamp_ns: u64,
         payload: Vec<u8>,
     ) -> Result<SubmitOutcome, OwnedTcpImageError> {
-        self.submit_owned(
+        self.submit_owned_with_corner_labels(
             PixelFormat::Rgba32,
             width,
             height,
             sequence,
             capture_timestamp_ns,
             payload,
+            None,
+        )
+    }
+
+    pub(crate) fn submit_rgba32_with_corner_labels(
+        &self,
+        width: u32,
+        height: u32,
+        sequence: u64,
+        capture_timestamp_ns: u64,
+        payload: &[u8],
+        corner_labels: Option<CornerLabelFrame>,
+    ) -> Result<SubmitOutcome, TcpImageError> {
+        self.submit_with_corner_labels(
+            PixelFormat::Rgba32,
+            width,
+            height,
+            sequence,
+            capture_timestamp_ns,
+            payload,
+            corner_labels,
+        )
+    }
+
+    pub(crate) fn submit_rgba32_owned_with_corner_labels(
+        &self,
+        width: u32,
+        height: u32,
+        sequence: u64,
+        capture_timestamp_ns: u64,
+        payload: Vec<u8>,
+        corner_labels: Option<CornerLabelFrame>,
+    ) -> Result<SubmitOutcome, OwnedTcpImageError> {
+        self.submit_owned_with_corner_labels(
+            PixelFormat::Rgba32,
+            width,
+            height,
+            sequence,
+            capture_timestamp_ns,
+            payload,
+            corner_labels,
         )
     }
 
@@ -639,7 +698,29 @@ impl TcpImagePublisher {
         capture_timestamp_ns: u64,
         payload: Vec<u8>,
     ) -> Result<SubmitOutcome, OwnedTcpImageError> {
-        let frame = TcpImageFrame::from_owned(
+        self.submit_owned_with_corner_labels(
+            format,
+            width,
+            height,
+            sequence,
+            capture_timestamp_ns,
+            payload,
+            None,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn submit_owned_with_corner_labels(
+        &self,
+        format: PixelFormat,
+        width: u32,
+        height: u32,
+        sequence: u64,
+        capture_timestamp_ns: u64,
+        payload: Vec<u8>,
+        corner_labels: Option<CornerLabelFrame>,
+    ) -> Result<SubmitOutcome, OwnedTcpImageError> {
+        let mut frame = TcpImageFrame::from_owned(
             format,
             width,
             height,
@@ -648,6 +729,7 @@ impl TcpImagePublisher {
             capture_timestamp_ns,
             payload,
         )?;
+        frame.corner_labels = corner_labels;
         self.mailbox
             .counters
             .owned_submit_total
@@ -664,11 +746,33 @@ impl TcpImagePublisher {
         capture_timestamp_ns: u64,
         payload: &[u8],
     ) -> Result<SubmitOutcome, TcpImageError> {
+        self.submit_with_corner_labels(
+            format,
+            width,
+            height,
+            sequence,
+            capture_timestamp_ns,
+            payload,
+            None,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn submit_with_corner_labels(
+        &self,
+        format: PixelFormat,
+        width: u32,
+        height: u32,
+        sequence: u64,
+        capture_timestamp_ns: u64,
+        payload: &[u8],
+        corner_labels: Option<CornerLabelFrame>,
+    ) -> Result<SubmitOutcome, TcpImageError> {
         self.mailbox
             .counters
             .borrowed_submit_total
             .fetch_add(1, Ordering::Relaxed);
-        let frame = match TcpImageFrame::from_slice(
+        let mut frame = match TcpImageFrame::from_slice(
             format,
             width,
             height,
@@ -683,6 +787,7 @@ impl TcpImagePublisher {
                 return Err(error);
             }
         };
+        frame.corner_labels = corner_labels;
         Ok(self.mailbox.submit(frame))
     }
 
@@ -695,12 +800,13 @@ impl TcpImagePublisher {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub struct TcpImageSenderConfig {
     pub bind_addr: SocketAddr,
     pub producer_epoch: u64,
     pub accept_poll: Duration,
     pub write_timeout: Duration,
+    pub(crate) corner_label_writer: Option<Arc<CornerLabelJsonlWriter>>,
 }
 
 impl TcpImageSenderConfig {
@@ -710,6 +816,7 @@ impl TcpImageSenderConfig {
             producer_epoch,
             accept_poll: DEFAULT_ACCEPT_POLL,
             write_timeout: DEFAULT_WRITE_TIMEOUT,
+            corner_label_writer: None,
         }
     }
 
@@ -751,7 +858,10 @@ impl TcpImageSender {
                 return Err(error);
             }
         };
-        let mailbox = Arc::new(LatestFrameMailbox::new(config.producer_epoch));
+        let mailbox = Arc::new(LatestFrameMailbox::with_corner_label_writer(
+            config.producer_epoch,
+            config.corner_label_writer.clone(),
+        ));
         let sender_mailbox = mailbox.clone();
         let thread = match thread::Builder::new()
             .name("talos-tcp-image-sender".to_string())
@@ -820,7 +930,7 @@ pub fn tcp_image_sender_counters() -> TcpImageSenderCounters {
     counters
 }
 
-fn configure_stream(stream: &TcpStream, config: TcpImageSenderConfig) -> io::Result<()> {
+fn configure_stream(stream: &TcpStream, config: &TcpImageSenderConfig) -> io::Result<()> {
     // The listener and data stream are both explicitly nonblocking. The sender
     // retains one in-progress frame and treats config.write_timeout as a
     // no-forward-progress deadline, so an OS blocking timeout is never relied on.
@@ -979,7 +1089,7 @@ fn sender_loop(
     while !mailbox.is_stopping() {
         if stream.is_none() {
             match listener.accept() {
-                Ok((accepted, _)) => match configure_stream(&accepted, config) {
+                Ok((accepted, _)) => match configure_stream(&accepted, &config) {
                     Ok(()) => {
                         mailbox
                             .counters
@@ -1062,6 +1172,19 @@ fn sender_loop(
                     .counters
                     .latest_sent_seq
                     .store(completed.frame.header.sequence, Ordering::Relaxed);
+                if let (Some(writer), Some(labels)) = (
+                    mailbox.corner_label_writer.as_ref(),
+                    completed.frame.corner_labels.as_ref(),
+                ) && let Err(write_error) =
+                    writer.write_sent_frame(&completed.frame.header, labels)
+                {
+                    error!(
+                        "corner-label row rejected for {} after sent TCP frame {} (I/O failures disable the writer): {}",
+                        writer.path().display(),
+                        completed.frame.header.sequence,
+                        write_error
+                    );
+                }
             }
             PendingWriteStep::Error(error) => {
                 let failed = pending.take().expect("pending write must exist");
@@ -1839,7 +1962,7 @@ mod tests {
                 Err(error) => panic!("unexpected accept error: {error}"),
             }
         };
-        configure_stream(&accepted, TcpImageSenderConfig::loopback_ephemeral(EPOCH)).unwrap();
+        configure_stream(&accepted, &TcpImageSenderConfig::loopback_ephemeral(EPOCH)).unwrap();
 
         let mut byte = [0; 1];
         let error = accepted.peek(&mut byte).unwrap_err();

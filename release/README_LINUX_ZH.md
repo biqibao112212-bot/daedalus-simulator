@@ -1,4 +1,4 @@
-# Daedalus 模拟器 1.2.1（Linux x86_64）
+# Daedalus 模拟器 1.3.0（Linux x86_64）
 
 这是面向实验室成员的已编译模拟器，不包含模拟器源码，也不包含自瞄模型、CUDA、
 TensorRT 或 ONNX。Linux 用户不需要 Windows 或 WSL。
@@ -8,18 +8,18 @@ TensorRT 或 ONNX。Linux 用户不需要 Windows 或 WSL。
 推荐下载 `linux-x86_64.tar.gz`，它会保留 Linux 可执行权限：
 
 ```bash
-mkdir daedalus-simulator-1.2.1
-tar -xzf linux-x86_64.tar.gz -C daedalus-simulator-1.2.1
-cd daedalus-simulator-1.2.1
+mkdir daedalus-simulator-1.3.0
+tar -xzf linux-x86_64.tar.gz -C daedalus-simulator-1.3.0
+cd daedalus-simulator-1.3.0
 ./install-linux.sh
 ```
 
 如果下载的是备用 ZIP：
 
 ```bash
-mkdir daedalus-simulator-1.2.1
-unzip linux-x86_64.zip -d daedalus-simulator-1.2.1
-cd daedalus-simulator-1.2.1
+mkdir daedalus-simulator-1.3.0
+unzip linux-x86_64.zip -d daedalus-simulator-1.3.0
+cd daedalus-simulator-1.3.0
 chmod +x install-linux.sh start-simulator.sh
 ./install-linux.sh
 ```
@@ -27,7 +27,7 @@ chmod +x install-linux.sh start-simulator.sh
 默认安装位置：
 
 ```text
-~/.local/opt/daedalus-simulator/1.2.1
+~/.local/opt/daedalus-simulator/1.3.0
 ```
 
 默认创建两个命令：
@@ -46,7 +46,7 @@ export PATH="$HOME/.local/bin:$PATH"
 自定义安装位置：
 
 ```bash
-./install-linux.sh --prefix /path/to/daedalus/1.2.1
+./install-linux.sh --prefix /path/to/daedalus/1.3.0
 ```
 
 该安装方式不需要 root；只有安装缺失的系统依赖时可能需要 `sudo`。
@@ -122,12 +122,12 @@ daedalus-simulator-visible
 ```bash
 sudo apt install build-essential cmake
 cmake -S . -B build \
-  -DCMAKE_PREFIX_PATH="$HOME/.local/opt/daedalus-simulator/1.2.1/sdk"
+  -DCMAKE_PREFIX_PATH="$HOME/.local/opt/daedalus-simulator/1.3.0/sdk"
 cmake --build build --parallel
 ```
 
 ```cmake
-find_package(DaedalusSimSdk 1.1 REQUIRED CONFIG)
+find_package(DaedalusSimSdk 1.3 REQUIRED CONFIG)
 target_link_libraries(my_autoaim PRIVATE DaedalusSimSdk::DaedalusSimSdk)
 ```
 
@@ -141,6 +141,8 @@ target_link_libraries(my_autoaim PRIVATE DaedalusSimSdk::DaedalusSimSdk)
 | `sdk/lib/` | Linux x86_64 SDK 库及 CMake package |
 | `docs/SIMULATOR_USER_GUIDE_ZH.md` | 完整中文使用手册和性能简报 |
 | `docs/SDK_API_REFERENCE_ZH.md` | 所有 SDK 函数、参数、返回值和示例 |
+| `docs/OFFLINE_EXACT_CORNER_EXPORT_ZH.md` | 默认关闭的离线同曝光角点导出合同与实验步骤 |
+| `schemas/offline-exact-corners-v1.schema.json` | exact-corner JSONL 机器可读 schema |
 | `docs/SIMULATOR_TROUBLESHOOTING.md` | 常见故障排查 |
 | `camera-calibration.json` | 固定只读相机内外参和曝光 |
 | `release.json` | 版本、端口和 ABI 契约 |
@@ -151,7 +153,7 @@ target_link_libraries(my_autoaim PRIVATE DaedalusSimSdk::DaedalusSimSdk)
 默认安装可执行：
 
 ```bash
-rm -rf -- "$HOME/.local/opt/daedalus-simulator/1.2.1"
+rm -rf -- "$HOME/.local/opt/daedalus-simulator/1.3.0"
 rm -f -- "$HOME/.local/bin/daedalus-simulator" \
   "$HOME/.local/bin/daedalus-simulator-visible"
 ```
@@ -165,3 +167,8 @@ rm -f -- "$HOME/.local/bin/daedalus-simulator" \
 - 实际后端和适配器写入 IPC 目录的 `daedalus-runtime-capabilities-v1.json`。
 
 更详细说明请从 `docs/SIMULATOR_USER_GUIDE_ZH.md` 开始阅读。
+
+离线训练标签必须显式使用
+`./start-simulator.sh --corner-labels-jsonl <安装目录之外的新绝对.jsonl路径>` 启用；它不会
+解锁 SDK 在线目标真值。采集与 free-IPPE 验收命令见
+`docs/OFFLINE_EXACT_CORNER_EXPORT_ZH.md`。

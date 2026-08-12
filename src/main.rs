@@ -3,6 +3,8 @@ mod auto_gen;
 mod capture;
 mod components;
 mod config;
+#[cfg(feature = "talos")]
+mod corner_labels;
 mod dataset;
 mod distribution;
 mod handler;

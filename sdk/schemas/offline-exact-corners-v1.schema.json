@@ -1,0 +1,161 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://daedalus.invalid/schemas/offline-exact-corners-v1.schema.json",
+  "title": "Daedalus offline exact-corner label row v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "producer_epoch",
+    "frame_seq",
+    "timestamp_ns",
+    "camera",
+    "target_id",
+    "target_number",
+    "relative_slot",
+    "armor_label",
+    "visibility",
+    "exact_corners_px",
+    "plate_geometry",
+    "motion_uniform",
+    "motion_uniform_guard_ns",
+    "distance_m",
+    "velocity_frame",
+    "linear_velocity_world_mps",
+    "angular_velocity_world_rad_s",
+    "future_truth_included"
+  ],
+  "properties": {
+    "schema_version": { "const": "daedalus.offline-exact-corners/1" },
+    "producer_epoch": { "$ref": "#/$defs/nonzero_u64" },
+    "frame_seq": { "$ref": "#/$defs/nonzero_u64" },
+    "timestamp_ns": { "$ref": "#/$defs/nonzero_u64" },
+    "camera": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profile_id", "intrinsics", "image"],
+      "properties": {
+        "profile_id": { "const": "daedalus-camera-1440x1080-v2" },
+        "intrinsics": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["model", "fx", "fy", "cx", "cy", "distortion_model", "distortion"],
+          "properties": {
+            "model": { "const": "pinhole" },
+            "fx": { "type": "number", "exclusiveMinimum": 0 },
+            "fy": { "type": "number", "exclusiveMinimum": 0 },
+            "cx": { "type": "number" },
+            "cy": { "type": "number" },
+            "distortion_model": { "const": "plumb_bob" },
+            "distortion": {
+              "type": "array",
+              "prefixItems": [
+                { "const": 0 }, { "const": 0 }, { "const": 0 }, { "const": 0 }, { "const": 0 }
+              ],
+              "items": false,
+              "minItems": 5,
+              "maxItems": 5
+            }
+          }
+        },
+        "image": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["width", "height", "pixel_format"],
+          "properties": {
+            "width": { "type": "integer", "minimum": 1, "maximum": 1440 },
+            "height": { "type": "integer", "minimum": 1, "maximum": 1080 },
+            "pixel_format": { "const": "rgba32" }
+          }
+        }
+      }
+    },
+    "target_id": { "$ref": "#/$defs/nonzero_u64" },
+    "target_number": { "const": 3 },
+    "relative_slot": { "type": "integer", "minimum": 0, "maximum": 3 },
+    "armor_label": { "type": "string", "minLength": 1 },
+    "visibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["classification", "scene_hidden", "corners_in_frame", "occlusion_tested"],
+      "properties": {
+        "classification": {
+          "enum": ["fully_in_frame", "partially_in_frame", "out_of_frame", "scene_hidden"]
+        },
+        "scene_hidden": { "type": "boolean" },
+        "corners_in_frame": { "type": "integer", "minimum": 0, "maximum": 4 },
+        "occlusion_tested": { "const": false }
+      }
+    },
+    "exact_corners_px": { "$ref": "#/$defs/corners_2d" },
+    "plate_geometry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source",
+        "asset_sha256",
+        "armor_type",
+        "nominal_width_m",
+        "nominal_height_m",
+        "measured_width_m",
+        "measured_height_m",
+        "tilt_from_vertical_deg",
+        "object_corners_armor_m",
+        "corner_order"
+      ],
+      "properties": {
+        "source": { "const": "asset_marker_mesh" },
+        "asset_sha256": {
+          "const": "1cc0a3cd1ab05bc9822b616271db3afb64d078e56b9bbf452a8acc6d9bad0a6f"
+        },
+        "armor_type": { "const": "small" },
+        "nominal_width_m": { "const": 0.135 },
+        "nominal_height_m": { "const": 0.055 },
+        "measured_width_m": { "type": "number", "minimum": 0.1335, "maximum": 0.1341 },
+        "measured_height_m": { "type": "number", "minimum": 0.0535, "maximum": 0.0542 },
+        "tilt_from_vertical_deg": { "type": "number", "minimum": 14.9, "maximum": 15.1 },
+        "object_corners_armor_m": { "$ref": "#/$defs/corners_3d" },
+        "corner_order": { "const": "bl,tl,tr,br" }
+      }
+    },
+    "motion_uniform": { "type": "boolean" },
+    "motion_uniform_guard_ns": { "const": 100000000 },
+    "distance_m": { "type": "number", "exclusiveMinimum": 0 },
+    "velocity_frame": { "const": "ros_odom" },
+    "linear_velocity_world_mps": { "$ref": "#/$defs/vector3" },
+    "angular_velocity_world_rad_s": { "$ref": "#/$defs/vector3" },
+    "future_truth_included": { "const": false }
+  },
+  "$defs": {
+    "nonzero_u64": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 18446744073709551615
+    },
+    "vector3": {
+      "type": "array",
+      "prefixItems": [{ "type": "number" }, { "type": "number" }, { "type": "number" }],
+      "items": false,
+      "minItems": 3,
+      "maxItems": 3
+    },
+    "corners_2d": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "prefixItems": [{ "type": "number" }, { "type": "number" }],
+        "items": false,
+        "minItems": 2,
+        "maxItems": 2
+      },
+      "minItems": 4,
+      "maxItems": 4
+    },
+    "corners_3d": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/vector3" },
+      "minItems": 4,
+      "maxItems": 4
+    }
+  }
+}
