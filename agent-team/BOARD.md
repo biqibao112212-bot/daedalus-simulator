@@ -30,7 +30,9 @@ public compatibility gate. Clean-commit performance evidence is committed with
 the Release metadata: distribution mode, exporter disabled, `207.210 Hz` main
 update and `190.275 Hz` capture submit. The next operation is a new-directory
 Windows `1.3.0` package followed by default-off and opt-in package-runtime
-acceptance; do not claim Linux acceptance from this Windows gate.
+acceptance; do not claim Linux acceptance from this Windows gate. After the
+marker-dimension fix, regenerated clean evidence is bound to `41ec49d` and
+records `173.296 Hz` main update / `155.369 Hz` capture submit.
 
 The first protected package attempt was retained under
 `D:\仿真\releases\daedalus-simulator\failed-evidence\1.3.0-width-height-swapped-20260812T0648Z`:
