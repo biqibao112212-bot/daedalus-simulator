@@ -329,33 +329,30 @@ fn window_exit_condition_for_mode(disable_performance_ui: bool) -> ExitCondition
 }
 
 fn simulator_asset_folder() -> String {
-    if distribution::is_locked() {
-        return std::env::current_exe()
-            .ok()
-            .and_then(|path| {
-                path.parent()
-                    .and_then(|bin| bin.parent())
-                    .map(PathBuf::from)
-            })
+    let package_assets = std::env::current_exe().ok().and_then(|path| {
+        path.parent()
+            .and_then(|bin| bin.parent())
             .map(|root| root.join("assets"))
-            .filter(|path| path.is_dir())
-            .unwrap_or_else(|| PathBuf::from("assets"))
-            .to_string_lossy()
-            .into_owned();
-    }
-    [
-        std::env::current_dir().ok().map(|path| path.join("assets")),
-        std::env::current_exe()
-            .ok()
-            .and_then(|path| path.parent().map(|parent| parent.join("assets"))),
-        Some(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("assets")),
-    ]
-    .into_iter()
-    .flatten()
-    .find(|path| path.is_dir())
-    .unwrap_or_else(|| PathBuf::from("assets"))
-    .to_string_lossy()
-    .into_owned()
+    });
+    let source_assets = std::env::current_dir().ok().map(|path| path.join("assets"));
+    let manifest_assets = Some(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("assets"));
+    let candidates = if distribution::is_locked() {
+        // A packaged distribution runs from <package>/bin/daedalus and must
+        // prefer its immutable package assets. Native clean-checkout
+        // measurements run the same distribution binary from target/... and
+        // therefore fall back to the source assets without fabricating a
+        // package-like target directory.
+        [package_assets, source_assets, manifest_assets]
+    } else {
+        [source_assets, package_assets, manifest_assets]
+    };
+    candidates
+        .into_iter()
+        .flatten()
+        .find(|path| path.is_dir())
+        .unwrap_or_else(|| PathBuf::from("assets"))
+        .to_string_lossy()
+        .into_owned()
 }
 
 fn auto_aim_enabled_on_start(config: &SimulationConfig) -> bool {
