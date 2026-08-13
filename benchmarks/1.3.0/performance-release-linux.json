@@ -1,0 +1,30 @@
+{
+  "schema": "daedalus-performance-v1",
+  "version": "1.3.0",
+  "profile": "release",
+  "rust_target": "x86_64-unknown-linux-gnu",
+  "features": ["talos", "distribution-release"],
+  "corner_labels_enabled": false,
+  "measurement_mode": "performance",
+  "binary_sha256": "187f26d561946461abe6ffb38493e076865af5bfd32cf1f48f668e26a7f1af9c",
+  "started_utc": "20260813T130452Z",
+  "duration_seconds": 20,
+  "source_commit": "f3fc3a62fc071d6acb19ee9f23eda25c94b6a4b5",
+  "source_dirty": false,
+  "binary_path": "/home/potato/Projects/仿真/repos/daedalus-simulator/target/x86_64-unknown-linux-gnu/release/daedalus",
+  "config_path": "/home/potato/Projects/仿真/repos/daedalus-simulator/config.performance.toml",
+  "metrics": {
+    "elapsed_s": 19.219,
+    "talos_image_transport": "tcp",
+    "main_update_hz": 316.921,
+    "capture_copy_submit_hz": 199.321,
+    "physics_step_hz": 250.148,
+    "preview_present_hz": 0.0,
+    "capture_processing_complete_total": 3754,
+    "capture_queue_drop_total": 0,
+    "talos_tcp_image_sent_hz": 0.0,
+    "talos_tcp_image_connect_total": 0,
+    "talos_tcp_image_sent_total": 0,
+    "talos_tcp_image_replaced_total": 3753
+  }
+}

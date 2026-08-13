@@ -94,6 +94,22 @@ bash scripts/measure-performance.sh --mode performance --duration-seconds 20 \
 bash scripts/measure-performance.sh --mode visible --duration-seconds 20
 ```
 
+### Linux 1.3.0 原生验收（2026-08-13）
+
+测试机为 Ubuntu 24.04.4、RTX 4060 Laptop、NVIDIA 595.84；Vulkan 选择 NVIDIA
+离散适配器。高性能模式在干净提交 `f3fc3a6` 的 Release
+`talos,distribution-release` 二进制上测量，TCP、1440×1080 RGBA、离线角点导出
+关闭：`main_update_hz` 为 **316.921 Hz**，`capture_copy_submit_hz` 为
+**199.321 Hz**，物理为 **250.148 Hz**，采集队列丢帧为零。它超过 Windows 1.3.0
+正式高性能门槛 171.190 / 163.228 Hz；机器可读摘要见
+[`benchmarks/1.3.0/performance-release-linux.json`](benchmarks/1.3.0/performance-release-linux.json)。
+
+同一二进制的可视 Vulkan 模式（X11 `DISPLAY=:0`）测得主更新 **282.194 Hz**、
+离屏采集提交 **197.436 Hz**、可见预览 **59.829 Hz**。60 Hz 预览限制不限制离屏
+图像采集；原始统计、stdout/stderr 和运行时能力记录保留于
+`/home/potato/Projects/仿真/runtime/simulator-performance/20260813T130432Z-performance`
+与 `20260813T130515Z-visible`。
+
 ### 默认：高性能模式
 
 ```powershell
