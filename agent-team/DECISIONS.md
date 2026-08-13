@@ -192,3 +192,10 @@
     163.228 Hz capture submit) as explicit minima on the same approved Ubuntu
     GPU host. Visible Vulkan measurements are retained as runtime evidence but
     are not confused with the package's headless capture gate.
+38. A distribution binary launched directly from `target/<triple>/release`
+    must be able to resolve the immutable source assets for clean-checkout
+    measurement, while an installed package must still prefer its adjacent
+    `<package>/assets` directory. The asset resolver therefore tries the
+    package layout first for distribution builds and falls back to current
+    source/manifest assets only when that package directory is absent. This
+    prevented false 0-Hz capture evidence caused by an empty target directory.

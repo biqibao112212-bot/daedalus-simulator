@@ -110,6 +110,16 @@ bash scripts/measure-performance.sh --mode visible --duration-seconds 20
 `/home/potato/Projects/仿真/runtime/simulator-performance/20260813T130432Z-performance`
 与 `20260813T130515Z-visible`。
 
+### 1.1.1 Linux 发行包复查（2026-08-13）
+
+受保护的 `1.1.1/linux-x86_64` 包未被重建或改写。其 manifest 重新计算为 **47/47**
+文件、大小和 SHA-256 全部一致，包内二进制在同一 Ubuntu 24.04.4 / RTX 4060 /
+Vulkan 主机可启动并选择 NVIDIA 离散 GPU。该旧包不输出 1.3.0 的频率遥测，因此按它
+自身的发行 SDK TCP RGBA32 1440×1080 消费口径测量：预热 3 秒后连续 15.003 秒收到
+**2,960 帧（197.288 FPS）**。接收端为 latest-only，序号跨度 4,863，故跨度不能误作
+逐帧交付率；这次复查证明当前 Ubuntu 主机上的包启动和 TCP 数据面正常。它不能替代
+AutoDL RTX 3090/Xeon 上记录的 36.138 FPS 历史结果，也不能被解释为跨机器版本回归。
+
 ### 默认：高性能模式
 
 ```powershell
