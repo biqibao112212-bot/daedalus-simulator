@@ -82,6 +82,18 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\package-release.ps
 
 ## 两种运行模式
 
+Linux 1.3.0 使用同一台 Ubuntu/RTX 4060 测试机、Vulkan 和 Release
+`talos,distribution-release` 二进制分别测量无窗口性能模式与可视验收模式。正式 Linux
+包只接受无窗口模式的离屏采集基线，且 1.3.0 的最低目标与 Windows 正式证据一致：
+`main_update_hz >= 171.190`、`capture_copy_submit_hz >= 163.228`。可视模式另行记录
+`preview_present_hz` 和离屏采集率，不能以约 60 Hz 的预览刷新率冒充采集吞吐。
+
+```bash
+bash scripts/measure-performance.sh --mode performance --duration-seconds 20 \
+  --minimum-main-update-hz 171.190 --minimum-capture-submit-hz 163.228
+bash scripts/measure-performance.sh --mode visible --duration-seconds 20
+```
+
 ### 默认：高性能模式
 
 ```powershell

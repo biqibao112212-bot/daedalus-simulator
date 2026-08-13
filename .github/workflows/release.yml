@@ -90,13 +90,8 @@ jobs:
         shell: pwsh
         run: ./scripts/check-compatibility.ps1
 
-      - name: Package Linux release
+      - name: Report Linux package requirement
         shell: bash
-        run: bash scripts/package-release.sh --output-root "$GITHUB_WORKSPACE/dist" --skip-build
-
-      - name: Upload Linux package
-        uses: actions/upload-artifact@v4
-        with:
-          name: daedalus-simulator-linux-x86_64
-          path: dist/**/*
-          if-no-files-found: error
+        run: |
+          echo "Linux package publication requires native GPU performance evidence."
+          echo "Run scripts/measure-performance.sh and package-release.sh on the approved Ubuntu GPU runner."

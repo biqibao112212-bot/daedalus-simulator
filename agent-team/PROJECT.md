@@ -57,6 +57,10 @@ scripts/check-compatibility.ps1
 scripts/build-release.ps1 -Platform windows -Arch x86_64
 scripts/measure-performance.ps1 -DurationSeconds 20
 scripts/package-release.ps1 -Platform windows -Arch x86_64
+bash scripts/build-release.sh
+bash scripts/measure-performance.sh --mode performance --duration-seconds 20
+bash scripts/measure-performance.sh --mode visible --duration-seconds 20
+bash scripts/package-release.sh
 ```
 
 Compatibility, performance, and formal Release claims require the exact clean

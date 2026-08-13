@@ -59,8 +59,16 @@ fi
 
 SOURCE_COMMIT="$("$GIT_BIN" -C "$GIT_ROOT" rev-parse HEAD)"
 [[ -z "$("$GIT_BIN" -C "$GIT_ROOT" status --porcelain -- .)" ]] || die "Release packaging requires a clean committed worktree."
-[[ -n "$PERFORMANCE_EVIDENCE" ]] || PERFORMANCE_EVIDENCE="$ROOT/benchmarks/$VERSION/performance-release.json"
-python3 "$ROOT/scripts/check-performance-evidence.py" --root "$ROOT" --evidence "$PERFORMANCE_EVIDENCE" --version "$VERSION"
+[[ -n "$PERFORMANCE_EVIDENCE" ]] || PERFORMANCE_EVIDENCE="$ROOT/benchmarks/$VERSION/performance-release-linux.json"
+MINIMUM_MAIN_UPDATE_HZ=100
+MINIMUM_CAPTURE_SUBMIT_HZ=100
+if [[ "$VERSION" == "1.3.0" ]]; then
+  # The 1.3.0 Ubuntu migration is accepted only if the same host can meet the
+  # published Windows 1.3.0 high-performance baseline.
+  MINIMUM_MAIN_UPDATE_HZ=171.190
+  MINIMUM_CAPTURE_SUBMIT_HZ=163.228
+fi
+python3 "$ROOT/scripts/check-performance-evidence.py" --root "$ROOT" --evidence "$PERFORMANCE_EVIDENCE" --version "$VERSION" --rust-target "$TARGET" --binary "$ROOT/target/$TARGET/release/daedalus" --minimum-main-update-hz "$MINIMUM_MAIN_UPDATE_HZ" --minimum-capture-submit-hz "$MINIMUM_CAPTURE_SUBMIT_HZ"
 [[ -f "$ROOT/LICENSE" ]] || die "repository LICENSE is missing"
 [[ -f "$ROOT/release/INTERNAL_LAB_USE_NOTICE.md" ]] || die "internal-use notice is missing"
 

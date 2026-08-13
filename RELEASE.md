@@ -45,7 +45,7 @@ invalid as performance evidence:
 .\scripts\measure-performance.ps1 -DurationSeconds 20
 ```
 
-The command requires
+The Windows command requires
 `target\x86_64-pc-windows-msvc\release\daedalus.exe`, the exact
 `talos,distribution-release` build, TCP image transport, and
 at least 100 Hz for both `main_update_hz` and `capture_copy_submit_hz`. For a
@@ -61,6 +61,22 @@ The measurement harness uses the telemetry-only
 `TALOS_PERFORMANCE_EVIDENCE_JSON` path because distribution builds remove
 caller-supplied `DAEDALUS_*` development controls. This evidence output carries
 frequency/counter telemetry only; it does not unlock target truth or labels.
+
+Linux uses the native Vulkan measurement harness and keeps its evidence
+separate from Windows because the executable, renderer backend, and binary hash
+are platform-specific:
+
+```bash
+bash scripts/measure-performance.sh --mode performance --duration-seconds 20
+bash scripts/measure-performance.sh --mode visible --duration-seconds 20
+```
+
+Only the high-performance evidence is a package gate. For Linux `1.3.0`, it
+must meet the accepted Windows `1.3.0` baseline: at least `171.190 Hz`
+`main_update_hz` and `163.228 Hz` `capture_copy_submit_hz`, while using the
+same Release `talos,distribution-release` feature set, TCP capture and a
+disabled offline exporter. Visible mode is recorded separately: its preview
+frequency is not a substitute for off-screen capture throughput.
 
 For local source commits, enable the tracked hook once per worktree:
 

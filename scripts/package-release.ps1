@@ -52,7 +52,7 @@ $sourceCommit = (git -C $root rev-parse HEAD).Trim()
 if ([string]::IsNullOrWhiteSpace($PerformanceEvidencePath)) { $PerformanceEvidencePath = Join-Path $root "benchmarks\$version\performance-release.json" }
 $python = Get-Command python -ErrorAction SilentlyContinue
 if ($null -eq $python) { throw 'Release packaging requires Python to validate performance evidence.' }
-& $python.Source (Join-Path $PSScriptRoot 'check-performance-evidence.py') --root $root --evidence $PerformanceEvidencePath --version $version
+& $python.Source (Join-Path $PSScriptRoot 'check-performance-evidence.py') --root $root --evidence $PerformanceEvidencePath --version $version --rust-target $RustTarget --binary (Join-Path $root "target\$RustTarget\release\daedalus.exe")
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 $repositoryLicense = Join-Path $root 'LICENSE'
 $internalUseNotice = Join-Path $root 'release\INTERNAL_LAB_USE_NOTICE.md'

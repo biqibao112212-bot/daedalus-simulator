@@ -185,3 +185,10 @@
     width/height and partial-Z4 packages remain separately retained as
     protected evidence. Consumers receive the accepted package, schema, and
     SDK; they do not receive labels, raw frames, or private Agent Team context.
+37. Linux performance evidence is target-native and distinct from Windows
+    evidence: each package validates the SHA256 of its own Release binary and
+    declares its Rust target. Linux `1.3.0` high-performance acceptance uses
+    the accepted Windows `1.3.0` frequency values (171.190 Hz main update and
+    163.228 Hz capture submit) as explicit minima on the same approved Ubuntu
+    GPU host. Visible Vulkan measurements are retained as runtime evidence but
+    are not confused with the package's headless capture gate.
