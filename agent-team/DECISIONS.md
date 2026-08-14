@@ -199,3 +199,13 @@
     package layout first for distribution builds and falls back to current
     source/manifest assets only when that package directory is absent. This
     prevented false 0-Hz capture evidence caused by an empty target directory.
+39. Release 1.3.1 adds the simulator-owned full-frame companion to the 1.3.0
+    exact-corner sidecar. It is collector-only, default-off and requires
+    `--save-rgba-frames --until-eof`; every complete TCP RGBA32 payload is
+    create-new persisted under `frames/`, hash-bound to the existing identity
+    ledger, and summarized by `daedalus.offline-frame-capture/1`. The validator
+    must receive `--require-raw-frames` before a session can be called an
+    image-to-label training asset. TCP v1/SHM v7/ABI r2/ports and distribution
+    online target truth remain unchanged; raw payloads remain protected runtime
+    assets and are never packed. This is the sole supported full-frame path for
+    consumers; a consumer TCP parser is outside its module boundary.

@@ -5,7 +5,8 @@
 - Active branch: `release/simulator-multiplatform-x86`
 - Frozen implementation baseline at task start: `48b9437c389c2911e0a135cf1d727e36a68317ab`
 - Frozen formal release: simulator `1.2.1`, SDK `1.2.0`, SHM v7 / ABI revision 2
-- Approved development target: simulator `1.3.0`, adding an offline exact-corner label export without changing the real-time SDK ABI
+- Active Linux release target: simulator/SDK `1.3.1`, adding collector-owned
+  offline full-frame export without changing the real-time SDK ABI
 
 ## Ownership and boundaries
 
@@ -44,7 +45,8 @@ predictor input.
 - Offline exact-corner contracts:
   `docs/OFFLINE_EXACT_CORNER_EXPORT.md`,
   `docs/OFFLINE_EXACT_CORNER_EXPORT_ZH.md`, and
-  `sdk/schemas/offline-exact-corners-v1.schema.json`
+  `sdk/schemas/offline-exact-corners-v1.schema.json`; full-frame capture adds
+  `sdk/schemas/offline-frame-capture-v1.schema.json`
 - Release/performance gates: `RELEASE.md`, `SIMULATOR_PERFORMANCE.md`
 
 ## Stable validation commands
@@ -95,3 +97,20 @@ evidence only.
   `0.000682232101 px` / `2.74679494e-6 m` equivalent error.
 - Formal performance, package, manifest, and package-runtime evidence must be
   regenerated after the implementation commit from a clean tree.
+
+## Linux 1.3.1 full-frame export (2026-08-14)
+
+- Commit `b1fe340` adds a backward-compatible, explicit Release collector
+  option `--save-rgba-frames` (only with `--until-eof`). For every complete
+  RGBA32 TCP identity it writes a create-new raw file, ledger relative path and
+  matching SHA-256, then writes a no-truth capture manifest. The new validator
+  gate `--require-raw-frames` verifies every raw file before label join.
+- The public TCP v1, SHM v7, ABI r2, Scene Control v2 and online truth lock are
+  unchanged. Raw frames remain collector-owned protected assets, never package
+  payloads; consumers consume the Release collector rather than implementing
+  TCP capture.
+- Clean Linux performance evidence is `benchmarks/1.3.1/performance-release-linux.json`
+  from `b1fe340`: `357.044 Hz` main and `198.468 Hz` capture submit. The
+  package source is `d7637d0`, adding only that evidence. Package smoke
+  `corner-repair-linux-1.3.1-full-frame-smoke-20260814-02` retained 2,482 raw
+  identities, 9,108 labels and passed full-frame/Z4/free-IPPE validation.

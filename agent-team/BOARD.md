@@ -2,6 +2,12 @@
 
 ## Current status
 
+- Linux x86_64 Release `1.3.1` is packaged at
+  `/home/potato/Projects/仿真/releases/daedalus-simulator/1.3.1/linux-x86_64`.
+  Its default-off Release collector now owns raw full-frame export; consumers
+  must use `--save-rgba-frames --until-eof` and validator
+  `--require-raw-frames`, not a copied TCP implementation.
+
 - Windows x86_64 Release `1.3.0` remains accepted and immutable at
   `D:\仿真\releases\daedalus-simulator\1.3.0\windows-x86_64`, manifest
   source `2bce032ebcc55bfc4cfa0e6e793802a55ea22c70`.
@@ -32,9 +38,14 @@
    consumer received `197.288 FPS` for 15 seconds on this host. This is a
    same-host startup/data-plane observation, not a revision of its AutoDL
    baseline or a cross-machine regression claim.
-3. The active release package source is `ee39776`; do not overwrite it. Later
-   documentation-only context commits do not alter the packaged binary or
+3. The immutable 1.3.0 Linux package source is `ee39776`; do not overwrite it.
+   The new immutable 1.3.1 Linux package source is `d7637d0`; later
+   documentation-only context commits do not alter either package binary or
    evidence hash.
+4. 1.3.1 full-frame export passed source Rust `196/196`, SDK `7/7`, a clean
+   20-second Linux performance gate (`357.044/198.468 Hz` main/capture),
+   package integrity, and a package-runtime raw-frame/label smoke. Consumers
+   may now update only through its release manifest and SDK contract.
 
 ## Validation still required
 
