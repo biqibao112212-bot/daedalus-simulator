@@ -1,6 +1,6 @@
 # Offline same-exposure exact-corner export
 
-Status: public research contract for Daedalus Simulator 1.3.0.
+Status: public research contract for Daedalus Simulator 1.3.1.
 
 ## Boundary
 
@@ -81,7 +81,7 @@ Create a dedicated runtime directory and choose a new file:
 ```powershell
 $session = 'D:\仿真\runtime\corner-label-session-001'
 New-Item -ItemType Directory -Path $session
-Set-Location D:\仿真\releases\daedalus-simulator\1.3.0\windows-x86_64
+Set-Location D:\仿真\releases\daedalus-simulator\1.3.1\windows-x86_64
 .\start-simulator.ps1 -CornerLabelsJsonl (Join-Path $session 'exact-corners.jsonl')
 ```
 
@@ -92,7 +92,7 @@ complete TCP frames, and records every wire identity plus the RGBA payload hash:
 ```powershell
 D:\Anaconda\envs\yolov8\python.exe .\docs\capture-corner-label-experiment.py `
   --output-dir D:\仿真\runtime\corner-label-session-001 `
-  --until-eof --linear-span-m 0.6 --save-first-rgba
+  --until-eof --linear-span-m 0.6 --save-rgba-frames
 ```
 
 Let it run for at least several reciprocal periods, then stop the simulator.
@@ -108,14 +108,18 @@ validate schema/identity/Z4/motion exclusion and generic free-IPPE closure:
 D:\Anaconda\envs\yolov8\python.exe .\docs\verify-corner-label-export.py `
   D:\仿真\runtime\corner-label-session-001\exact-corners.jsonl `
   --tcp-identities D:\仿真\runtime\corner-label-session-001\tcp-identities.jsonl `
-  --require-complete-z4 --require-uniform-and-excluded
+  --require-raw-frames --require-complete-z4 --require-uniform-and-excluded
 ```
 
-The optional identity file contains one received TCP triple per JSON line. The
-validator checks the shipped schema contract, fields, asset hash, uniqueness,
-absence of future truth, and generic OpenCV `SOLVEPNP_IPPE`
-reprojection/equivalent metric closure. The JSONL, identity ledger, raw frame,
+`--save-rgba-frames` is explicit and requires `--until-eof`. It writes a new
+`frames/<epoch>_<sequence>_<timestamp>.rgba` for every complete RGBA32 TCP
+identity, adds its relative path and SHA-256 to the identity ledger, and writes
+`capture-manifest.json`. The validator's `--require-raw-frames` verifies every
+raw payload size/hash and the manifest before joining labels. This preserves
+the current write-only offline boundary: online truth remains locked and no
+detector/PnP/predictor input is added. The JSONL, identity ledger, raw frames,
 and experiment directory are protected collection assets and are never packed
 into the simulator Release.
 
-Schema: `schemas/offline-exact-corners-v1.schema.json`.
+Schemas: `schemas/offline-exact-corners-v1.schema.json` and
+`schemas/offline-frame-capture-v1.schema.json`.

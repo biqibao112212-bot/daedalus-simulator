@@ -72,6 +72,8 @@ if ($release.ballistics.projectile_speed_mps -le 0 -or
 }
 $releaseExport = $release.offline_exports.exact_corner_labels
 $contractExport = $contract.offline_exports.exact_corner_labels
+$releaseFrameCapture = $release.offline_exports.full_frame_capture
+$contractFrameCapture = $contract.offline_exports.full_frame_capture
 if ($null -eq $releaseExport -or $null -eq $contractExport -or
     $releaseExport.schema_version -ne 'daedalus.offline-exact-corners/1' -or
     $releaseExport.schema_version -ne $contractExport.schema_version -or
@@ -88,6 +90,33 @@ if ($null -eq $releaseExport -or $null -eq $contractExport -or
     $releaseExport.future_truth_included -ne $false -or
     $contractExport.future_truth_included -ne $false) {
     throw 'Offline exact-corner export contract is missing, inconsistent, or leaks online/future truth.'
+}
+$frameCaptureSchema = 'daedalus.offline-frame-capture/1'
+if ($null -eq $releaseFrameCapture -or $null -eq $contractFrameCapture -or
+    $releaseFrameCapture.schema_version -ne $frameCaptureSchema -or
+    $releaseFrameCapture.schema_version -ne $contractFrameCapture.schema_version -or
+    $releaseFrameCapture.schema_file -ne 'schemas/offline-frame-capture-v1.schema.json' -or
+    $releaseFrameCapture.schema_file -ne $contractFrameCapture.schema_file -or
+    $releaseFrameCapture.collector_option -ne '--save-rgba-frames' -or
+    $releaseFrameCapture.collector_option -ne $contractFrameCapture.collector_option -or
+    $releaseFrameCapture.default_enabled -ne $false -or $contractFrameCapture.default_enabled -ne $false -or
+    $releaseFrameCapture.requires_until_eof -ne $true -or $contractFrameCapture.requires_until_eof -ne $true -or
+    $releaseFrameCapture.image_format -ne 'rgba32-raw' -or $contractFrameCapture.image_format -ne 'rgba32-raw' -or
+    $releaseFrameCapture.online_target_truth_enabled -ne $false -or $contractFrameCapture.online_target_truth_enabled -ne $false -or
+    $releaseFrameCapture.future_truth_included -ne $false -or $contractFrameCapture.future_truth_included -ne $false) {
+    throw 'Offline full-frame capture contract is missing, inconsistent, or leaks online/future truth.'
+}
+$frameSchemaPath = Join-Path $root ('sdk\' + $releaseFrameCapture.schema_file.Replace('/', '\'))
+if (-not (Test-Path -LiteralPath $frameSchemaPath -PathType Leaf)) {
+    throw "Offline full-frame capture schema is missing: $frameSchemaPath"
+}
+$frameSchema = Get-Content -LiteralPath $frameSchemaPath -Raw -Encoding UTF8 | ConvertFrom-Json
+if ($frameSchema.properties.schema_version.const -ne $frameCaptureSchema -or
+    $frameSchema.properties.capture_mode.const -ne 'until_eof' -or
+    $frameSchema.properties.image_format.const -ne 'rgba32-raw' -or
+    $frameSchema.properties.online_truth_read.const -ne $false -or
+    $frameSchema.properties.future_truth_included.const -ne $false) {
+    throw 'Offline full-frame capture schema does not enforce complete raw-frame and no-truth semantics.'
 }
 $schemaPath = Join-Path $root ('sdk\' + $releaseExport.schema_file.Replace('/', '\'))
 if (-not (Test-Path -LiteralPath $schemaPath -PathType Leaf)) {

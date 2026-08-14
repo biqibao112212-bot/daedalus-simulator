@@ -62,8 +62,8 @@ SOURCE_COMMIT="$("$GIT_BIN" -C "$GIT_ROOT" rev-parse HEAD)"
 [[ -n "$PERFORMANCE_EVIDENCE" ]] || PERFORMANCE_EVIDENCE="$ROOT/benchmarks/$VERSION/performance-release-linux.json"
 MINIMUM_MAIN_UPDATE_HZ=100
 MINIMUM_CAPTURE_SUBMIT_HZ=100
-if [[ "$VERSION" == "1.3.0" ]]; then
-  # The 1.3.0 Ubuntu migration is accepted only if the same host can meet the
+if [[ "$VERSION" == 1.3.* ]]; then
+  # The 1.3.x Linux line is accepted only if the same host can meet the
   # published Windows 1.3.0 high-performance baseline.
   MINIMUM_MAIN_UPDATE_HZ=171.190
   MINIMUM_CAPTURE_SUBMIT_HZ=163.228
@@ -113,7 +113,8 @@ cp -- "$ROOT/SIMULATOR_PERFORMANCE.md" "$ROOT/SIMULATOR_TROUBLESHOOTING.md" \
   "$ROOT/sdk/README.md" "$TARGET_DIR/docs/"
 cp -- "$ROOT/scripts/capture-corner-label-experiment.py" \
   "$ROOT/scripts/verify-corner-label-export.py" "$TARGET_DIR/docs/"
-cp -- "$ROOT/sdk/schemas/offline-exact-corners-v1.schema.json" "$TARGET_DIR/schemas/"
+cp -- "$ROOT/sdk/schemas/offline-exact-corners-v1.schema.json" \
+  "$ROOT/sdk/schemas/offline-frame-capture-v1.schema.json" "$TARGET_DIR/schemas/"
 cp -- "$ROOT/sdk/contract.json" "$TARGET_DIR/docs/sdk-contract.json"
 cp -a -- "$SDK_INSTALL/." "$TARGET_DIR/sdk/"
 chmod +x "$TARGET_DIR/start-simulator.sh" "$TARGET_DIR/bin/daedalus"

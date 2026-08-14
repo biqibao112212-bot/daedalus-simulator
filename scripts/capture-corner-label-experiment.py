@@ -17,6 +17,7 @@ TCP_MAGIC = 0x54494D47
 TCP_VERSION = 1
 TCP_HEADER_BYTES = 64
 TCP_HEADER = struct.Struct(">IHHHHIIIQQQQQ")
+FRAME_CAPTURE_SCHEMA = "daedalus.offline-frame-capture/1"
 
 
 class StreamEnded(Exception):
@@ -153,6 +154,12 @@ def decode_header(wire):
     }
 
 
+def write_new_bytes(path, payload):
+    """Write a protected payload once, without ever replacing a prior capture."""
+    with path.open("xb") as handle:
+        handle.write(payload)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--output-dir", type=Path, required=True, help="existing protected session directory")
@@ -168,9 +175,18 @@ def main():
     parser.add_argument("--spin-deg-s", type=float, default=0.0)
     parser.add_argument("--direction-deg", type=float, default=90.0)
     parser.add_argument("--save-first-rgba", action="store_true")
+    parser.add_argument(
+        "--save-rgba-frames",
+        action="store_true",
+        help="write one protected raw RGBA32 frame per TCP identity; requires --until-eof",
+    )
     args = parser.parse_args()
     if not args.until_eof and args.frames <= 0:
         fail("--frames must be positive")
+    if args.save_rgba_frames and not args.until_eof:
+        fail("--save-rgba-frames requires --until-eof for complete identity evidence")
+    if args.save_rgba_frames and args.save_first_rgba:
+        fail("--save-rgba-frames already retains the first frame; do not also pass --save-first-rgba")
     output_dir = args.output_dir.resolve()
     if not output_dir.is_dir():
         fail(f"output directory must already exist: {output_dir}")
@@ -180,6 +196,14 @@ def main():
     rgba_path = output_dir / "first-frame.rgba"
     if args.save_first_rgba and rgba_path.exists():
         fail(f"refusing to overwrite protected raw frame: {rgba_path}")
+    frames_dir = output_dir / "frames"
+    manifest_path = output_dir / "capture-manifest.json"
+    if args.save_rgba_frames and frames_dir.exists():
+        fail(f"refusing to reuse protected frame directory: {frames_dir}")
+    if args.save_rgba_frames and manifest_path.exists():
+        fail(f"refusing to overwrite protected capture manifest: {manifest_path}")
+    if args.save_rgba_frames:
+        frames_dir.mkdir()
 
     session_id = f"corner-label-{uuid.uuid4().hex}"
     scene_address = (args.tcp_host, args.scene_port)
@@ -243,6 +267,14 @@ def main():
                 fail("TCP producer epoch changed or frame sequence did not increase")
             last_seq = header["frame_seq"]
             header["payload_sha256"] = hashlib.sha256(payload).hexdigest()
+            if args.save_rgba_frames:
+                name = "{}_{}_{}.rgba".format(
+                    header["producer_epoch"], header["frame_seq"], header["timestamp_ns"]
+                )
+                destination = frames_dir / name
+                write_new_bytes(destination, payload)
+                header["raw_rgba_file"] = str(Path("frames") / name)
+                header["raw_rgba_sha256"] = hashlib.sha256(destination.read_bytes()).hexdigest()
             identities.write(json.dumps(header, separators=(",", ":")) + "\n")
             identities.flush()
             if received_frames == 0 and args.save_first_rgba:
@@ -251,10 +283,30 @@ def main():
 
     if received_frames == 0:
         fail("no complete TCP frames were received")
+    if args.save_rgba_frames:
+        with manifest_path.open("x", encoding="utf-8", newline="\n") as handle:
+            json.dump(
+                {
+                    "schema_version": FRAME_CAPTURE_SCHEMA,
+                    "capture_mode": "until_eof",
+                    "frame_count": received_frames,
+                    "producer_epoch": first_epoch,
+                    "last_frame_seq": last_seq,
+                    "image_format": "rgba32-raw",
+                    "frame_directory": "frames",
+                    "identity_ledger": "tcp-identities.jsonl",
+                    "online_truth_read": False,
+                    "future_truth_included": False,
+                },
+                handle,
+                indent=2,
+            )
+            handle.write("\n")
 
     print(
         f"corner_label_capture_ok frames={received_frames} producer_epoch={first_epoch} "
-        f"last_frame_seq={last_seq} identities={identities_path}"
+        f"last_frame_seq={last_seq} identities={identities_path} "
+        f"full_frames={args.save_rgba_frames}"
     )
 
 

@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://daedalus.invalid/schemas/offline-frame-capture-v1.schema.json",
+  "title": "Daedalus offline full-frame capture manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "capture_mode", "frame_count", "producer_epoch", "last_frame_seq", "image_format", "frame_directory", "identity_ledger", "online_truth_read", "future_truth_included"],
+  "properties": {
+    "schema_version": { "const": "daedalus.offline-frame-capture/1" },
+    "capture_mode": { "const": "until_eof" },
+    "frame_count": { "type": "integer", "minimum": 1 },
+    "producer_epoch": { "type": "integer", "minimum": 1 },
+    "last_frame_seq": { "type": "integer", "minimum": 1 },
+    "image_format": { "const": "rgba32-raw" },
+    "frame_directory": { "const": "frames" },
+    "identity_ledger": { "const": "tcp-identities.jsonl" },
+    "online_truth_read": { "const": false },
+    "future_truth_included": { "const": false }
+  }
+}

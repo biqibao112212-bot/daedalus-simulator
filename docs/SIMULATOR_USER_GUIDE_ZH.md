@@ -1,7 +1,8 @@
-# Daedalus 模拟器使用手册（Release 1.3.0）
+# Daedalus 模拟器使用手册（Release 1.3.1）
 
 > 1.2.1 仍是冻结性能基线，目标在视野内的 Windows 原生 Stage3 记录为 140.967 FPS；
-> 1.3.0 新增默认关闭的离线同曝光 exact-corner 导出，不改变在线自瞄接口。新采集仍使用
+> 1.3.0 新增默认关闭的离线同曝光 exact-corner 导出；1.3.1 的 Release collector 另增加
+> 显式 full-frame RGBA32 保存，不改变在线自瞄接口。新采集仍使用
 > Windows 原生消费者、TCP RGBA32 1440×1080 与版本锁；WSL、`/mnt/d` 和文件三缓冲仅为
 > 历史兼容资料。
 
@@ -26,8 +27,8 @@ SDK 1.3 支持构建完整的自瞄闭环：
 
 | 项目 | 契约 |
 | --- | --- |
-| 模拟器 | 1.3.0 |
-| SDK | 1.3.0 |
+| 模拟器 | 1.3.1 |
+| SDK | 1.3.1 |
 | 操作系统 | Windows x86_64、Linux x86_64 |
 | 图像 | 默认 TCP RGBA32，1440×1080，latest-only；帧头也支持 RGB24 |
 | 元数据 | Talos SHM v7，ABI revision 2 |
@@ -117,7 +118,7 @@ $TALOS_IPC_DIR/daedalus-runtime-capabilities-v1.json
 ## 5. 在自瞄工程中引入 SDK
 
 ```cmake
-find_package(DaedalusSimSdk 1.3 REQUIRED CONFIG)
+find_package(DaedalusSimSdk 1.3.1 REQUIRED CONFIG)
 target_link_libraries(my_autoaim PRIVATE DaedalusSimSdk::DaedalusSimSdk)
 ```
 

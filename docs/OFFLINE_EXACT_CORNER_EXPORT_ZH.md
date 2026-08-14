@@ -1,6 +1,6 @@
 # 离线同曝光 exact-corner 标签导出
 
-状态：Daedalus Simulator 1.3.0 公共研究合同。
+状态：Daedalus Simulator 1.3.1 公共研究合同。
 
 ## 边界
 
@@ -66,7 +66,7 @@ false；往返平移只有在当前位置距最近确定性端点严格大于
 ```powershell
 $session = 'D:\仿真\runtime\corner-label-session-001'
 New-Item -ItemType Directory -Path $session
-Set-Location D:\仿真\releases\daedalus-simulator\1.3.0\windows-x86_64
+Set-Location D:\仿真\releases\daedalus-simulator\1.3.1\windows-x86_64
 .\start-simulator.ps1 -CornerLabelsJsonl (Join-Path $session 'exact-corners.jsonl')
 ```
 
@@ -76,7 +76,7 @@ Set-Location D:\仿真\releases\daedalus-simulator\1.3.0\windows-x86_64
 ```powershell
 D:\Anaconda\envs\yolov8\python.exe .\docs\capture-corner-label-experiment.py `
   --output-dir D:\仿真\runtime\corner-label-session-001 `
-  --until-eof --linear-span-m 0.6 --save-first-rgba
+  --until-eof --linear-span-m 0.6 --save-rgba-frames
 ```
 
 至少运行数个往返周期后停止模拟器；采集器会把 TCP 连接上已存在的完整帧全部排空到
@@ -90,12 +90,15 @@ schema、同曝光身份、Z4 完整性、运动排除和 free-IPPE 闭合：
 D:\Anaconda\envs\yolov8\python.exe .\docs\verify-corner-label-export.py `
   D:\仿真\runtime\corner-label-session-001\exact-corners.jsonl `
   --tcp-identities D:\仿真\runtime\corner-label-session-001\tcp-identities.jsonl `
-  --require-complete-z4 --require-uniform-and-excluded
+  --require-raw-frames --require-complete-z4 --require-uniform-and-excluded
 ```
 
-身份文件每行保存一个真实接收的 TCP 三元身份和 payload hash。验证器检查包内 schema、
-必填字段、资产 hash、唯一性、无未来真值，并用 OpenCV generic `SOLVEPNP_IPPE` 检查
-像素重投影与等效米制闭合。JSONL、身份台账、原始帧与实验目录均为受保护采集资产，
+`--save-rgba-frames` 必须与 `--until-eof` 同时使用。它会为每个完整 RGBA32 TCP identity
+写入新的 `frames/<epoch>_<sequence>_<timestamp>.rgba`，在 identity ledger 记录相对路径和
+SHA-256，并写入 `capture-manifest.json`。验证器的 `--require-raw-frames` 会在 join 标签前
+检查全部原始帧的字节数、hash 和 manifest。该能力仍是只写离线旁路：在线真值保持锁定，
+不会新增 detector/PnP/预测器输入。JSONL、身份台账、原始帧与实验目录均为受保护采集资产，
 不得进入模拟器 Release 包。
 
-机器可读 schema：`schemas/offline-exact-corners-v1.schema.json`。
+机器可读 schema：`schemas/offline-exact-corners-v1.schema.json` 与
+`schemas/offline-frame-capture-v1.schema.json`。

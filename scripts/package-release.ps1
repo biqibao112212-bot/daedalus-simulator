@@ -111,7 +111,9 @@ Copy-Item -LiteralPath `
     (Join-Path $root 'scripts\capture-corner-label-experiment.py'),
     (Join-Path $root 'scripts\verify-corner-label-export.py') `
     -Destination (Join-Path $target 'docs')
-Copy-Item -LiteralPath (Join-Path $root 'sdk\schemas\offline-exact-corners-v1.schema.json') `
+Copy-Item -LiteralPath `
+    (Join-Path $root 'sdk\schemas\offline-exact-corners-v1.schema.json'),
+    (Join-Path $root 'sdk\schemas\offline-frame-capture-v1.schema.json') `
     -Destination (Join-Path $target 'schemas')
 Copy-Item -LiteralPath (Join-Path $root 'sdk\contract.json') -Destination (Join-Path $target 'docs\sdk-contract.json')
 Get-ChildItem -LiteralPath $SdkInstallRoot -Force | Copy-Item -Destination (Join-Path $target 'sdk') -Recurse -Force

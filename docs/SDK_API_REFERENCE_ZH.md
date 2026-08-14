@@ -22,7 +22,7 @@
 cmake_minimum_required(VERSION 3.16)
 project(lab_autoaim LANGUAGES CXX)
 
-find_package(DaedalusSimSdk 1.3 REQUIRED CONFIG)
+find_package(DaedalusSimSdk 1.3.1 REQUIRED CONFIG)
 
 add_executable(lab_autoaim main.cpp)
 target_compile_features(lab_autoaim PRIVATE cxx_std_17)

@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 
 SCHEMA_VERSION = "daedalus.offline-exact-corners/1"
+FRAME_CAPTURE_SCHEMA = "daedalus.offline-frame-capture/1"
 ASSET_SHA256 = "1cc0a3cd1ab05bc9822b616271db3afb64d078e56b9bbf452a8acc6d9bad0a6f"
 ORDER = "bl,tl,tr,br"
 GUARD_NS = 100_000_000
@@ -178,10 +179,59 @@ def ippe_closure(corners, object_points, intrinsics, distance_m):
     return pixel_rms, equivalent_m
 
 
+def load_tcp_identities(path, require_raw_frames):
+    identities = {}
+    root = path.resolve().parent
+    for line_number, line in enumerate(path.read_text(encoding="utf-8-sig").splitlines(), 1):
+        if not line.strip():
+            continue
+        value = json.loads(line)
+        try:
+            identity = tuple(value[key] for key in ("producer_epoch", "frame_seq", "timestamp_ns"))
+        except KeyError as error:
+            fail(f"identity line {line_number}: missing {error}")
+        if identity in identities:
+            fail(f"identity line {line_number}: duplicate TCP identity")
+        if require_raw_frames:
+            required = ("payload_sha256", "payload_bytes", "raw_rgba_file", "raw_rgba_sha256")
+            if any(key not in value for key in required):
+                fail(f"identity line {line_number}: missing full-frame capture metadata")
+            relative = Path(value["raw_rgba_file"])
+            if relative.is_absolute() or ".." in relative.parts or relative.parts[:1] != ("frames",):
+                fail(f"identity line {line_number}: unsafe raw frame path")
+            raw = root / relative
+            if not raw.is_file() or raw.stat().st_size != value["payload_bytes"]:
+                fail(f"identity line {line_number}: raw frame is missing or has the wrong size")
+            digest = hashlib.sha256(raw.read_bytes()).hexdigest()
+            if digest != value["payload_sha256"] or digest != value["raw_rgba_sha256"]:
+                fail(f"identity line {line_number}: raw frame hash does not match TCP payload")
+        identities[identity] = value
+    if not identities:
+        fail("TCP identity ledger contains no frames")
+    if require_raw_frames:
+        manifest = root / "capture-manifest.json"
+        if not manifest.is_file():
+            fail("full-frame capture manifest is missing")
+        value = json.loads(manifest.read_text(encoding="utf-8"))
+        if (
+            value.get("schema_version") != FRAME_CAPTURE_SCHEMA
+            or value.get("capture_mode") != "until_eof"
+            or value.get("frame_count") != len(identities)
+            or value.get("identity_ledger") != path.name
+            or value.get("frame_directory") != "frames"
+            or value.get("image_format") != "rgba32-raw"
+            or value.get("online_truth_read") is not False
+            or value.get("future_truth_included") is not False
+        ):
+            fail("full-frame capture manifest is incompatible")
+    return set(identities)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("jsonl", type=Path)
     parser.add_argument("--tcp-identities", type=Path, help="optional JSONL containing received TCP identity triples")
+    parser.add_argument("--require-raw-frames", action="store_true", help="verify every ledger identity has an immutable raw RGBA32 payload")
     parser.add_argument("--asset", type=Path, default=Path(__file__).resolve().parents[1] / "assets" / "vehicle.glb")
     parser.add_argument("--schema", type=Path, default=default_schema_path())
     parser.add_argument("--require-complete-z4", action="store_true")
@@ -199,13 +249,11 @@ def main():
     if hashlib.sha256(args.asset.read_bytes()).hexdigest() != ASSET_SHA256:
         fail(f"small-armor asset hash mismatch: {args.asset}")
     validate_schema_contract(args.schema)
+    if args.require_raw_frames and not args.tcp_identities:
+        fail("--require-raw-frames requires --tcp-identities")
     tcp_identities = None
     if args.tcp_identities:
-        tcp_identities = set()
-        for line in args.tcp_identities.read_text(encoding="utf-8-sig").splitlines():
-            if line.strip():
-                value = json.loads(line)
-                tcp_identities.add(tuple(value[key] for key in ("producer_epoch", "frame_seq", "timestamp_ns")))
+        tcp_identities = load_tcp_identities(args.tcp_identities, args.require_raw_frames)
     rows = 0
     identities = set()
     slots = set()
