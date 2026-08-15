@@ -2,12 +2,15 @@
 
 ## Current status
 
-- In progress: contest `1.3.1-contest` is adding a read-only big-rune ring
-  score to the C++ SDK and launcher. It records the physical collision contact
-  in an active target's local plane and reports per-side current-run data;
-  focused Rust score/collision and SDK CTest validation have passed. A clean
-  Release rebuild, performance evidence, package replacement and installed
-  runtime smoke remain required before the package claim is advanced.
+- Contest `1.3.1-contest` now provides a read-only big-rune ring score through
+  C++ `ContestClient`, Scene Control v2 and `daedalus-contest score red|blue`.
+  It records a valid active-leaf collision point in the target-local plane and
+  reports per-side current-run data. Clean Release Rust validation and SDK
+  CTest `8/8` passed; the fresh high-performance Vulkan evidence reached
+  `357.758 Hz` main update and `198.311 Hz` capture submit. The replacement
+  package source is `2f759ec`, its manifest rehash passed `43/43`, and its
+  installed visible Vulkan runtime returned red/blue active-run score records
+  plus a `1440x1080` TCP frame on the RTX 4060.
 
 - Contest branch `release/contest-linux-1.3.1` is implementing the Linux-only
   `1.3.1-contest` package. Its C++ client, constrained scene control and
