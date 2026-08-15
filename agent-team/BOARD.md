@@ -4,12 +4,12 @@
 
 - Contest branch `release/contest-linux-1.3.1` is implementing the Linux-only
   `1.3.1-contest` package. Its C++ client, constrained scene control and
-  participant launcher passed clean Release Rust `203/203` and SDK CTest
-  `8/8`. Its high-performance Vulkan gate measured `370.753 Hz` main update
-  and `198.333 Hz` capture submit against the 171.190/163.228 Hz acceptance
+  participant launcher passed clean Release Rust validation and SDK CTest
+  `8/8`. Its high-performance Vulkan gate measured `349.598 Hz` main update
+  and `197.772 Hz` capture submit against the 171.190/163.228 Hz acceptance
   minima. The final Linux package is at
   `/home/potato/Projects/仿真/releases/daedalus-simulator/1.3.1-contest/linux-x86_64`;
-  its manifest rehash passed `43/43`, and its package source is `1993c6c`.
+  its manifest rehash passed `43/43`, and its package source is `74fd730`.
 - Contest runtime now defaults to direct participant vehicle control and no
   longer displays unsupported F-key controls: WASD/left Shift movement,
   arrows/right mouse gimbal, and Space firing are live; automatic aim is off
@@ -61,6 +61,13 @@
 - The Linux high-performance acceptance line for `1.3.0` is the accepted
   Windows evidence: at least `171.190 Hz` main update and `163.228 Hz`
   capture submit. Visible mode is measured and retained separately.
+
+- Package scenario acceptance covers both Energy modes: Q/E select small/large
+  for normal local use, while C++ RuneScenario can apply either rules-driven
+  motion or a stopped five-leaf state made only from the four supported visual
+  appearances. The installed package accepted a static small scenario and a
+  rule-driven large scenario, then completed Energy to Shooting Range to Energy
+  switching while returning a 1440x1080 frame from the RTX 4060 Vulkan runtime.
 
 ## Freeze and blockers
 
