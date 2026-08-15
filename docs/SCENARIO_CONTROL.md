@@ -89,6 +89,36 @@ SceneControlClient::setRuneScenario; ContestClient forwards the same bounded
 method. The legacy set_rune_state remains available for compatible non-contest
 tooling, but new annotation tooling should use RuneScenario.
 
+## Large-rune ring score
+
+`get_big_rune_score` returns the read-only score for one face's current (or
+most recently completed) rules-driven large-rune activation. It is intended
+for evaluation and annotation bookkeeping, not for changing the mechanism.
+Only valid impacts on currently active large-rune leaves contribute. The
+simulator uses the physics contact point in the target plane, maps the 300 mm
+effective detection diameter into ten equal 15 mm radial bands, and returns
+ring `10` at the centre through ring `1` at the outer edge. The public rule
+specifies the ten rings and 1 mm radial contact accuracy; the equal-band
+boundary mapping is the contest simulator's explicit, reproducible mapping.
+
+~~~json
+{
+  "protocol": "daedalus.scene-control/2",
+  "command_id": 45,
+  "session_id": "rune-labels-01",
+  "op": "get_big_rune_score",
+  "args": {"team": "red"}
+}
+~~~
+
+The successful response includes a `data` object with `run_id`, `run_active`,
+`activated_arms`, `has_hit`, `average_ring`, `last_ring`, `last_radius_mm`, and
+`last_target`. `activated_arms` is the number of valid lit-arm hits in this
+activation (5–10 for a completed large-rune cycle under the native rules);
+`average_ring` is zero before the first valid hit. C++ users call
+`SceneControlClient::getBigRuneScore(RuneTeam::Red)` or the matching
+`ContestClient` facade.
+
 ## Compatibility
 
 The frozen 1.1.1 package and Scene Control v1 remain unchanged. Consumers must

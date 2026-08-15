@@ -14,6 +14,7 @@ Commands:
   start [--performance] [--scene shooting-range|energy|large-energy]
   stop | status | doctor
   scene shooting-range|energy|large-energy
+  score red|blue
   frame
   aim YAW_DEG PITCH_DEG [--fire]
 
@@ -126,7 +127,7 @@ case "$COMMAND" in
     ldd "$ROOT/bin/daedalus" >/dev/null
     if owned_process_running; then client health; else echo "simulator not running"; fi
     ;;
-  scene|frame|aim)
+  scene|score|frame|aim)
     client "$COMMAND" "$@"
     ;;
   --help|-h|help)

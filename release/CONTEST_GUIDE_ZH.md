@@ -20,6 +20,7 @@ daedalus-contest status
 daedalus-contest scene energy
 daedalus-contest frame
 daedalus-contest aim 0 90 --fire
+daedalus-contest score red
 daedalus-contest stop
 ```
 
@@ -88,6 +89,22 @@ frozen.leaf_states = {
     RuneLeafState::Deactivated};
 simulator.setRuneScenario(frozen);
 ```
+
+大能量机关的有效击打环数可直接读取。模拟器以物理接触点计算靶面径向位置：有效
+检测直径为 300 mm，中心为 `10` 环，外缘为 `1` 环；`average_ring` 只统计本次大符
+激活期间击中的有效亮扇叶（规则周期完成时为 5–10 个）。
+
+```cpp
+auto red_score = simulator.getBigRuneScore(RuneTeam::Red);
+if (red_score && red_score.value->has_hit) {
+    float average_ring = red_score.value->average_ring;
+    std::uint8_t last_ring = red_score.value->last_ring;
+}
+```
+
+命令行验收工具可用 `daedalus-contest score red` 或
+`daedalus-contest score blue` 显示同一数据。该接口为只读；要控制大/小符、停止或
+按规则转动，仍使用上面的 `RuneScenario`。
 
 用 CMake 接入安装包中的 SDK：
 

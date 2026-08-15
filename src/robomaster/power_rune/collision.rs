@@ -1,15 +1,16 @@
 use crate::robomaster::power_rune::common::RuneHitOutcome;
 use crate::robomaster::power_rune::rotation::PowerRuneRotation;
 use crate::robomaster::power_rune::rune::{PowerRune, PowerRuneMechanism};
+use crate::robomaster::prelude::BigRuneScores;
 use crate::telemetry::{
     ProjectileImpactRecorded, ProjectileKinematics, ProjectileTelemetry, ProjectileTrace,
     RuneTargetSnapshot,
 };
 use avian3d::prelude::LinearVelocity;
-use avian3d::prelude::{CollisionEnd, CollisionEventsEnabled};
+use avian3d::prelude::{CollisionEventsEnabled, CollisionStart, Collisions};
 use bevy::prelude::{
     ChildOf, Commands, Component, Entity, EntityEvent, GlobalTransform, On, Query, Res, ResMut,
-    Resource, Transform, Update, With,
+    Resource, Transform, Update, Vec3, With,
 };
 use std::collections::HashSet;
 
@@ -24,6 +25,7 @@ struct ConsumedRuneProjectiles(HashSet<Entity>);
 pub struct RuneIndex {
     pub target: usize,
     pub rune: Entity,
+    pub center: Entity,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -51,10 +53,12 @@ pub struct RuneHit {
 }
 
 fn handle_rune_collision(
-    event: On<CollisionEnd>,
+    event: On<CollisionStart>,
     mut commands: Commands,
     mut consumed_projectiles: ResMut<ConsumedRuneProjectiles>,
     telemetry: Res<ProjectileTelemetry>,
+    mut scores: ResMut<BigRuneScores>,
+    collisions: Collisions,
     mut runes: Query<(
         &mut PowerRuneMechanism,
         &mut PowerRuneRotation,
@@ -119,8 +123,26 @@ fn handle_rune_collision(
         .remove::<CollisionEventsEnabled>()
         .insert(ProjectileImpactRecorded);
 
+    let score = scores.for_team_mut(rune.team());
+    score.begin_run_if_needed(mechanism.state().is_activating_large());
+    let hit_radius_m = rune_contact_radius_m(
+        &collisions,
+        event.collider1,
+        event.collider2,
+        target.center,
+        &transforms,
+    );
     let mut rng = rand::thread_rng();
     let outcome = mechanism.state_mut().hit(target.target, &mut rng);
+    if matches!(
+        rune.mode(),
+        crate::robomaster::power_rune::common::RuneMode::Large
+    ) && outcome.is_accurate()
+    {
+        if let Some(radius_m) = hit_radius_m {
+            score.record_activated_arm(target.target, radius_m);
+        }
+    }
     rotation.sync_activation(
         mechanism.state().mode(),
         mechanism.state().is_activating(),
@@ -155,6 +177,25 @@ fn handle_rune_collision(
     }
 }
 
+fn rune_contact_radius_m(
+    collisions: &Collisions,
+    collider1: Entity,
+    collider2: Entity,
+    target_center: Entity,
+    transforms: &Query<&GlobalTransform>,
+) -> Option<f32> {
+    let contact_point = collisions
+        .get(collider1, collider2)?
+        .find_deepest_contact()?
+        .point;
+    let target_transform = transforms.get(target_center).ok()?;
+    let local = target_transform
+        .affine()
+        .inverse()
+        .transform_point3(contact_point);
+    Some(Vec3::new(local.x, local.y, 0.0).length())
+}
+
 fn cleanup_consumed_rune_projectiles(
     mut consumed_projectiles: ResMut<ConsumedRuneProjectiles>,
     projectiles: Query<(), With<Projectile>>,
@@ -184,6 +225,7 @@ pub(super) struct PowerRuneCollisionPlugin;
 impl bevy::app::Plugin for PowerRuneCollisionPlugin {
     fn build(&self, app: &mut bevy::app::App) {
         app.init_resource::<ConsumedRuneProjectiles>()
+            .init_resource::<BigRuneScores>()
             .add_systems(Update, cleanup_consumed_rune_projectiles)
             .add_observer(handle_rune_collision);
     }
@@ -198,6 +240,7 @@ mod tests {
     use crate::robomaster::prelude::Team;
     use crate::statistic::ProjectileStatistics;
     use crate::telemetry::{ProjectileImpactRecorded, ProjectileTelemetry};
+    use avian3d::prelude::ContactGraph;
     use bevy::prelude::{App, Transform};
 
     #[test]
@@ -206,6 +249,8 @@ mod tests {
         app.insert_resource(ProjectileStatistics::default());
         app.insert_resource(ProjectileTelemetry::from_env());
         app.init_resource::<ConsumedRuneProjectiles>();
+        app.init_resource::<BigRuneScores>();
+        app.init_resource::<ContactGraph>();
         app.add_observer(handle_rune_collision);
         app.add_observer(on_hit);
 
@@ -229,6 +274,7 @@ mod tests {
                 .spawn(RuneIndex {
                     target: target_index,
                     rune,
+                    center: Entity::PLACEHOLDER,
                 })
                 .id();
             let projectile = app
@@ -236,7 +282,7 @@ mod tests {
                 .spawn((Projectile, CollisionEventsEnabled))
                 .id();
 
-            app.world_mut().trigger(CollisionEnd {
+            app.world_mut().trigger(CollisionStart {
                 collider1: projectile,
                 collider2: target,
                 body1: Some(projectile),

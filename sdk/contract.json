@@ -49,7 +49,8 @@
     "set_range_target_motion",
     "set_range_target_geometry",
     "set_rune_state",
-    "set_rune_scenario"
+    "set_rune_scenario",
+    "get_big_rune_score"
   ],
   "contest_profile": {
     "linux_only": true,
@@ -62,6 +63,13 @@
       "rule_driven_leaves": "simulator-owned",
       "rotation_direction": "red face clockwise or counter_clockwise; blue face is opposite"
     },
+    "big_rune_score": {
+      "teams": ["red", "blue"],
+      "applies_to": "valid hits on active large-rune leaves in rule-driven mode",
+      "effective_detection_diameter_mm": 300,
+      "rings": "1 through 10; 10 is centre and 1 is outermost",
+      "returned_fields": ["run_id", "run_active", "activated_arms", "average_ring", "last_ring", "last_radius_mm", "last_target"]
+    },
     "preferred_cxx_facade": "ContestClient"
   },
   "capabilities": [
@@ -73,6 +81,7 @@
     "exposure_pose_by_frame",
     "tcp_image",
     "scene_control",
+    "big_rune_score",
     "runtime_capabilities"
   ],
   "unsupported_interfaces": [

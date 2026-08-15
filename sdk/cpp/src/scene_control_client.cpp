@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cmath>
+#include <cstdlib>
 #include <limits>
 #include <sstream>
 
@@ -171,6 +172,72 @@ bool uint64Field(const std::string& json, const std::string& field,
   }
   *value = parsed;
   return true;
+}
+
+bool boolField(const std::string& json, const std::string& field, bool* value) {
+  std::size_t cursor = 0;
+  if (!locateFieldValue(json, field, &cursor)) return false;
+  if (json.compare(cursor, 4, "true") == 0) {
+    *value = true;
+    return true;
+  }
+  if (json.compare(cursor, 5, "false") == 0) {
+    *value = false;
+    return true;
+  }
+  return false;
+}
+
+bool floatField(const std::string& json, const std::string& field, float* value) {
+  std::size_t cursor = 0;
+  if (!locateFieldValue(json, field, &cursor)) return false;
+  const char* begin = json.c_str() + cursor;
+  char* end = nullptr;
+  const float parsed = std::strtof(begin, &end);
+  if (end == begin || !std::isfinite(parsed)) return false;
+  *value = parsed;
+  return true;
+}
+
+bool int64Field(const std::string& json, const std::string& field,
+                std::int64_t* value) {
+  std::size_t cursor = 0;
+  if (!locateFieldValue(json, field, &cursor)) return false;
+  const char* begin = json.c_str() + cursor;
+  char* end = nullptr;
+  const long long parsed = std::strtoll(begin, &end, 10);
+  if (end == begin) return false;
+  *value = static_cast<std::int64_t>(parsed);
+  return true;
+}
+
+bool objectField(const std::string& json, const std::string& field,
+                 std::string* value) {
+  std::size_t cursor = 0;
+  if (!locateFieldValue(json, field, &cursor) || cursor >= json.size() ||
+      json[cursor] != '{') {
+    return false;
+  }
+  const std::size_t begin = cursor;
+  bool in_string = false;
+  bool escaped = false;
+  int depth = 0;
+  for (; cursor < json.size(); ++cursor) {
+    const char ch = json[cursor];
+    if (in_string) {
+      if (escaped) escaped = false;
+      else if (ch == '\\') escaped = true;
+      else if (ch == '"') in_string = false;
+      continue;
+    }
+    if (ch == '"') in_string = true;
+    else if (ch == '{') ++depth;
+    else if (ch == '}' && --depth == 0) {
+      *value = json.substr(begin, cursor - begin + 1);
+      return true;
+    }
+  }
+  return false;
 }
 
 ClientResult<SceneControlStatus> parseStatus(const std::string& value) {
@@ -394,6 +461,7 @@ ClientResult<SceneControlResponse> parseSceneControlResponse(
         parsed_status.status.error, parsed_status.status.message);
   }
   response.status = *parsed_status.value;
+  (void)objectField(json, "data", &response.data_json);
   return ClientResult<SceneControlResponse>::success(std::move(response));
 }
 
@@ -515,6 +583,49 @@ ClientResult<SceneControlResponse> SceneControlClient::setRuneScenario(
   if (!args) return ClientResult<SceneControlResponse>::failure(
       args.status.error, args.status.message);
   return request("set_rune_scenario", *args.value);
+}
+
+ClientResult<BigRuneScore> SceneControlClient::getBigRuneScore(RuneTeam team) {
+  const char* name = team == RuneTeam::Red ? "red" : "blue";
+  const auto response = request(
+      "get_big_rune_score", std::string("{\"team\":\"") + name + "\"}");
+  if (!response) {
+    return ClientResult<BigRuneScore>::failure(
+        response.status.error, response.status.message);
+  }
+  if (response.value->data_json.empty()) {
+    return ClientResult<BigRuneScore>::failure(
+        ClientError::ProtocolError, "big rune score response has no data");
+  }
+  BigRuneScore score{};
+  std::string score_team;
+  std::uint64_t activated_arms = 0;
+  std::uint64_t last_ring = 0;
+  std::uint64_t last_radius_mm = 0;
+  std::int64_t last_target = 0;
+  if (!stringField(response.value->data_json, "team", &score_team) ||
+      !uint64Field(response.value->data_json, "run_id", &score.run_id) ||
+      !boolField(response.value->data_json, "run_active", &score.run_active) ||
+      !uint64Field(response.value->data_json, "activated_arms", &activated_arms) ||
+      !boolField(response.value->data_json, "has_hit", &score.has_hit) ||
+      !floatField(response.value->data_json, "average_ring", &score.average_ring) ||
+      !uint64Field(response.value->data_json, "last_ring", &last_ring) ||
+      !uint64Field(response.value->data_json, "last_radius_mm", &last_radius_mm) ||
+      !int64Field(response.value->data_json, "last_target", &last_target) ||
+      activated_arms > 10 || last_ring > 10 || last_radius_mm > 150 ||
+      last_target < -1 || last_target > 4) {
+    return ClientResult<BigRuneScore>::failure(
+        ClientError::ProtocolError, "invalid big rune score response");
+  }
+  if (score_team == "red") score.team = RuneTeam::Red;
+  else if (score_team == "blue") score.team = RuneTeam::Blue;
+  else return ClientResult<BigRuneScore>::failure(
+      ClientError::ProtocolError, "unknown big rune score team");
+  score.activated_arms = static_cast<std::uint8_t>(activated_arms);
+  score.last_ring = static_cast<std::uint8_t>(last_ring);
+  score.last_radius_mm = static_cast<std::uint16_t>(last_radius_mm);
+  score.last_target = static_cast<std::int8_t>(last_target);
+  return ClientResult<BigRuneScore>::success(score);
 }
 ClientResult<SceneControlResponse> SceneControlClient::setRuneState(
     const RuneState& state) {

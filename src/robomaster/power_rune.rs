@@ -5,5 +5,6 @@ mod consts;
 pub mod prelude;
 mod rotation;
 mod rune;
+mod score;
 mod state;
 mod visual;

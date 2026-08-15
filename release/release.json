@@ -39,7 +39,13 @@
   "contest_profile": {
     "linux_only": true,
     "supported_scenes": ["shooting_range", "energy"],
-    "unsupported_scenes": ["armor", "outpost"]
+    "unsupported_scenes": ["armor", "outpost"],
+    "big_rune_score": {
+      "sdk_method": "ContestClient::getBigRuneScore",
+      "cli_command": "daedalus-contest score red|blue",
+      "effective_detection_diameter_mm": 300,
+      "rings": "1-10, centre to outer edge"
+    }
   },
   "fixed_calibration": "camera-calibration.json",
   "fixed_calibration_revision": 2,

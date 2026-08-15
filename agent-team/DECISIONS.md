@@ -252,3 +252,13 @@
     through a game. The C++ RuneScenario interface supersedes empty RuneState
     snapshots for annotation: it provides rules-driven small/large behaviour,
     or stopped rotation with exactly five pre-defined leaf appearances.
+46. `1.3.1-contest` exposes a read-only per-face large-rune score through
+    Scene Control v2 and the C++17 `ContestClient`. A valid collision on a lit
+    large-rune leaf contributes the physics engine's actual contact point in
+    the target local plane. The 300 mm effective detection diameter is mapped
+    deterministically to ten equal 15 mm radial bands (ring 10 at centre,
+    ring 1 at the edge), because the public rule identifies ten rings and
+    1 mm radial contact precision but does not publish a textual radial-band
+    table. Each response contains run identity/activity, activated-arm count,
+    average ring and the latest impact; it never permits callers to forge
+    score, target state or truth.

@@ -15,6 +15,7 @@ void usage() {
       << "Commands:\n"
       << "  health\n"
       << "  scene shooting-range|energy|large-energy\n"
+      << "  score red|blue\n"
       << "  frame\n"
       << "  aim YAW_DEG PITCH_DEG [--fire]\n";
 }
@@ -81,6 +82,25 @@ int main(int argc, char** argv) {
     std::cout << "scene=" << value
               << " applied_frame_seq=" << response.value->applied_frame_seq
               << " message=" << response.value->message << '\n';
+    return 0;
+  }
+  if (command == "score" && cursor + 1 == argc) {
+    const std::string team = argv[cursor++];
+    if (team != "red" && team != "blue") {
+      usage();
+      return 2;
+    }
+    const auto score = client.getBigRuneScore(
+        team == "red" ? RuneTeam::Red : RuneTeam::Blue);
+    if (!score) return failure(score.status);
+    std::cout << "team=" << team << " run_id=" << score.value->run_id
+              << " active=" << score.value->run_active
+              << " activated_arms=" << static_cast<unsigned>(score.value->activated_arms)
+              << " has_hit=" << score.value->has_hit
+              << " average_ring=" << score.value->average_ring
+              << " last_ring=" << static_cast<unsigned>(score.value->last_ring)
+              << " last_radius_mm=" << score.value->last_radius_mm
+              << " last_target=" << static_cast<int>(score.value->last_target) << '\n';
     return 0;
   }
   if (command == "frame" && cursor == argc) {

@@ -2,6 +2,13 @@
 
 ## Current status
 
+- In progress: contest `1.3.1-contest` is adding a read-only big-rune ring
+  score to the C++ SDK and launcher. It records the physical collision contact
+  in an active target's local plane and reports per-side current-run data;
+  focused Rust score/collision and SDK CTest validation have passed. A clean
+  Release rebuild, performance evidence, package replacement and installed
+  runtime smoke remain required before the package claim is advanced.
+
 - Contest branch `release/contest-linux-1.3.1` is implementing the Linux-only
   `1.3.1-contest` package. Its C++ client, constrained scene control and
   participant launcher passed clean Release Rust validation and SDK CTest

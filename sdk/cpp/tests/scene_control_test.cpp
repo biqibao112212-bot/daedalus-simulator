@@ -19,12 +19,16 @@ int main() {
       "{\"protocol\":\"daedalus.scene-control/2\",\"command_id\":42,"
       "\"session_id\":\"session-a\",\"status\":\"ok\","
       "\"applied_frame_seq\":99,\"timestamp_ns\":123456,"
-      "\"message\":\"ready\"}";
+      "\"message\":\"ready\",\"data\":{\"team\":\"red\",\"run_id\":1,"
+      "\"run_active\":true,\"activated_arms\":2,\"has_hit\":true,"
+      "\"average_ring\":7.5,\"last_ring\":5,\"last_radius_mm\":75,"
+      "\"last_target\":3}}";
   const auto parsed = parseSceneControlResponse(response, 42, "session-a");
   if (!parsed || parsed.value->status != SceneControlStatus::Ok ||
       parsed.value->applied_frame_seq != 99 ||
       parsed.value->timestamp_ns != 123456 ||
-      parsed.value->message != "ready") {
+      parsed.value->message != "ready" ||
+      parsed.value->data_json.find("\"average_ring\":7.5") == std::string::npos) {
     return 3;
   }
   if (parseSceneControlResponse(response, 41, "session-a")) return 4;

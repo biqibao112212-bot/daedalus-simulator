@@ -154,3 +154,21 @@ evidence only.
   package source is `d7637d0`, adding only that evidence. Package smoke
   `corner-repair-linux-1.3.1-full-frame-smoke-20260814-02` retained 2,482 raw
   identities, 9,108 labels and passed full-frame/Z4/free-IPPE validation.
+
+## Contest big-rune scoring (2026-08-15)
+
+- `1.3.1-contest` adds `get_big_rune_score` to Scene Control v2 and maps it to
+  `SceneControlClient::getBigRuneScore(RuneTeam)` and
+  `ContestClient::getBigRuneScore(RuneTeam)`. It is read-only and is available
+  through the participant launcher as `daedalus-contest score red|blue`.
+- The mechanism records only a valid collision with a currently lit large-rune
+  leaf during a rules-driven activation. The result carries the per-face run
+  identity, whether it is active, valid activated-arm count, average ring and
+  most recent contact. No online ground truth, target mutation or arbitrary
+  score injection is introduced.
+- The public RM 2026 rule defines a 300 mm effective detecting diameter,
+  ten rings, and 1 mm radial contact accuracy. It does not publish a textual
+  numerical table for the ring radii. The contest simulator therefore makes
+  its reproducible interpretation explicit: ten equal 15 mm radial bands,
+  centre=10 and outer edge=1. This is implementation-defined mapping, not an
+  assertion that the rule text specifies those exact boundaries.

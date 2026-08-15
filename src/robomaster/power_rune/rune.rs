@@ -1,5 +1,6 @@
 use crate::robomaster::power_rune::common::{RUNE_TARGET_COUNT, RuneMode};
 use crate::robomaster::power_rune::rotation::PowerRuneRotation;
+use crate::robomaster::power_rune::score::BigRuneScores;
 use crate::robomaster::power_rune::state::{MechanismState, RuneTargetStates};
 use crate::robomaster::power_rune::visual::PowerRuneVisuals;
 use crate::robomaster::prelude::Team;
@@ -380,6 +381,17 @@ fn rune_activation_tick(
     }
 }
 
+fn track_big_rune_score_runs(
+    runes: Query<(&PowerRune, &PowerRuneMechanism)>,
+    mut scores: ResMut<BigRuneScores>,
+) {
+    for (rune, mechanism) in &runes {
+        scores
+            .for_team_mut(rune.team())
+            .begin_run_if_needed(mechanism.state().is_activating_large());
+    }
+}
+
 fn apply_power_rune_visuals(
     control: Res<ManualPowerRuneControlState>,
     mut runes: Query<(&PowerRune, &PowerRuneMechanism, &mut PowerRuneVisuals)>,
@@ -423,6 +435,7 @@ impl bevy::app::Plugin for PowerRuneUpdatePlugin {
                     contest_power_rune_mode_controls,
                     enforce_manual_power_rune_close,
                     rune_activation_tick,
+                    track_big_rune_score_runs,
                     apply_power_rune_visuals,
                     rune_rotation_system,
                 )

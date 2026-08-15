@@ -71,6 +71,7 @@ fn build_targets(
                     RuneIndex {
                         target: logical_index,
                         rune: face_entity,
+                        center: entity,
                     },
                     CollisionEventsEnabled,
                 )

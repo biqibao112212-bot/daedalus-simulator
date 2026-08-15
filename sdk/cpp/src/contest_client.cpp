@@ -80,6 +80,14 @@ ClientResult<SceneControlResponse> ContestClient::setRuneScenario(
   return scene_client_.setRuneScenario(scenario);
 }
 
+ClientResult<BigRuneScore> ContestClient::getBigRuneScore(RuneTeam team) {
+  if (!connected_) {
+    return ClientResult<BigRuneScore>::failure(
+        ClientError::NotReady, "connect() must succeed before getBigRuneScore()");
+  }
+  return scene_client_.getBigRuneScore(team);
+}
+
 ClientResult<ContestFrame> ContestClient::nextFrame(
     std::uint64_t after_source_sequence) const {
   if (!connected_) {

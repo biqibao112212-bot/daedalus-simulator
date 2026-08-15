@@ -9,9 +9,9 @@ use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use crate::robomaster::prelude::{
-    Activation, ManualPowerRuneControlState, PowerRune, PowerRuneMechanism, PowerRuneRotation,
-    RUNE_TARGET_COUNT, RuneMode, RuneTargetStates, apply_scene_control_power_rune_scenario,
-    apply_scene_control_power_rune_state,
+    Activation, BigRuneScores, ManualPowerRuneControlState, PowerRune, PowerRuneMechanism,
+    PowerRuneRotation, RUNE_TARGET_COUNT, RuneMode, RuneTargetStates, Team,
+    apply_scene_control_power_rune_scenario, apply_scene_control_power_rune_state,
 };
 use crate::setup::{
     AutoAimSceneMode, AutoAimSceneState, ShootingRangeTarget, scene_is_available_in_build,
@@ -156,6 +156,8 @@ struct SceneControlResponse {
     applied_frame_seq: u64,
     timestamp_ns: u64,
     message: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    data: Option<Value>,
 }
 
 #[derive(Debug)]
@@ -198,6 +200,7 @@ pub fn receive_scene_control_commands(
     mut scene_state: ResMut<AutoAimSceneState>,
     mut range_state: ResMut<ShootingRangeControlState>,
     mut rune_control: ResMut<ManualPowerRuneControlState>,
+    rune_scores: Res<BigRuneScores>,
     mut runes: Query<(
         &mut PowerRune,
         &mut PowerRuneMechanism,
@@ -308,6 +311,37 @@ pub fn receive_scene_control_commands(
                     runtime.pending_scene.is_some()
                 ),
             ),
+            "get_big_rune_score" => match parse_rune_team(&request.args) {
+                Ok(team) => {
+                    let score = rune_scores.for_team(team);
+                    send_ok_data(
+                        &transport,
+                        datagram.peer,
+                        &request,
+                        runtime.frame_seq,
+                        "big rune score read",
+                        serde_json::json!({
+                            "team": match team { Team::Red => "red", Team::Blue => "blue" },
+                            "run_id": score.run_id(),
+                            "run_active": score.run_active(),
+                            "activated_arms": score.activated_arms(),
+                            "has_hit": score.has_hit(),
+                            "average_ring": score.average_ring(),
+                            "last_ring": score.last_ring(),
+                            "last_radius_mm": score.last_radius_mm(),
+                            "last_target": score.last_target(),
+                        }),
+                    );
+                }
+                Err(message) => send_status(
+                    &transport,
+                    datagram.peer,
+                    &request,
+                    ResponseStatus::InvalidRequest,
+                    runtime.frame_seq,
+                    message,
+                ),
+            },
             "set_scene" => {
                 if runtime.pending_scene.is_some() {
                     send_status(
@@ -763,6 +797,14 @@ fn parse_rune_scenario(
     Ok((mode, false, red_face_clockwise, Some(states)))
 }
 
+fn parse_rune_team(args: &Map<String, Value>) -> Result<Team, String> {
+    match string_arg(args, "team")? {
+        "red" => Ok(Team::Red),
+        "blue" => Ok(Team::Blue),
+        _ => Err("args.team must be red or blue".to_string()),
+    }
+}
+
 fn now_ns() -> u64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -786,7 +828,27 @@ fn response(
         applied_frame_seq: frame_seq,
         timestamp_ns: now_ns(),
         message: message.into(),
+        data: None,
     }
+}
+
+fn send_ok_data(
+    transport: &SceneControlTransport,
+    peer: SocketAddr,
+    request: &SceneControlRequest,
+    frame_seq: u64,
+    message: impl Into<String>,
+    data: Value,
+) {
+    let mut response = response(
+        request.command_id,
+        request.session_id.clone(),
+        ResponseStatus::Ok,
+        frame_seq,
+        message,
+    );
+    response.data = Some(data);
+    send_response(transport, peer, response);
 }
 
 fn send_response(
@@ -905,6 +967,11 @@ mod tests {
             parse_rune_scenario(&rule),
             Ok((RuneMode::Large, true, true, None))
         ));
+        let team = serde_json::from_value::<Map<String, Value>>(serde_json::json!({
+            "team": "red"
+        }))
+        .unwrap();
+        assert!(matches!(parse_rune_team(&team), Ok(Team::Red)));
 
         let static_frame = serde_json::from_value::<Map<String, Value>>(serde_json::json!({
             "mode": "small", "motion": "static", "direction": "counter_clockwise",

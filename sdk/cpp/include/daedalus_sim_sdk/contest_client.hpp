@@ -49,6 +49,7 @@ class ContestClient {
       ContestScene scene);
   [[nodiscard]] ClientResult<SceneControlResponse> setRuneScenario(
       const RuneScenario& scenario);
+  [[nodiscard]] ClientResult<BigRuneScore> getBigRuneScore(RuneTeam team);
   [[nodiscard]] ClientResult<ContestFrame> nextFrame(
       std::uint64_t after_source_sequence = 0) const;
   [[nodiscard]] ClientResult<std::uint64_t> sendAim(
