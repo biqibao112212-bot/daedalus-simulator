@@ -18,6 +18,13 @@ pub const fn is_locked() -> bool {
     cfg!(feature = "distribution-release")
 }
 
+// The contest binary is deliberately a narrower distribution profile.  Keep
+// this separate from `is_locked()`: ordinary internal releases retain their
+// historic scene set and only the dedicated contest build has this restriction.
+pub const fn is_contest_release() -> bool {
+    cfg!(feature = "contest-release")
+}
+
 pub fn prepare_environment() {
     if !is_locked() {
         return;

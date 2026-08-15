@@ -51,7 +51,7 @@ command -v python3 >/dev/null || die "python3 is required"
 
 BINARY="$ROOT/target/$TARGET/release/daedalus"
 if [[ "$BUILD" == 1 ]]; then
-  cargo build --locked --release --features talos,distribution-release --target "$TARGET"
+  cargo build --locked --release --features talos,distribution-release,contest-release --target "$TARGET"
 fi
 [[ -x "$BINARY" ]] || die "Release simulator binary is missing or not executable: $BINARY"
 if pgrep -x daedalus >/dev/null; then
@@ -116,7 +116,7 @@ evidence = {
     "version": (root / "VERSION").read_text(encoding="utf-8").strip(),
     "profile": "release",
     "rust_target": target,
-    "features": ["talos", "distribution-release"],
+    "features": ["talos", "distribution-release", "contest-release"],
     "corner_labels_enabled": False,
     "measurement_mode": mode,
     "binary_sha256": hashlib.sha256(binary.read_bytes()).hexdigest(),

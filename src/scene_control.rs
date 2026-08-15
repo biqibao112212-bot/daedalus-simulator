@@ -12,7 +12,9 @@ use crate::robomaster::prelude::{
     ManualPowerRuneControlState, PowerRune, PowerRuneMechanism, RUNE_TARGET_COUNT, RuneMode,
     apply_scene_control_power_rune_state,
 };
-use crate::setup::{AutoAimSceneMode, AutoAimSceneState, ShootingRangeTarget};
+use crate::setup::{
+    AutoAimSceneMode, AutoAimSceneState, ShootingRangeTarget, scene_is_available_in_build,
+};
 use crate::systems::{RangeTargetMotionMode, ShootingRangeControlState};
 
 const PROTOCOL: &str = "daedalus.scene-control/2";
@@ -329,6 +331,17 @@ pub fn receive_scene_control_commands(
                         continue;
                     }
                 };
+                if !scene_is_available_in_build(mode) {
+                    send_status(
+                        &transport,
+                        datagram.peer,
+                        &request,
+                        ResponseStatus::Unsupported,
+                        runtime.frame_seq,
+                        "contest release supports only energy and shooting_range",
+                    );
+                    continue;
+                }
                 if scene_state.current == mode && !scene_state.is_switch_pending() {
                     send_ok(
                         &transport,
@@ -429,6 +442,19 @@ pub fn receive_scene_control_commands(
             }
             "set_rune_state" => match parse_rune_state(&request.args) {
                 Ok((mode, pending, activated)) => {
+                    if crate::distribution::is_contest_release()
+                        && matches!(mode, Some(RuneMode::Small))
+                    {
+                        send_status(
+                            &transport,
+                            datagram.peer,
+                            &request,
+                            ResponseStatus::Unsupported,
+                            runtime.frame_seq,
+                            "contest release supports only the large energy mechanism",
+                        );
+                        continue;
+                    }
                     if apply_scene_control_power_rune_state(
                         mode,
                         &pending,

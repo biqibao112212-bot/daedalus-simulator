@@ -19,6 +19,7 @@ ros2 = ["dep:r2r"]
 talos = ["dep:talos-ipc"]
 ffmpeg = ["dep:ffmpeg-next"]
 distribution-release = []
+contest-release = ["distribution-release"]
 default = ["talos"]
 
 [dependencies]

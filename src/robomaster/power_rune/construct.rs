@@ -177,7 +177,11 @@ fn setup_power_rune(
     let red_clockwise = rand::thread_rng().gen_bool(0.5);
 
     for (index, face_entity) in faces {
-        let mode = RuneMode::Small;
+        let mode = if crate::distribution::is_contest_release() {
+            RuneMode::Large
+        } else {
+            RuneMode::Small
+        };
 
         let deactivated = name_map.remove(format!("FACE_{}_R_UNPOWERED", index).as_str());
         let activated = name_map.remove(format!("FACE_{}_R_POWERED", index).as_str());

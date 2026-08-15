@@ -1,7 +1,7 @@
 {
   "product": "daedalus-simulator",
-  "version": "1.3.1",
-  "sdk_version": "1.3.1",
+  "version": "1.3.1-contest",
+  "sdk_version": "1.3.1-contest",
   "shm_version": 7,
   "sdk_abi_revision": 2,
   "image": {
@@ -36,6 +36,11 @@
   "scene_control_port": 5603,
   "distribution_profile": "internal-lab",
   "distribution_locked": true,
+  "contest_profile": {
+    "linux_only": true,
+    "supported_scenes": ["shooting_range", "large_energy"],
+    "unsupported_scenes": ["armor", "outpost", "small_energy"]
+  },
   "fixed_calibration": "camera-calibration.json",
   "fixed_calibration_revision": 2,
   "runtime_capabilities": "daedalus-runtime-capabilities-v1.json",

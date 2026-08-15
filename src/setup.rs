@@ -121,6 +121,14 @@ impl AutoAimSceneMode {
     }
 }
 
+pub const fn scene_is_available_in_build(mode: AutoAimSceneMode) -> bool {
+    !crate::distribution::is_contest_release()
+        || matches!(
+            mode,
+            AutoAimSceneMode::Energy | AutoAimSceneMode::ShootingRange
+        )
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum AimCaptureTargetKind {
     ArmorVehicle,
@@ -168,8 +176,12 @@ impl AutoAimSceneState {
         }
     }
 
-    pub fn request(&mut self, mode: AutoAimSceneMode) {
+    pub fn request(&mut self, mode: AutoAimSceneMode) -> bool {
+        if !scene_is_available_in_build(mode) {
+            return false;
+        }
         self.requested = mode;
+        true
     }
 
     pub fn force_rebuild_current(&mut self) {
@@ -205,10 +217,17 @@ fn scene_mode_from_str(mode: &str) -> AutoAimSceneMode {
 }
 
 pub fn initial_auto_aim_scene_mode(config: &SimulationConfig) -> AutoAimSceneMode {
-    scene_mode_from_env("DAEDALUS_SCENE_MODE")
+    let requested = scene_mode_from_env("DAEDALUS_SCENE_MODE")
         .or_else(|| scene_mode_from_env("DAEDALUS_AUTO_AIM_MODE"))
         .map(|mode| scene_mode_from_str(&mode))
-        .unwrap_or_else(|| scene_mode_from_str(&config.auto_aim.bridge_mode))
+        .unwrap_or_else(|| scene_mode_from_str(&config.auto_aim.bridge_mode));
+    if scene_is_available_in_build(requested) {
+        requested
+    } else {
+        // A contest launch always starts on a permitted map.  The client can
+        // then select either permitted map through Scene Control.
+        AutoAimSceneMode::ShootingRange
+    }
 }
 
 fn scene_mode_from_env(key: &str) -> Option<String> {
@@ -1628,5 +1647,20 @@ mod tests {
         assert!(target_axes.is_rotation_x_locked());
         assert!(!target_axes.is_rotation_y_locked());
         assert!(target_axes.is_rotation_z_locked());
+    }
+
+    #[cfg(feature = "contest-release")]
+    #[test]
+    fn contest_build_exposes_only_range_and_energy() {
+        assert!(scene_is_available_in_build(AutoAimSceneMode::ShootingRange));
+        assert!(scene_is_available_in_build(AutoAimSceneMode::Energy));
+        assert!(!scene_is_available_in_build(AutoAimSceneMode::Armor));
+        assert!(!scene_is_available_in_build(AutoAimSceneMode::Outpost));
+
+        let mut state = AutoAimSceneState::new(AutoAimSceneMode::ShootingRange);
+        assert!(!state.request(AutoAimSceneMode::Armor));
+        assert_eq!(state.requested, AutoAimSceneMode::ShootingRange);
+        assert!(state.request(AutoAimSceneMode::Energy));
+        assert_eq!(state.requested, AutoAimSceneMode::Energy);
     }
 }

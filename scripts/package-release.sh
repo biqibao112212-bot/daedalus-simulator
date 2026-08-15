@@ -94,30 +94,20 @@ cp -- "$BINARY" "$TARGET_DIR/bin/daedalus"
 cp -a -- "$ROOT/assets" "$TARGET_DIR/assets"
 cp -- "$ROOT/release/release.json" "$ROOT/release/platform-matrix.json" \
   "$ROOT/release/camera-calibration.json" "$TARGET_DIR/"
-cp -- "$ROOT/release/start-simulator.sh" "$TARGET_DIR/start-simulator.sh"
+cp -- "$ROOT/release/start-simulator.sh" "$ROOT/release/daedalus-contest.sh" "$TARGET_DIR/"
 cp -- "$PERFORMANCE_EVIDENCE" "$TARGET_DIR/docs/performance-release.json"
-cp -- "$ROOT/release/README_LINUX_ZH.md" "$TARGET_DIR/README_ZH.md"
+cp -- "$ROOT/release/CONTEST_GUIDE_ZH.md" "$TARGET_DIR/README_ZH.md"
 cp -- "$ROOT/release/install-linux.sh" "$TARGET_DIR/install-linux.sh"
-chmod +x "$TARGET_DIR/start-simulator.sh" "$TARGET_DIR/install-linux.sh"
+chmod +x "$TARGET_DIR/start-simulator.sh" "$TARGET_DIR/daedalus-contest.sh" "$TARGET_DIR/install-linux.sh"
 cp -- "$ROOT/LICENSE" "$TARGET_DIR/LICENSE.txt"
 cp -- "$ROOT/release/INTERNAL_LAB_USE_NOTICE.md" "$TARGET_DIR/INTERNAL_LAB_USE_NOTICE.md"
-cp -- "$ROOT/SIMULATOR_PERFORMANCE.md" "$ROOT/SIMULATOR_TROUBLESHOOTING.md" \
-  "$ROOT/RELEASE.md" "$ROOT/release/PLATFORM_SUPPORT.md" "$ROOT/release/LEGAL_RELEASE_GATE.md" \
-  "$ROOT/docs/SIMULATOR_USER_GUIDE_ZH.md" "$ROOT/docs/SDK_API_REFERENCE_ZH.md" \
-  "$ROOT/docs/SCENARIO_CONTROL.md" \
-  "$ROOT/docs/OFFLINE_EXACT_CORNER_EXPORT.md" \
-  "$ROOT/docs/OFFLINE_EXACT_CORNER_EXPORT_ZH.md" \
-  "$ROOT/docs/RELEASE_PROGRESS_ZH.md" \
-  "$ROOT/benchmarks/1.1.0/performance-short-2026-07-26.json" \
-  "$ROOT/benchmarks/1.1.1/performance-autodl-rtx3090-2026-07-30.json" \
-  "$ROOT/sdk/README.md" "$TARGET_DIR/docs/"
-cp -- "$ROOT/scripts/capture-corner-label-experiment.py" \
-  "$ROOT/scripts/verify-corner-label-export.py" "$TARGET_DIR/docs/"
-cp -- "$ROOT/sdk/schemas/offline-exact-corners-v1.schema.json" \
-  "$ROOT/sdk/schemas/offline-frame-capture-v1.schema.json" "$TARGET_DIR/schemas/"
+cp -- "$ROOT/release/CONTEST_GUIDE_ZH.md" "$ROOT/sdk/README.md" \
+  "$ROOT/SIMULATOR_TROUBLESHOOTING.md" "$TARGET_DIR/docs/"
 cp -- "$ROOT/sdk/contract.json" "$TARGET_DIR/docs/sdk-contract.json"
 cp -a -- "$SDK_INSTALL/." "$TARGET_DIR/sdk/"
-chmod +x "$TARGET_DIR/start-simulator.sh" "$TARGET_DIR/bin/daedalus"
+chmod +x "$TARGET_DIR/start-simulator.sh" "$TARGET_DIR/daedalus-contest.sh" \
+  "$TARGET_DIR/install-linux.sh" "$TARGET_DIR/bin/daedalus" \
+  "$TARGET_DIR/sdk/bin/daedalus_contest_client"
 
 if find "$TARGET_DIR" -type f -printf '%f\n' | grep -Eiq '(cuda|cudnn|tensorrt|onnx|\.engine$|\.plan$|\.trt$|\.pt$|\.pth$|\.safetensors$|\.ckpt$|\.tflite$|\.pb$|\.mlmodel$|checkpoint)'; then
   die "simulator package contains forbidden inference payloads"
@@ -170,6 +160,8 @@ executables = {
     pathlib.PurePosixPath("bin/daedalus"),
     pathlib.PurePosixPath("install-linux.sh"),
     pathlib.PurePosixPath("start-simulator.sh"),
+    pathlib.PurePosixPath("daedalus-contest.sh"),
+    pathlib.PurePosixPath("sdk/bin/daedalus_contest_client"),
 }
 
 def normalized(member: tarfile.TarInfo) -> tarfile.TarInfo:

@@ -413,28 +413,30 @@ pub fn spawn_scene_mode_button_panel(mut commands: Commands) {
                     ..default()
                 },))
                 .with_children(|row| {
-                    row.spawn((
-                        Button,
-                        SceneModeUiButton {
-                            mode: AutoAimSceneMode::Armor,
-                        },
-                        BackgroundColor(scene_button_normal_color()),
-                        Node {
-                            width: Val::Px(140.0),
-                            height: Val::Px(30.0),
-                            justify_content: JustifyContent::Center,
-                            align_items: AlignItems::Center,
-                            ..default()
-                        },
-                    ))
-                    .with_child((
-                        Text::new(AutoAimSceneMode::Armor.label()),
-                        TextFont {
-                            font_size: FontSize::Px(13.0),
-                            ..default()
-                        },
-                        TextColor(Color::WHITE),
-                    ));
+                    if crate::setup::scene_is_available_in_build(AutoAimSceneMode::Armor) {
+                        row.spawn((
+                            Button,
+                            SceneModeUiButton {
+                                mode: AutoAimSceneMode::Armor,
+                            },
+                            BackgroundColor(scene_button_normal_color()),
+                            Node {
+                                width: Val::Px(140.0),
+                                height: Val::Px(30.0),
+                                justify_content: JustifyContent::Center,
+                                align_items: AlignItems::Center,
+                                ..default()
+                            },
+                        ))
+                        .with_child((
+                            Text::new(AutoAimSceneMode::Armor.label()),
+                            TextFont {
+                                font_size: FontSize::Px(13.0),
+                                ..default()
+                            },
+                            TextColor(Color::WHITE),
+                        ));
+                    }
                     row.spawn((
                         Button,
                         SceneModeUiButton {
@@ -562,7 +564,9 @@ pub fn scene_mode_keyboard_shortcuts(
     keyboard: Res<ButtonInput<KeyCode>>,
     mut scene_state: ResMut<AutoAimSceneState>,
 ) {
-    if keyboard.just_pressed(KeyCode::F7) {
+    if keyboard.just_pressed(KeyCode::F7)
+        && crate::setup::scene_is_available_in_build(AutoAimSceneMode::Armor)
+    {
         scene_state.request(AutoAimSceneMode::Armor);
         info!("Scene switch requested: Normal Map.");
     }
@@ -594,7 +598,9 @@ pub fn scene_mode_control_panel(
         .show(ctx, |ui| {
             ui.set_min_width(440.0);
             ui.horizontal(|ui| {
-                mode_button(ui, &mut requested, AutoAimSceneMode::Armor);
+                if crate::setup::scene_is_available_in_build(AutoAimSceneMode::Armor) {
+                    mode_button(ui, &mut requested, AutoAimSceneMode::Armor);
+                }
                 mode_button(ui, &mut requested, AutoAimSceneMode::Energy);
                 mode_button(ui, &mut requested, AutoAimSceneMode::ShootingRange);
             });

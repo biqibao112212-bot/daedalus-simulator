@@ -28,7 +28,7 @@ if evidence.get('schema') != 'daedalus-performance-v1': fail('unsupported eviden
 if evidence.get('profile') != 'release': fail('evidence was not collected from a Release profile')
 if evidence.get('rust_target') != args.rust_target:
     fail(f"evidence Rust target {evidence.get('rust_target')!r} does not match required {args.rust_target!r}")
-if set(evidence.get('features') or []) != {'talos', 'distribution-release'}: fail('evidence must use talos + distribution-release features')
+if set(evidence.get('features') or []) != {'talos', 'distribution-release', 'contest-release'}: fail('evidence must use talos + distribution-release + contest-release features')
 if evidence.get('corner_labels_enabled') is not False: fail('baseline Release performance evidence must keep corner-label export disabled')
 if evidence.get('version') != args.version: fail(f"evidence version {evidence.get('version')!r} does not match VERSION {args.version!r}")
 if evidence.get('source_dirty') is not False: fail('formal Release evidence must be collected from a clean committed checkout')

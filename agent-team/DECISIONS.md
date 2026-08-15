@@ -218,3 +218,9 @@
     must not remain in the canonical checkout. Git provides historical source;
     formal Release packages and protected runtime evidence remain immutable and
     are explicitly outside this cache rule.
+41. `1.3.1-contest` is a separate Linux x86_64-only maintenance branch for an
+    internal laboratory algorithm competition. Its distribution build enables
+    `contest-release` in addition to `distribution-release`, rejects Normal
+    Map/Outpost/small energy runtime requests, defaults to an allowed map and
+    exposes C++17 `ContestClient` plus a participant launcher. The stable
+    transport ABI remains TCP v1, SHM v7, ABI r2 and Scene Control v2.

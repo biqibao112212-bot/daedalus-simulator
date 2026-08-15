@@ -10,6 +10,7 @@ include(CTest)
 find_package(Threads REQUIRED)
 
 add_library(DaedalusSimSdk STATIC
+  src/contest_client.cpp
   src/scene_control_client.cpp
   src/runtime_capabilities.cpp
   src/socket_platform.cpp
@@ -98,6 +99,16 @@ if(BUILD_TESTING)
     COMMAND daedalus_sim_sdk_runtime_capabilities_test
   )
 
+  add_executable(daedalus_sim_sdk_contest_client_test
+    tests/contest_client_test.cpp
+  )
+  target_link_libraries(daedalus_sim_sdk_contest_client_test PRIVATE
+    DaedalusSimSdk::DaedalusSimSdk
+  )
+  add_test(NAME daedalus_sim_sdk_contest_client_test
+    COMMAND daedalus_sim_sdk_contest_client_test
+  )
+
   # Manual runtime acceptance probe. It is built with the SDK test tree but is
   # intentionally not a CTest because it requires a running distribution
   # simulator and the exact TALOS_IPC_DIR from that run.
@@ -109,11 +120,17 @@ if(BUILD_TESTING)
   )
 endif()
 
+add_executable(daedalus_contest_client tools/contest_client_cli.cpp)
+target_link_libraries(daedalus_contest_client PRIVATE
+  DaedalusSimSdk::DaedalusSimSdk
+)
+
 install(TARGETS DaedalusSimSdk EXPORT DaedalusSimSdkTargets
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
 )
+install(TARGETS daedalus_contest_client RUNTIME DESTINATION bin)
 install(DIRECTORY include/ DESTINATION include)
 install(EXPORT DaedalusSimSdkTargets
   FILE DaedalusSimSdkTargets.cmake

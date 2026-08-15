@@ -228,7 +228,11 @@ fn manual_power_rune_controls(
     mut runes: Query<(&mut PowerRune, &mut PowerRuneMechanism)>,
 ) {
     let requested_mode = if keyboard.just_pressed(KeyCode::F10) {
-        Some(Some(RuneMode::Small))
+        Some(Some(if crate::distribution::is_contest_release() {
+            RuneMode::Large
+        } else {
+            RuneMode::Small
+        }))
     } else if keyboard.just_pressed(KeyCode::F11) {
         Some(Some(RuneMode::Large))
     } else if keyboard.just_pressed(KeyCode::F12) {

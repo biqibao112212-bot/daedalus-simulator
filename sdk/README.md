@@ -1,11 +1,16 @@
-# Daedalus Simulator SDK 1.3.1
+# Daedalus Contest SDK 1.3.1-contest（Linux x86_64）
 
 实验室发行版仅交付模拟器二进制；SDK 是消费者使用模拟器的受支持接口。SDK 不包含、
 管理或加载任何自瞄推理模型。
 
+该比赛版本运行时只支持靶场与大能量机关。首选入口是 C++17
+`ContestClient`；它将图像、按帧同步云台姿态、云台控制和受限场景切换组合成一个对象。
+普通场、前哨场及小能量机关由发行二进制拒绝。
+
 ## 受支持的公开能力
 
-- `SceneControlClient`：切换装甲板、能量机关、前哨站和测试场景；控制小符/大符状态。
+- `ContestClient`：比赛首选单入口；切换靶场/大能量机关、读取曝光同步图像并发送云台命令。
+- `SceneControlClient`：底层受限场景控制；竞赛构建只接受靶场、能量机关和大符状态。
 - `TcpImageClient`：读取默认 RGBA32、1440×1080、latest-only 相机图像；以帧头格式为准。
 - `TalosMetadataMapping` / `TalosMetadataReader`：只读固定相机内参和实际云台状态。
 - `UdpGimbalClient`：发送云台绝对角命令；每条命令自动分配 `command_id`。
@@ -19,7 +24,7 @@
 
 ## 固定契约
 
-- SDK：`1.3.1`
+- SDK：`1.3.1-contest`（CMake ABI 兼容版本 `1.3.1`）
 - Talos SHM：`v7`，ABI revision `2`
 - 默认 TCP 图像：RGBA32 `1440×1080`；旧 SHM 图像槽：RGB24
 - TCP 图像：`127.0.0.1:5602`

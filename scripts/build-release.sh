@@ -10,7 +10,7 @@ SDK_INSTALL="$BUILD_ROOT/sdk-install"
 BUILD_STAMP="$BUILD_ROOT/build-stamp.env"
 BINARY="$ROOT/target/$TARGET/release/daedalus"
 SDK_CONFIG="$SDK_INSTALL/lib/cmake/DaedalusSimSdk/DaedalusSimSdkConfig.cmake"
-FEATURES="talos,distribution-release"
+FEATURES="talos,distribution-release,contest-release"
 
 die() { echo "build-release.sh: $*" >&2; exit 1; }
 

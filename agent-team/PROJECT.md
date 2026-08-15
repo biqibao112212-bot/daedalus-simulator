@@ -2,11 +2,22 @@
 
 - Protocol: `agent-team-fixed/v2`
 - Repository: `D:\仿真\repos\daedalus-simulator`
-- Active branch: `release/simulator-multiplatform-x86`
+- Active branch: `release/contest-linux-1.3.1`
 - Frozen implementation baseline at task start: `48b9437c389c2911e0a135cf1d727e36a68317ab`
 - Frozen formal release: simulator `1.2.1`, SDK `1.2.0`, SHM v7 / ABI revision 2
 - Active Linux release target: simulator/SDK `1.3.1`, adding collector-owned
   offline full-frame export without changing the real-time SDK ABI
+
+## Contest release target
+
+- `1.3.1-contest` is a separately maintained Linux x86_64-only internal
+  laboratory competition line derived from the accepted Linux `1.3.1` source.
+- Its runtime exposes only Shooting Range and the large Energy Mechanism.
+  Normal Map, Outpost and small Energy Mechanism are rejected by the release
+  binary rather than merely hidden by its launcher.
+- The supported participant API is C++17 `ContestClient`, an SDK facade over
+  the existing image, exposure-synchronised gimbal, UDP command and Scene
+  Control contracts. It does not add target truth or algorithm interfaces.
 
 ## Ownership and boundaries
 
@@ -69,7 +80,7 @@ predictor input.
 
 ```text
 cargo fmt --all -- --check
-cargo test --locked --release --target x86_64-unknown-linux-gnu --features talos,distribution-release
+cargo test --locked --release --target x86_64-unknown-linux-gnu --features talos,distribution-release,contest-release
 cargo clippy --locked --release --target x86_64-unknown-linux-gnu --features talos,distribution-release --all-targets -- -D warnings
 scripts/check-compatibility.ps1
 scripts/build-release.ps1 -Platform windows -Arch x86_64
