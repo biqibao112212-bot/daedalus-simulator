@@ -262,3 +262,9 @@
     table. Each response contains run identity/activity, activated-arm count,
     average ring and the latest impact; it never permits callers to forge
     score, target state or truth.
+47. The contest client exposes large-rune score in the existing bottom-left
+    projectile-statistics HUD instead of a separate panel: it follows the
+    `pct` field and reports Red/Blue valid-arm count, average ring and last
+    ring. To preserve the concise client control surface, the HUD segment is
+    present only on the Energy map while the large rune is selected; SDK and
+    launcher queries remain available for all read-only score inspection.

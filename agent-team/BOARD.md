@@ -2,6 +2,12 @@
 
 ## Current status
 
+- In progress: add the contest big-rune score to the existing bottom-left
+  projectile-statistics line, directly after `pct`. It appears only in Energy
+  while the large rune is selected, showing red/blue activated-arm count,
+  average ring and latest ring. The focused HUD test passed; a clean Release
+  rebuild and installed visible smoke are required before replacing the package.
+
 - Contest `1.3.1-contest` now provides a read-only big-rune ring score through
   C++ `ContestClient`, Scene Control v2 and `daedalus-contest score red|blue`.
   It records a valid active-leaf collision point in the target-local plane and

@@ -7,7 +7,9 @@ use crate::components::{SlapperInfantry, SubscribeAutoAim};
 use crate::config::SimulationConfig;
 use crate::distribution;
 use crate::integrated_auto_aim::IntegratedAutoAimBridge;
-use crate::robomaster::prelude::{Armor, ArmorStickerSelection};
+use crate::robomaster::prelude::{
+    Armor, ArmorStickerSelection, BigRuneScores, PowerRune, RuneMode, Team,
+};
 use crate::setup::{AutoAimSceneMode, AutoAimSceneState};
 use crate::statistic::ProjectileStatistics;
 use crate::systems::FrequencyMetrics;
@@ -20,8 +22,18 @@ fn create_help_text(
     bridge_status: &str,
     stats: &ProjectileStatistics,
     scene: AutoAimSceneMode,
+    big_rune_scores: &BigRuneScores,
+    large_rune_active: bool,
 ) -> Text {
-    help_text_content(auto_aim, bridge_status, stats, scene).into()
+    help_text_content(
+        auto_aim,
+        bridge_status,
+        stats,
+        scene,
+        big_rune_scores,
+        large_rune_active,
+    )
+    .into()
 }
 
 fn help_text_content(
@@ -29,6 +41,8 @@ fn help_text_content(
     bridge_status: &str,
     stats: &ProjectileStatistics,
     scene: AutoAimSceneMode,
+    big_rune_scores: &BigRuneScores,
+    large_rune_active: bool,
 ) -> String {
     let controls = if distribution::is_contest_release() {
         if scene == AutoAimSceneMode::Energy {
@@ -39,8 +53,24 @@ fn help_text_content(
     } else {
         "Controls: F2-Screenshot F3-Camera F5-Auto Aim F6-Range Panel F7-Normal F8-Range F9-Energy F10-Small Rune F11-Large Rune F12-Close Rune | Space-Fire | WASD-Move Arrows/RMB-Gimbal"
     };
+    let big_rune_score = if distribution::is_contest_release()
+        && scene == AutoAimSceneMode::Energy
+        && large_rune_active
+    {
+        format!(
+            " | big-rune R arms={} avg={:.1} last={} B arms={} avg={:.1} last={}",
+            big_rune_scores.for_team(Team::Red).activated_arms(),
+            big_rune_scores.for_team(Team::Red).average_ring(),
+            big_rune_scores.for_team(Team::Red).last_ring(),
+            big_rune_scores.for_team(Team::Blue).activated_arms(),
+            big_rune_scores.for_team(Team::Blue).average_ring(),
+            big_rune_scores.for_team(Team::Blue).last_ring(),
+        )
+    } else {
+        String::new()
+    };
     format!(
-        "auto-aim={} bridge={} total={} accurate={} pct={:.2}\n{controls}",
+        "auto-aim={} bridge={} total={} accurate={} pct={:.2}{big_rune_score}\n{controls}",
         if auto_aim { "ON " } else { "OFF" },
         bridge_status,
         stats.launch_count,
@@ -68,6 +98,8 @@ pub fn update_help_text(
     bridge: Option<Res<IntegratedAutoAimBridge>>,
     stats: Res<ProjectileStatistics>,
     scene_state: Res<AutoAimSceneState>,
+    big_rune_scores: Res<BigRuneScores>,
+    runes: Query<&PowerRune>,
 ) {
     let bridge_status = bridge
         .as_deref()
@@ -79,6 +111,9 @@ pub fn update_help_text(
             bridge_status,
             &stats,
             scene_state.current,
+            &big_rune_scores,
+            scene_state.current == AutoAimSceneMode::Energy
+                && runes.iter().any(|rune| rune.mode() == RuneMode::Large),
         );
     }
 }
@@ -299,6 +334,8 @@ mod tests {
             "N/A",
             &ProjectileStatistics::default(),
             AutoAimSceneMode::ShootingRange,
+            &BigRuneScores::default(),
+            false,
         );
 
         assert!(text.contains("WASD Move"));
@@ -320,11 +357,14 @@ mod tests {
             "N/A",
             &ProjectileStatistics::default(),
             AutoAimSceneMode::Energy,
+            &BigRuneScores::default(),
+            true,
         );
 
         assert!(text.contains("Left Shift Boost"));
         assert!(text.contains("Q Small Rune"));
         assert!(text.contains("E Large Rune"));
+        assert!(text.contains("big-rune R arms=0 avg=0.0 last=0"));
         assert!(!text.contains("Q/E Chassis Turn"));
     }
 }
