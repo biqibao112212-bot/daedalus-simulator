@@ -3,12 +3,15 @@
 ## Current status
 
 - Final `1.3.1-contest` Linux publish package is ready from source
-  `307fd18`. It includes the refreshed Chinese SDK/readme guidance for
+  `8958341`. It includes the refreshed Chinese SDK/readme guidance for
   large-rune score fields and the in-window statistics HUD. The regenerated
   clean Release build and SDK CTest passed, the final performance evidence is
-  `323.756/199.234 Hz` main/capture against `171.190/163.228 Hz` minima, the
-  manifest rehash passed `43/43`, and the installed Vulkan smoke returned a
-  `1440x1080` TCP frame plus the red score query on RTX 4060.
+  `343.848/198.912 Hz` main/capture against `171.190/163.228 Hz` minima, and
+  the manifest rehash passed `43/43`. The hotfix adds a synchronous invisible
+  support collider to the energy spawn apron before `GROUND_DENSE` finishes
+  importing; package-runtime Vulkan smoke held the switched Energy chassis at
+  the same ROS position `(5.588985, 3.984273, 0.035651) m` across 4 seconds,
+  while returning a `1440x1080` TCP frame and the red score query on RTX 4060.
 
 - The contest big-rune score now appears in the existing bottom-left
   projectile-statistics line, directly after `pct`. It is shown only in Energy
