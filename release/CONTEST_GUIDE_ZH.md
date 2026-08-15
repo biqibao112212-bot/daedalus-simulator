@@ -10,7 +10,7 @@
 
 ```bash
 ./install-linux.sh
-daedalus-contest start --visible --scene shooting-range
+daedalus-contest start --scene shooting-range
 daedalus-contest status
 ```
 
@@ -23,8 +23,10 @@ daedalus-contest aim 0 90 --fire
 daedalus-contest stop
 ```
 
-没有桌面环境时省略 `--visible`，即可用高性能无窗口模式运行。若要并行做本机实验，
-为每个实例指定不同的运行目录和端口隔离环境；正式比赛同一用户只启动一个实例。
+比赛版本默认以可视渲染模式启动，参赛者直接执行 `daedalus-contest start` 即可看到
+窗口。无桌面环境或性能压测时，显式使用 `daedalus-contest start --performance` 启动
+无窗口高性能模式。若要并行做本机实验，为每个实例指定不同的运行目录和端口隔离环境；
+正式比赛同一用户只启动一个实例。
 
 ## C++ SDK
 

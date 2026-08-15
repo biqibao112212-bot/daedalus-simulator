@@ -11,15 +11,16 @@ usage() {
 Usage: daedalus-contest [--runtime-dir PATH] <command> [options]
 
 Commands:
-  start [--visible] [--scene shooting-range|large-energy]
+  start [--performance] [--scene shooting-range|large-energy]
   stop | status | doctor
   scene shooting-range|large-energy
   frame
   aim YAW_DEG PITCH_DEG [--fire]
 
-`start` launches one local contest simulator.  All other commands talk to the
-same instance through its runtime directory.  The only selectable maps are
-Shooting Range and the large Energy Mechanism.
+`start` launches a visible local contest simulator by default. Use
+`--performance` only for the headless high-performance mode. All other
+commands talk to the same instance through its runtime directory. The only
+selectable maps are Shooting Range and the large Energy Mechanism.
 EOF
 }
 
@@ -53,11 +54,12 @@ client() { "$CLIENT" --ipc-dir "$RUNTIME_DIR" "$@"; }
 
 case "$COMMAND" in
   start)
-    VISIBLE=0
+    VISIBLE=1
     SCENE="shooting-range"
     while [[ $# -gt 0 ]]; do
       case "$1" in
         --visible) VISIBLE=1; shift ;;
+        --performance) VISIBLE=0; shift ;;
         --scene)
           [[ $# -ge 2 ]] || die "--scene requires a value"
           SCENE="$2"; shift 2 ;;
