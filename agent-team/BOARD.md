@@ -4,12 +4,16 @@
 
 - Contest branch `release/contest-linux-1.3.1` is implementing the Linux-only
   `1.3.1-contest` package. Its C++ client, constrained scene control and
-  participant launcher passed clean Release Rust `197/197` and SDK CTest
-  `8/8`. Its high-performance Vulkan gate measured `365.428 Hz` main update
-  and `198.689 Hz` capture submit against the 171.190/163.228 Hz acceptance
+  participant launcher passed clean Release Rust `199/199` and SDK CTest
+  `8/8`. Its high-performance Vulkan gate measured `306.822 Hz` main update
+  and `197.885 Hz` capture submit against the 171.190/163.228 Hz acceptance
   minima. The final Linux package is at
   `/home/potato/Projects/仿真/releases/daedalus-simulator/1.3.1-contest/linux-x86_64`;
-  its manifest rehash passed `43/43` and source is `2c5df16`.
+  its manifest must be regenerated from source `579dc34` before handoff.
+- Contest runtime now defaults to direct participant vehicle control and no
+  longer displays unsupported F-key controls: WASD/Shift movement, Q/E chassis
+  yaw, arrows/right mouse gimbal, and Space firing are live; automatic aim is
+  off at startup so manual gimbal input owns the controlled vehicle.
 - Package-runtime acceptance on Ubuntu/RTX 4060 passed: `daedalus-contest`
   started visible Shooting Range, created an actual 2560x1440 `daedalus` X11
   window, reported `1.3.1-contest` / Vulkan / RTX 4060, returned RGBA32
