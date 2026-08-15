@@ -64,13 +64,11 @@ ClientResult<SceneControlResponse> ContestClient::selectScene(
       scene == ContestScene::ShootingRange ? SceneMode::ShootingRange
                                            : SceneMode::Energy);
   if (!selected) return selected;
-  if (scene != ContestScene::LargeEnergy) return selected;
-
-  RuneState large_rune;
-  large_rune.mode = RuneMode::Large;
-  const auto rune = scene_client_.setRuneState(large_rune);
-  if (!rune) return rune;
-  return rune;
+  // Selecting the Energy map creates a live large-rune cycle in the simulator.
+  // Do not send an empty RuneState here: explicit scene-control target lists
+  // are frozen inspection snapshots, so they suppress hit-driven rounds and
+  // the mandatory timeout reset.
+  return selected;
 }
 
 ClientResult<ContestFrame> ContestClient::nextFrame(

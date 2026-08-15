@@ -11,9 +11,10 @@
   `/home/potato/Projects/仿真/releases/daedalus-simulator/1.3.1-contest/linux-x86_64`;
   its manifest rehash passed `43/43`, and its package source is `5127965`.
 - Contest runtime now defaults to direct participant vehicle control and no
-  longer displays unsupported F-key controls: WASD/Shift movement, Q/E chassis
-  yaw, arrows/right mouse gimbal, and Space firing are live; automatic aim is
-  off at startup so manual gimbal input owns the controlled vehicle.
+  longer displays unsupported F-key controls: WASD/left Shift movement,
+  arrows/right mouse gimbal, and Space firing are live; automatic aim is off
+  at startup so manual gimbal input owns the controlled vehicle. Q/E turns the
+  chassis in Shooting Range and changes large-rune direction in Energy.
 - Package-runtime acceptance passed on Ubuntu/RTX 4060: the default visible
   launcher opened an actual 2560x1440 X11 Vulkan window; the installed C++ SDK
   read a 1440x1080 TCP frame, sent aim/fire, and switched both allowed scenes.
@@ -28,11 +29,15 @@
   started visible Shooting Range, created an actual 2560x1440 `daedalus` X11
   window, reported `1.3.1-contest` / Vulkan / RTX 4060, returned RGBA32
   1440x1080 TCP frames, applied a C++ SDK gimbal command, then switched to
-  large Energy Mechanism and applied its large-rune state. The desktop lacks
+  large Energy Mechanism. The desktop lacks
   the screenshot tools required for a PNG capture, so the saved proof is the
   command/runtime evidence rather than a screenshot asset.
 - `daedalus-contest start` defaults to visible Vulkan rendering for the
   competition. `--performance` is the explicit opt-in headless mode.
+- Selecting large Energy through the C++ contest SDK now leaves the simulator
+  in its live large-rune state machine rather than applying a frozen empty
+  target snapshot: it starts with two active leaves, advances after hits and
+  recovers through its timeouts.
 
 - Linux x86_64 Release `1.3.1` is packaged at
   `/home/potato/Projects/仿真/releases/daedalus-simulator/1.3.1/linux-x86_64`.

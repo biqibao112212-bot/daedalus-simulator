@@ -8,19 +8,34 @@ use crate::config::SimulationConfig;
 use crate::distribution;
 use crate::integrated_auto_aim::IntegratedAutoAimBridge;
 use crate::robomaster::prelude::{Armor, ArmorStickerSelection};
+use crate::setup::{AutoAimSceneMode, AutoAimSceneState};
 use crate::statistic::ProjectileStatistics;
 use crate::systems::FrequencyMetrics;
 
 #[derive(Component)]
 pub(crate) struct HelpText;
 
-fn create_help_text(auto_aim: bool, bridge_status: &str, stats: &ProjectileStatistics) -> Text {
-    help_text_content(auto_aim, bridge_status, stats).into()
+fn create_help_text(
+    auto_aim: bool,
+    bridge_status: &str,
+    stats: &ProjectileStatistics,
+    scene: AutoAimSceneMode,
+) -> Text {
+    help_text_content(auto_aim, bridge_status, stats, scene).into()
 }
 
-fn help_text_content(auto_aim: bool, bridge_status: &str, stats: &ProjectileStatistics) -> String {
+fn help_text_content(
+    auto_aim: bool,
+    bridge_status: &str,
+    stats: &ProjectileStatistics,
+    scene: AutoAimSceneMode,
+) -> String {
     let controls = if distribution::is_contest_release() {
-        "Controls: WASD Move | Q/E Chassis Turn | Arrow Keys / Right Mouse Gimbal | Space Fire"
+        if scene == AutoAimSceneMode::Energy {
+            "Controls: WASD Move | Left Shift Boost | Q/E Rune CW/CCW | Arrow Keys / Right Mouse Gimbal | Space Fire"
+        } else {
+            "Controls: WASD Move | Left Shift Boost | Q/E Chassis Turn | Arrow Keys / Right Mouse Gimbal | Space Fire"
+        }
     } else {
         "Controls: F2-Screenshot F3-Camera F5-Auto Aim F6-Range Panel F7-Normal F8-Range F9-Energy F10-Small Rune F11-Large Rune F12-Close Rune | Space-Fire | WASD-Move Arrows/RMB-Gimbal"
     };
@@ -52,6 +67,7 @@ pub fn update_help_text(
     auto_aim: Res<SubscribeAutoAim>,
     bridge: Option<Res<IntegratedAutoAimBridge>>,
     stats: Res<ProjectileStatistics>,
+    scene_state: Res<AutoAimSceneState>,
 ) {
     let bridge_status = bridge
         .as_deref()
@@ -62,6 +78,7 @@ pub fn update_help_text(
             auto_aim.load(std::sync::atomic::Ordering::Acquire),
             bridge_status,
             &stats,
+            scene_state.current,
         );
     }
 }
@@ -277,9 +294,15 @@ mod tests {
     #[cfg(feature = "contest-release")]
     #[test]
     fn contest_help_shows_only_participant_vehicle_controls() {
-        let text = help_text_content(false, "N/A", &ProjectileStatistics::default());
+        let text = help_text_content(
+            false,
+            "N/A",
+            &ProjectileStatistics::default(),
+            AutoAimSceneMode::ShootingRange,
+        );
 
         assert!(text.contains("WASD Move"));
+        assert!(text.contains("Left Shift Boost"));
         assert!(text.contains("Q/E Chassis Turn"));
         assert!(text.contains("Right Mouse Gimbal"));
         assert!(text.contains("Space Fire"));
@@ -287,5 +310,20 @@ mod tests {
         assert!(!text.contains("F2-Screenshot"));
         assert!(!text.contains("F10-Small Rune"));
         assert!(!text.contains("F12-Close Rune"));
+    }
+
+    #[cfg(feature = "contest-release")]
+    #[test]
+    fn contest_energy_help_exposes_rune_direction_controls() {
+        let text = help_text_content(
+            false,
+            "N/A",
+            &ProjectileStatistics::default(),
+            AutoAimSceneMode::Energy,
+        );
+
+        assert!(text.contains("Left Shift Boost"));
+        assert!(text.contains("Q/E Rune CW/CCW"));
+        assert!(!text.contains("Q/E Chassis Turn"));
     }
 }

@@ -52,6 +52,10 @@ impl RotationController {
         self.clockwise
     }
 
+    pub fn set_clockwise(&mut self, clockwise: bool) {
+        self.clockwise = clockwise;
+    }
+
     pub fn rotate(&self, transform: &mut Transform, angle: f32) {
         transform.rotate_local_axis(self.direction, angle);
     }
@@ -112,6 +116,10 @@ impl PowerRuneRotation {
 
     pub fn controller(&self) -> &RotationController {
         &self.controller
+    }
+
+    pub fn set_clockwise(&mut self, clockwise: bool) {
+        self.controller.set_clockwise(clockwise);
     }
 
     pub fn begin_activation(&mut self, mode: RuneMode, rng: &mut impl Rng) {
@@ -176,6 +184,18 @@ mod tests {
     fn counter_clockwise_rotation_negates_speed() {
         let mut controller = RotationController::new(false);
 
+        assert_eq!(
+            controller.current_speed(RuneMode::Small, 0.25),
+            -ROTATION_BASELINE_SMALL
+        );
+    }
+
+    #[test]
+    fn direction_can_be_changed_while_the_rune_is_running() {
+        let mut controller = RotationController::new(true);
+        controller.set_clockwise(false);
+
+        assert!(!controller.is_clockwise());
         assert_eq!(
             controller.current_speed(RuneMode::Small, 0.25),
             -ROTATION_BASELINE_SMALL

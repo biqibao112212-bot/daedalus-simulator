@@ -8,6 +8,7 @@ use crate::components::{
 };
 use crate::config::SimulationConfig;
 use crate::robomaster::vehicle::movement::VehicleDynamic;
+use crate::setup::{AutoAimSceneMode, AutoAimSceneState};
 use avian3d::prelude::*;
 
 macro_rules! input {
@@ -78,6 +79,7 @@ pub fn vehicle_controls(
     time: Res<Time>,
     keyboard: Res<ButtonInput<KeyCode>>,
     config: Res<SimulationConfig>,
+    scene_state: Option<Res<AutoAimSceneState>>,
     infantry: Single<(Forces, &Mass, &mut VehicleDynamic), (With<Infantry>, With<Controlled>)>,
     gimbal: Single<
         (&GlobalTransform, &InfantryGimbal),
@@ -112,7 +114,17 @@ pub fn vehicle_controls(
         boost,
     );
 
-    let input = input!(keyboard, KeyQ, KeyE);
+    // In the contest Energy map Q/E selects the large-rune direction. Keep
+    // chassis yaw on Q/E in Shooting Range, where the rune is not present.
+    let input = if crate::distribution::is_contest_release()
+        && scene_state
+            .as_deref()
+            .is_some_and(|state| state.current == AutoAimSceneMode::Energy)
+    {
+        0.0
+    } else {
+        input!(keyboard, KeyQ, KeyE)
+    };
     let (mut chassis_transform, mut chassis_data) = chassis.into_inner();
     update_chassis_rotation(
         &mut chassis_transform,

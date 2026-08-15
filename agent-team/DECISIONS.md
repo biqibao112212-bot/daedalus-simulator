@@ -237,3 +237,12 @@
     The visible HUD is ASCII rather than Chinese because the shipped default
     font lacks CJK glyphs, and a missing-glyph prompt is worse than an English
     prompt in this internal competition client.
+44. In `1.3.1-contest`, Q/E is scene-specific to keep the participant control
+    surface small and meaningful: Shooting Range uses it for chassis yaw;
+    Energy uses Q for clockwise and E for counter-clockwise large-rune motion.
+    The Red/Blue mechanism faces receive opposite local directions, preserving
+    their paired physical rotation. The C++ `ContestClient` must only select
+    the Energy scene and never submit an empty explicit `RuneState`: that API
+    represents a frozen inspection snapshot and blocks hit-driven rounds. The
+    scene's native large-rune state machine instead starts two active leaves,
+    advances/reset on hit/timeout, and remains the competition default.

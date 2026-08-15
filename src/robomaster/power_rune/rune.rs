@@ -4,7 +4,9 @@ use crate::robomaster::power_rune::state::MechanismState;
 use crate::robomaster::power_rune::visual::PowerRuneVisuals;
 use crate::robomaster::prelude::Team;
 use crate::robomaster::visibility::StatefulAppearance;
+use crate::setup::{AutoAimSceneMode, AutoAimSceneState};
 use bevy::app::Update;
+use bevy::log::info;
 use bevy::prelude::{
     ButtonInput, Component, IntoScheduleConfigs, KeyCode, Query, Res, ResMut, Resource, Time,
     Transform,
@@ -247,6 +249,50 @@ fn manual_power_rune_controls(
     apply_power_rune_control(active_mode, &mut control, &mut runes);
 }
 
+fn rotation_is_clockwise_for_team(team: Team, requested_clockwise: bool) -> bool {
+    match team {
+        Team::Red => requested_clockwise,
+        Team::Blue => !requested_clockwise,
+    }
+}
+
+fn contest_power_rune_rotation_controls(
+    keyboard: Res<ButtonInput<KeyCode>>,
+    scene_state: Res<AutoAimSceneState>,
+    mut runes: Query<(&PowerRune, &mut PowerRuneRotation)>,
+) {
+    if !crate::distribution::is_contest_release() || scene_state.current != AutoAimSceneMode::Energy
+    {
+        return;
+    }
+
+    let requested_clockwise = if keyboard.just_pressed(KeyCode::KeyQ) {
+        Some(true)
+    } else if keyboard.just_pressed(KeyCode::KeyE) {
+        Some(false)
+    } else {
+        None
+    };
+    let Some(requested_clockwise) = requested_clockwise else {
+        return;
+    };
+
+    for (rune, mut rotation) in &mut runes {
+        rotation.set_clockwise(rotation_is_clockwise_for_team(
+            rune.team(),
+            requested_clockwise,
+        ));
+    }
+    info!(
+        "Contest large-rune rotation set to {}.",
+        if requested_clockwise {
+            "clockwise"
+        } else {
+            "counter-clockwise"
+        }
+    );
+}
+
 fn enforce_manual_power_rune_close(
     control: Res<ManualPowerRuneControlState>,
     mut runes: Query<(&PowerRune, &mut PowerRuneMechanism)>,
@@ -308,6 +354,7 @@ impl bevy::app::Plugin for PowerRuneUpdatePlugin {
                 (
                     initial_power_rune_control_from_env,
                     manual_power_rune_controls,
+                    contest_power_rune_rotation_controls,
                     enforce_manual_power_rune_close,
                     rune_activation_tick,
                     apply_power_rune_visuals,
@@ -315,5 +362,18 @@ impl bevy::app::Plugin for PowerRuneUpdatePlugin {
                 )
                     .chain(),
             );
+    }
+}
+
+#[cfg(test)]
+mod rotation_control_tests {
+    use super::*;
+
+    #[test]
+    fn opposite_faces_keep_opposite_directions() {
+        assert!(rotation_is_clockwise_for_team(Team::Red, true));
+        assert!(!rotation_is_clockwise_for_team(Team::Blue, true));
+        assert!(!rotation_is_clockwise_for_team(Team::Red, false));
+        assert!(rotation_is_clockwise_for_team(Team::Blue, false));
     }
 }

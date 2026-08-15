@@ -19,8 +19,10 @@
   the existing image, exposure-synchronised gimbal, UDP command and Scene
   Control contracts. It does not add target truth or algorithm interfaces.
 - The visible contest client starts with automatic aim disabled and supports
-  direct local vehicle control: WASD/Shift movement, Q/E chassis yaw, arrows
-  or right-mouse gimbal motion, and Space firing.
+  direct local vehicle control: WASD/left Shift movement, arrows or
+  right-mouse gimbal motion, and Space firing. Q/E controls chassis yaw in
+  Shooting Range and selects clockwise/counter-clockwise large-rune rotation
+  in the Energy Mechanism.
 
 ## Ownership and boundaries
 
