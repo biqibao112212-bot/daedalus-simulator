@@ -2,11 +2,13 @@
 
 ## Current status
 
-- In progress: finalize the `1.3.1-contest` Linux publish package with updated
-  SDK/readme guidance for large-rune score fields and the in-window statistics
-  HUD. Because public release/SDK inputs are package-gated, the final clean
-  release build, performance evidence, manifest and installed smoke will be
-  regenerated after the documentation commit.
+- Final `1.3.1-contest` Linux publish package is ready from source
+  `307fd18`. It includes the refreshed Chinese SDK/readme guidance for
+  large-rune score fields and the in-window statistics HUD. The regenerated
+  clean Release build and SDK CTest passed, the final performance evidence is
+  `323.756/199.234 Hz` main/capture against `171.190/163.228 Hz` minima, the
+  manifest rehash passed `43/43`, and the installed Vulkan smoke returned a
+  `1440x1080` TCP frame plus the red score query on RTX 4060.
 
 - The contest big-rune score now appears in the existing bottom-left
   projectile-statistics line, directly after `pct`. It is shown only in Energy
