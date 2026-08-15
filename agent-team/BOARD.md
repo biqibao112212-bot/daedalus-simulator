@@ -4,9 +4,11 @@
 
 - Contest branch `release/contest-linux-1.3.1` is implementing the Linux-only
   `1.3.1-contest` package. Its C++ client, constrained scene control and
-  participant launcher have passed development SDK CTest and Rust test
-  compilation. Clean-commit build, performance gate, package and visible
-  runtime acceptance remain required before it is published.
+  participant launcher passed clean Release Rust `197/197` and SDK CTest
+  `8/8`. Its high-performance Vulkan gate measured `383.280 Hz` main update
+  and `200.623 Hz` capture submit against the 171.190/163.228 Hz acceptance
+  minima. Package and visible runtime acceptance remain required before it is
+  published.
 
 - Linux x86_64 Release `1.3.1` is packaged at
   `/home/potato/Projects/仿真/releases/daedalus-simulator/1.3.1/linux-x86_64`.
