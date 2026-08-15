@@ -9,7 +9,8 @@ use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use crate::robomaster::prelude::{
-    ManualPowerRuneControlState, PowerRune, PowerRuneMechanism, RUNE_TARGET_COUNT, RuneMode,
+    Activation, ManualPowerRuneControlState, PowerRune, PowerRuneMechanism, PowerRuneRotation,
+    RUNE_TARGET_COUNT, RuneMode, RuneTargetStates, apply_scene_control_power_rune_scenario,
     apply_scene_control_power_rune_state,
 };
 use crate::setup::{
@@ -197,7 +198,11 @@ pub fn receive_scene_control_commands(
     mut scene_state: ResMut<AutoAimSceneState>,
     mut range_state: ResMut<ShootingRangeControlState>,
     mut rune_control: ResMut<ManualPowerRuneControlState>,
-    mut runes: Query<(&mut PowerRune, &mut PowerRuneMechanism)>,
+    mut runes: Query<(
+        &mut PowerRune,
+        &mut PowerRuneMechanism,
+        &mut PowerRuneRotation,
+    )>,
 ) {
     runtime.frame_seq = runtime.frame_seq.saturating_add(1).max(1);
     let Some(transport) = transport else {
@@ -442,19 +447,6 @@ pub fn receive_scene_control_commands(
             }
             "set_rune_state" => match parse_rune_state(&request.args) {
                 Ok((mode, pending, activated)) => {
-                    if crate::distribution::is_contest_release()
-                        && matches!(mode, Some(RuneMode::Small))
-                    {
-                        send_status(
-                            &transport,
-                            datagram.peer,
-                            &request,
-                            ResponseStatus::Unsupported,
-                            runtime.frame_seq,
-                            "contest release supports only the large energy mechanism",
-                        );
-                        continue;
-                    }
                     if apply_scene_control_power_rune_state(
                         mode,
                         &pending,
@@ -468,6 +460,47 @@ pub fn receive_scene_control_commands(
                             &request,
                             runtime.frame_seq,
                             "rune state applied",
+                        );
+                    } else {
+                        send_status(
+                            &transport,
+                            datagram.peer,
+                            &request,
+                            ResponseStatus::NotReady,
+                            runtime.frame_seq,
+                            "power rune entity is not ready",
+                        );
+                    }
+                }
+                Err(message) => send_status(
+                    &transport,
+                    datagram.peer,
+                    &request,
+                    ResponseStatus::InvalidRequest,
+                    runtime.frame_seq,
+                    message,
+                ),
+            },
+            "set_rune_scenario" => match parse_rune_scenario(&request.args) {
+                Ok((mode, rule_driven, red_face_clockwise, leaf_states)) => {
+                    if apply_scene_control_power_rune_scenario(
+                        mode,
+                        rule_driven,
+                        red_face_clockwise,
+                        leaf_states,
+                        &mut rune_control,
+                        &mut runes,
+                    ) {
+                        send_ok(
+                            &transport,
+                            datagram.peer,
+                            &request,
+                            runtime.frame_seq,
+                            if rule_driven {
+                                "rule-driven rune scenario applied"
+                            } else {
+                                "static rune scenario applied"
+                            },
                         );
                     } else {
                         send_status(
@@ -682,6 +715,54 @@ fn parse_rune_state(
     Ok((mode, pending, activated))
 }
 
+fn parse_rune_scenario(
+    args: &Map<String, Value>,
+) -> Result<(RuneMode, bool, bool, Option<RuneTargetStates>), String> {
+    let mode = match string_arg(args, "mode")? {
+        "small" => RuneMode::Small,
+        "large" => RuneMode::Large,
+        _ => return Err("args.mode must be small or large".to_string()),
+    };
+    let rule_driven = match string_arg(args, "motion")? {
+        "rule" => true,
+        "static" => false,
+        _ => return Err("args.motion must be rule or static".to_string()),
+    };
+    let red_face_clockwise = match string_arg(args, "direction")? {
+        "clockwise" => true,
+        "counter_clockwise" => false,
+        _ => return Err("args.direction must be clockwise or counter_clockwise".to_string()),
+    };
+    let leaves = args
+        .get("leaf_states")
+        .and_then(Value::as_array)
+        .ok_or_else(|| "args.leaf_states must be an array".to_string())?;
+    if rule_driven {
+        if !leaves.is_empty() {
+            return Err("rule motion requires an empty leaf_states array".to_string());
+        }
+        return Ok((mode, true, red_face_clockwise, None));
+    }
+    if leaves.len() != RUNE_TARGET_COUNT {
+        return Err("static motion requires exactly five leaf_states".to_string());
+    }
+    let mut states = [Activation::Deactivated; RUNE_TARGET_COUNT];
+    for (index, state) in leaves.iter().enumerate() {
+        states[index] =
+            match state.as_str() {
+                Some("deactivated") => Activation::Deactivated,
+                Some("activating") => Activation::Activating,
+                Some("activated") => Activation::Activated,
+                Some("completed") => Activation::Completed,
+                _ => return Err(
+                    "leaf_states values must be deactivated, activating, activated, or completed"
+                        .to_string(),
+                ),
+            };
+    }
+    Ok((mode, false, red_face_clockwise, Some(states)))
+}
+
 fn now_ns() -> u64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -815,6 +896,22 @@ mod tests {
         }))
         .unwrap();
         assert!(parse_rune_state(&rune).is_ok());
+
+        let rule = serde_json::from_value::<Map<String, Value>>(serde_json::json!({
+            "mode": "large", "motion": "rule", "direction": "clockwise", "leaf_states": []
+        }))
+        .unwrap();
+        assert!(matches!(
+            parse_rune_scenario(&rule),
+            Ok((RuneMode::Large, true, true, None))
+        ));
+
+        let static_frame = serde_json::from_value::<Map<String, Value>>(serde_json::json!({
+            "mode": "small", "motion": "static", "direction": "counter_clockwise",
+            "leaf_states": ["activating", "activated", "completed", "deactivated", "deactivated"]
+        }))
+        .unwrap();
+        assert!(parse_rune_scenario(&static_frame).is_ok());
     }
 
     #[test]

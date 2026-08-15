@@ -221,13 +221,13 @@
 41. `1.3.1-contest` is a separate Linux x86_64-only maintenance branch for an
     internal laboratory algorithm competition. Its distribution build enables
     `contest-release` in addition to `distribution-release`, rejects Normal
-    Map/Outpost/small energy runtime requests, defaults to an allowed map and
+    Map/Outpost runtime requests, defaults to an allowed map and
     exposes C++17 `ContestClient` plus a participant launcher. The stable
     transport ABI remains TCP v1, SHM v7, ABI r2 and Scene Control v2.
 42. The contest client is a participant-facing visible simulator rather than a
     command-only production distribution. It therefore enables local controlled
     vehicle input while preserving SDK transport: WASD/left Shift movement,
-    Q/E chassis yaw, arrows/right-mouse gimbal and Space firing. Auto aim is
+    Q/E scene control, arrows/right-mouse gimbal and Space firing. Auto aim is
     disabled at contest startup so it cannot silently take gimbal ownership;
     ordinary distribution releases keep their SDK-command-driven lock.
 43. The contest energy scene has a dedicated, deterministic participant spawn:
@@ -246,3 +246,9 @@
     represents a frozen inspection snapshot and blocks hit-driven rounds. The
     scene's native large-rune state machine instead starts two active leaves,
     advances/reset on hit/timeout, and remains the competition default.
+45. Decision 44 is superseded for the Energy scene: Q selects the small rune
+    and E selects the large rune. Neither key changes the selected game
+    direction, because the rules require opposite red/blue directions fixed
+    through a game. The C++ RuneScenario interface supersedes empty RuneState
+    snapshots for annotation: it provides rules-driven small/large behaviour,
+    or stopped rotation with exactly five pre-defined leaf appearances.

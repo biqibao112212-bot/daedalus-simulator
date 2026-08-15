@@ -48,12 +48,20 @@
     "set_scene",
     "set_range_target_motion",
     "set_range_target_geometry",
-    "set_rune_state"
+    "set_rune_state",
+    "set_rune_scenario"
   ],
   "contest_profile": {
     "linux_only": true,
-    "supported_scenes": ["shooting_range", "large_energy"],
-    "unsupported_scenes": ["armor", "outpost", "small_energy"],
+    "supported_scenes": ["shooting_range", "energy"],
+    "unsupported_scenes": ["armor", "outpost"],
+    "rune_scenario": {
+      "modes": ["small", "large"],
+      "motion": ["rule", "static"],
+      "static_leaf_states": ["deactivated", "activating", "activated", "completed"],
+      "rule_driven_leaves": "simulator-owned",
+      "rotation_direction": "red face clockwise or counter_clockwise; blue face is opposite"
+    },
     "preferred_cxx_facade": "ContestClient"
   },
   "capabilities": [

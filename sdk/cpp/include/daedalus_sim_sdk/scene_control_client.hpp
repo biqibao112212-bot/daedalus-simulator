@@ -4,6 +4,7 @@
 #include <daedalus_sim_sdk/endpoints_v1.hpp>
 
 #include <chrono>
+#include <array>
 #include <atomic>
 #include <cstdint>
 #include <string>
@@ -42,6 +43,9 @@ struct SceneControlOptions {
 enum class SceneMode { Armor, Energy, Outpost, ShootingRange };
 enum class RangeMotionMode { Stationary, Linear, Spin, LinearAndSpin };
 enum class RuneMode { Off, Small, Large };
+enum class RuneMotion { RuleDriven, Static };
+enum class RuneDirection { Clockwise, CounterClockwise };
+enum class RuneLeafState { Deactivated, Activating, Activated, Completed };
 
 struct RangeTargetMotion {
   std::uint8_t target = 3;
@@ -63,6 +67,17 @@ struct RuneState {
   std::vector<std::uint8_t> activated_targets;
 };
 
+// Bounded energy-mechanism scenario for annotation and algorithm evaluation.
+// RuleDriven uses the official small/large speed model and has no caller-set
+// leaf states. Static stops rotation and accepts exactly five enumerated leaf
+// appearances; it never accepts arbitrary colors, meshes, or target truth.
+struct RuneScenario {
+  RuneMode mode = RuneMode::Large;
+  RuneMotion motion = RuneMotion::RuleDriven;
+  RuneDirection red_face_direction = RuneDirection::Clockwise;
+  std::vector<RuneLeafState> leaf_states;
+};
+
 [[nodiscard]] ClientResult<std::string> encodeSetSceneArgs(SceneMode mode);
 [[nodiscard]] ClientResult<std::string> encodeRangeTargetMotionArgs(
     const RangeTargetMotion& motion);
@@ -70,6 +85,8 @@ struct RuneState {
     const RangeTargetGeometry& geometry);
 [[nodiscard]] ClientResult<std::string> encodeRuneStateArgs(
     const RuneState& state);
+[[nodiscard]] ClientResult<std::string> encodeRuneScenarioArgs(
+    const RuneScenario& scenario);
 
 [[nodiscard]] ClientResult<std::string> buildSceneControlRequest(
     std::uint64_t command_id, const std::string& session_id,
@@ -108,6 +125,8 @@ class SceneControlClient {
       const std::string& args_json);
   [[nodiscard]] ClientResult<SceneControlResponse> setRuneState(
       const RuneState& state);
+  [[nodiscard]] ClientResult<SceneControlResponse> setRuneScenario(
+      const RuneScenario& scenario);
 
   [[nodiscard]] const SceneControlOptions& options() const noexcept {
     return options_;

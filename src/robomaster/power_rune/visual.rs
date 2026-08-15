@@ -73,4 +73,21 @@ impl PowerRuneVisuals {
             target.apply(mode, activation, appearance);
         }
     }
+
+    pub fn apply_target_states(
+        &mut self,
+        mode: RuneMode,
+        states: &[Activation; RUNE_TARGET_COUNT],
+        appearance: &mut StatefulAppearance,
+    ) {
+        let root = if states.iter().all(|state| *state == Activation::Deactivated) {
+            Activation::Deactivated
+        } else {
+            Activation::Activated
+        };
+        self.root.set(root, appearance);
+        for (target, activation) in self.targets.iter_mut().zip(states) {
+            target.apply(mode, *activation, appearance);
+        }
+    }
 }

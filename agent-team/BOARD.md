@@ -14,7 +14,7 @@
   longer displays unsupported F-key controls: WASD/left Shift movement,
   arrows/right mouse gimbal, and Space firing are live; automatic aim is off
   at startup so manual gimbal input owns the controlled vehicle. Q/E turns the
-  chassis in Shooting Range and changes large-rune direction in Energy.
+  chassis in Shooting Range and switches small/large rune mode in Energy.
 - Package-runtime acceptance passed on Ubuntu/RTX 4060: the default visible
   launcher opened an actual 2560x1440 X11 Vulkan window; the installed C++ SDK
   read a 1440x1080 TCP frame, sent aim/fire, and switched both allowed scenes.

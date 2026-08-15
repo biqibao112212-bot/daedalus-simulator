@@ -1,8 +1,8 @@
 # Daedalus 1.3.1-contest（Linux x86_64）
 
 这是实验室内部算法比赛版本，只支持 Linux x86_64。它从 Linux 1.3.1 发行版继承
-渲染、物理、相机和 ABI，但运行时只开放两个地图：**靶场**与**大能量机关**。普通场、
-前哨场和小能量机关会被发行二进制拒绝。
+渲染、物理、相机和 ABI，但运行时只开放两个地图：**靶场**与**能量机关**。能量机关地图
+支持小符与大符；普通场和前哨场会被发行二进制拒绝。
 
 ## 一分钟开始
 
@@ -14,10 +14,10 @@ daedalus-contest start --scene shooting-range
 daedalus-contest status
 ```
 
-使用同一个用户会话切换到大能量机关：
+使用同一个用户会话切换到能量机关：
 
 ```bash
-daedalus-contest scene large-energy
+daedalus-contest scene energy
 daedalus-contest frame
 daedalus-contest aim 0 90 --fire
 daedalus-contest stop
@@ -34,7 +34,7 @@ daedalus-contest stop
 
 - `W/A/S/D`：底盘移动；按住左 `Shift` 加速。
 - 靶场中 `Q/E`：底盘左/右旋转。
-- 大能量机关中 `Q/E`：分别切换为顺时针/逆时针旋转；两个机关面保持相反方向的配对旋转。
+- 能量机关中 `Q`：切换到小符；`E`：切换到大符。两种模式都按规则旋转，方向在本次运行内保持不变。
 - 方向键或按住鼠标右键移动鼠标：控制云台。
 - `Space`：按射击冷却连续发射。
 
@@ -67,6 +67,26 @@ UdpGimbalCommand aim;
 aim.yaw_deg = 0.0F;
 aim.pitch_deg = 90.0F;
 simulator.sendAim(aim);
+```
+
+制作可控标注数据时，使用受限的能量机关场景接口，而不是修改渲染资产。`RuleDriven`
+严格使用规则转速模型；`Static` 停止转动，并且只接受五个扇叶的四种既有视觉状态。
+
+```cpp
+simulator.selectScene(ContestScene::Energy);
+RuneScenario rule;
+rule.mode = RuneMode::Large;
+rule.motion = RuneMotion::RuleDriven;
+simulator.setRuneScenario(rule);
+
+RuneScenario frozen;
+frozen.mode = RuneMode::Large;
+frozen.motion = RuneMotion::Static;
+frozen.leaf_states = {
+    RuneLeafState::Activating, RuneLeafState::Activating,
+    RuneLeafState::Deactivated, RuneLeafState::Deactivated,
+    RuneLeafState::Deactivated};
+simulator.setRuneScenario(frozen);
 ```
 
 用 CMake 接入安装包中的 SDK：

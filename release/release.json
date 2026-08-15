@@ -38,8 +38,8 @@
   "distribution_locked": true,
   "contest_profile": {
     "linux_only": true,
-    "supported_scenes": ["shooting_range", "large_energy"],
-    "unsupported_scenes": ["armor", "outpost", "small_energy"]
+    "supported_scenes": ["shooting_range", "energy"],
+    "unsupported_scenes": ["armor", "outpost"]
   },
   "fixed_calibration": "camera-calibration.json",
   "fixed_calibration_revision": 2,

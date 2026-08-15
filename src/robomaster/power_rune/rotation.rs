@@ -105,12 +105,14 @@ impl RotationController {
 #[derive(Component)]
 pub struct PowerRuneRotation {
     controller: RotationController,
+    paused: bool,
 }
 
 impl PowerRuneRotation {
     pub fn new(clockwise: bool) -> Self {
         Self {
             controller: RotationController::new(clockwise),
+            paused: false,
         }
     }
 
@@ -120,6 +122,14 @@ impl PowerRuneRotation {
 
     pub fn set_clockwise(&mut self, clockwise: bool) {
         self.controller.set_clockwise(clockwise);
+    }
+
+    pub fn set_paused(&mut self, paused: bool) {
+        self.paused = paused;
+    }
+
+    pub fn is_paused(&self) -> bool {
+        self.paused
     }
 
     pub fn begin_activation(&mut self, mode: RuneMode, rng: &mut impl Rng) {
@@ -135,6 +145,9 @@ impl PowerRuneRotation {
     }
 
     pub fn rotate(&mut self, mode: RuneMode, transform: &mut Transform, dt: f32) {
+        if self.paused {
+            return;
+        }
         let speed = self.controller.current_speed(mode, dt);
         self.controller.rotate(transform, speed * dt);
     }
@@ -200,6 +213,17 @@ mod tests {
             controller.current_speed(RuneMode::Small, 0.25),
             -ROTATION_BASELINE_SMALL
         );
+    }
+
+    #[test]
+    fn paused_rotation_does_not_change_the_transform() {
+        let mut rotation = PowerRuneRotation::new(true);
+        let mut transform = Transform::IDENTITY;
+        rotation.set_paused(true);
+        rotation.rotate(RuneMode::Small, &mut transform, 1.0);
+
+        assert_eq!(transform, Transform::IDENTITY);
+        assert!(rotation.is_paused());
     }
 
     #[test]

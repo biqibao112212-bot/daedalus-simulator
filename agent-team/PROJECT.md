@@ -12,17 +12,18 @@
 
 - `1.3.1-contest` is a separately maintained Linux x86_64-only internal
   laboratory competition line derived from the accepted Linux `1.3.1` source.
-- Its runtime exposes only Shooting Range and the large Energy Mechanism.
-  Normal Map, Outpost and small Energy Mechanism are rejected by the release
-  binary rather than merely hidden by its launcher.
+- Its runtime exposes only Shooting Range and Energy Mechanism. Energy supports
+  both small and large rune modes; Normal Map and Outpost are rejected by the
+  release binary rather than merely hidden by its launcher.
 - The supported participant API is C++17 `ContestClient`, an SDK facade over
   the existing image, exposure-synchronised gimbal, UDP command and Scene
   Control contracts. It does not add target truth or algorithm interfaces.
 - The visible contest client starts with automatic aim disabled and supports
   direct local vehicle control: WASD/left Shift movement, arrows or
   right-mouse gimbal motion, and Space firing. Q/E controls chassis yaw in
-  Shooting Range and selects clockwise/counter-clockwise large-rune rotation
-  in the Energy Mechanism.
+  Shooting Range and selects small/large rune mode in the Energy Mechanism.
+  The C++ RuneScenario surface supports only rules-driven rotation or a
+  stopped, five-leaf selection from existing visual states for annotation.
 
 ## Ownership and boundaries
 

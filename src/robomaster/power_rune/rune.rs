@@ -1,6 +1,6 @@
 use crate::robomaster::power_rune::common::{RUNE_TARGET_COUNT, RuneMode};
 use crate::robomaster::power_rune::rotation::PowerRuneRotation;
-use crate::robomaster::power_rune::state::MechanismState;
+use crate::robomaster::power_rune::state::{MechanismState, RuneTargetStates};
 use crate::robomaster::power_rune::visual::PowerRuneVisuals;
 use crate::robomaster::prelude::Team;
 use crate::robomaster::visibility::StatefulAppearance;
@@ -29,6 +29,8 @@ pub struct PowerRuneMechanism {
 pub struct ManualPowerRuneControlState {
     override_enabled: bool,
     active_mode: Option<RuneMode>,
+    visual_override: Option<RuneTargetStates>,
+    rotation_paused: bool,
 }
 
 #[derive(Resource, Debug, Default, Copy, Clone, PartialEq, Eq)]
@@ -143,23 +145,30 @@ fn initial_power_rune_state(mode: RuneMode, rng: &mut impl rand::Rng) -> Mechani
 fn apply_power_rune_control(
     active_mode: Option<RuneMode>,
     control: &mut ManualPowerRuneControlState,
-    runes: &mut Query<(&mut PowerRune, &mut PowerRuneMechanism)>,
+    runes: &mut Query<(
+        &mut PowerRune,
+        &mut PowerRuneMechanism,
+        &mut PowerRuneRotation,
+    )>,
 ) -> bool {
     let mut applied = false;
     let mut rng = rand::thread_rng();
-    for (mut rune, mut mechanism) in runes.iter_mut() {
+    for (mut rune, mut mechanism, mut rotation) in runes.iter_mut() {
         if let Some(mode) = active_mode {
             rune.set_mode(mode);
             *mechanism.state_mut() = initial_power_rune_state(mode, &mut rng);
         } else {
             *mechanism.state_mut() = held_inactive_state(rune.mode());
         }
+        rotation.set_paused(false);
         applied = true;
     }
 
     if applied {
         control.override_enabled = true;
         control.active_mode = active_mode;
+        control.visual_override = None;
+        control.rotation_paused = false;
     }
 
     applied
@@ -170,10 +179,14 @@ pub(crate) fn apply_scene_control_power_rune_state(
     pending_targets: &[usize],
     activated_targets: &[usize],
     control: &mut ManualPowerRuneControlState,
-    runes: &mut Query<(&mut PowerRune, &mut PowerRuneMechanism)>,
+    runes: &mut Query<(
+        &mut PowerRune,
+        &mut PowerRuneMechanism,
+        &mut PowerRuneRotation,
+    )>,
 ) -> bool {
     let mut applied = false;
-    for (mut rune, mut mechanism) in runes.iter_mut() {
+    for (mut rune, mut mechanism, mut rotation) in runes.iter_mut() {
         if let Some(mode) = active_mode {
             rune.set_mode(mode);
             *mechanism.state_mut() = if activated_targets.len() == RUNE_TARGET_COUNT {
@@ -184,11 +197,51 @@ pub(crate) fn apply_scene_control_power_rune_state(
         } else {
             *mechanism.state_mut() = held_inactive_state(rune.mode());
         }
+        rotation.set_paused(false);
         applied = true;
     }
     if applied {
         control.override_enabled = true;
         control.active_mode = active_mode;
+        control.visual_override = None;
+        control.rotation_paused = false;
+    }
+    applied
+}
+
+pub(crate) fn apply_scene_control_power_rune_scenario(
+    mode: RuneMode,
+    rule_driven: bool,
+    red_face_clockwise: bool,
+    leaf_states: Option<RuneTargetStates>,
+    control: &mut ManualPowerRuneControlState,
+    runes: &mut Query<(
+        &mut PowerRune,
+        &mut PowerRuneMechanism,
+        &mut PowerRuneRotation,
+    )>,
+) -> bool {
+    let mut applied = false;
+    let mut rng = rand::thread_rng();
+    for (mut rune, mut mechanism, mut rotation) in runes.iter_mut() {
+        rune.set_mode(mode);
+        rotation.set_clockwise(rotation_is_clockwise_for_team(
+            rune.team(),
+            red_face_clockwise,
+        ));
+        rotation.set_paused(!rule_driven);
+        *mechanism.state_mut() = if rule_driven {
+            MechanismState::start(mode, &mut rng)
+        } else {
+            held_inactive_state(mode)
+        };
+        applied = true;
+    }
+    if applied {
+        control.override_enabled = true;
+        control.active_mode = Some(mode);
+        control.visual_override = leaf_states;
+        control.rotation_paused = !rule_driven;
     }
     applied
 }
@@ -196,7 +249,11 @@ pub(crate) fn apply_scene_control_power_rune_state(
 fn initial_power_rune_control_from_env(
     mut applied: ResMut<InitialPowerRuneControlApplied>,
     mut control: ResMut<ManualPowerRuneControlState>,
-    mut runes: Query<(&mut PowerRune, &mut PowerRuneMechanism)>,
+    mut runes: Query<(
+        &mut PowerRune,
+        &mut PowerRuneMechanism,
+        &mut PowerRuneRotation,
+    )>,
 ) {
     if applied.0 {
         return;
@@ -227,7 +284,11 @@ mod tests {
 fn manual_power_rune_controls(
     keyboard: Res<ButtonInput<KeyCode>>,
     mut control: ResMut<ManualPowerRuneControlState>,
-    mut runes: Query<(&mut PowerRune, &mut PowerRuneMechanism)>,
+    mut runes: Query<(
+        &mut PowerRune,
+        &mut PowerRuneMechanism,
+        &mut PowerRuneRotation,
+    )>,
 ) {
     let requested_mode = if keyboard.just_pressed(KeyCode::F10) {
         Some(Some(if crate::distribution::is_contest_release() {
@@ -256,41 +317,33 @@ fn rotation_is_clockwise_for_team(team: Team, requested_clockwise: bool) -> bool
     }
 }
 
-fn contest_power_rune_rotation_controls(
+fn contest_power_rune_mode_controls(
     keyboard: Res<ButtonInput<KeyCode>>,
     scene_state: Res<AutoAimSceneState>,
-    mut runes: Query<(&PowerRune, &mut PowerRuneRotation)>,
+    mut control: ResMut<ManualPowerRuneControlState>,
+    mut runes: Query<(
+        &mut PowerRune,
+        &mut PowerRuneMechanism,
+        &mut PowerRuneRotation,
+    )>,
 ) {
     if !crate::distribution::is_contest_release() || scene_state.current != AutoAimSceneMode::Energy
     {
         return;
     }
 
-    let requested_clockwise = if keyboard.just_pressed(KeyCode::KeyQ) {
-        Some(true)
+    let requested_mode = if keyboard.just_pressed(KeyCode::KeyQ) {
+        Some(RuneMode::Small)
     } else if keyboard.just_pressed(KeyCode::KeyE) {
-        Some(false)
+        Some(RuneMode::Large)
     } else {
         None
     };
-    let Some(requested_clockwise) = requested_clockwise else {
+    let Some(requested_mode) = requested_mode else {
         return;
     };
-
-    for (rune, mut rotation) in &mut runes {
-        rotation.set_clockwise(rotation_is_clockwise_for_team(
-            rune.team(),
-            requested_clockwise,
-        ));
-    }
-    info!(
-        "Contest large-rune rotation set to {}.",
-        if requested_clockwise {
-            "clockwise"
-        } else {
-            "counter-clockwise"
-        }
-    );
+    apply_power_rune_control(Some(requested_mode), &mut control, &mut runes);
+    info!("Contest energy mechanism switched to {requested_mode:?} mode.");
 }
 
 fn enforce_manual_power_rune_close(
@@ -308,8 +361,12 @@ fn enforce_manual_power_rune_close(
 
 fn rune_activation_tick(
     time: Res<Time>,
+    control: Res<ManualPowerRuneControlState>,
     mut runes: Query<(&mut PowerRuneMechanism, &mut PowerRuneRotation)>,
 ) {
+    if control.rotation_paused {
+        return;
+    }
     let delta_secs = time.delta_secs();
     let mut rng = rand::thread_rng();
 
@@ -324,18 +381,27 @@ fn rune_activation_tick(
 }
 
 fn apply_power_rune_visuals(
+    control: Res<ManualPowerRuneControlState>,
     mut runes: Query<(&PowerRune, &PowerRuneMechanism, &mut PowerRuneVisuals)>,
     mut appearance: StatefulAppearance,
 ) {
     for (rune, mechanism, mut visuals) in &mut runes {
-        visuals.apply(rune.mode(), mechanism.state(), &mut appearance);
+        if let Some(states) = control.visual_override {
+            visuals.apply_target_states(rune.mode(), &states, &mut appearance);
+        } else {
+            visuals.apply(rune.mode(), mechanism.state(), &mut appearance);
+        }
     }
 }
 
 fn rune_rotation_system(
     time: Res<Time>,
+    control: Res<ManualPowerRuneControlState>,
     mut runes: Query<(&PowerRune, &mut PowerRuneRotation, &mut Transform)>,
 ) {
+    if control.rotation_paused {
+        return;
+    }
     let dt = time.delta_secs();
     for (rune, mut rotation, mut transform) in &mut runes {
         rotation.rotate(rune.mode(), &mut transform, dt);
@@ -354,7 +420,7 @@ impl bevy::app::Plugin for PowerRuneUpdatePlugin {
                 (
                     initial_power_rune_control_from_env,
                     manual_power_rune_controls,
-                    contest_power_rune_rotation_controls,
+                    contest_power_rune_mode_controls,
                     enforce_manual_power_rune_close,
                     rune_activation_tick,
                     apply_power_rune_visuals,

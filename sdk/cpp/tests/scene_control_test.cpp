@@ -56,5 +56,22 @@ int main() {
   rune.pending_targets = {2};
   rune.activated_targets = {0, 4};
   if (!encodeRuneStateArgs(rune)) return 9;
+  RuneScenario rule{};
+  rule.mode = RuneMode::Large;
+  rule.motion = RuneMotion::RuleDriven;
+  if (!encodeRuneScenarioArgs(rule)) return 10;
+  rule.leaf_states = {RuneLeafState::Activating};
+  if (encodeRuneScenarioArgs(rule)) return 11;
+  RuneScenario frozen{};
+  frozen.mode = RuneMode::Small;
+  frozen.motion = RuneMotion::Static;
+  frozen.red_face_direction = RuneDirection::CounterClockwise;
+  frozen.leaf_states = {
+      RuneLeafState::Activating, RuneLeafState::Activated,
+      RuneLeafState::Completed, RuneLeafState::Deactivated,
+      RuneLeafState::Deactivated};
+  const auto frozen_args = encodeRuneScenarioArgs(frozen);
+  if (!frozen_args || frozen_args.value->find("static") == std::string::npos ||
+      frozen_args.value->find("completed") == std::string::npos) return 12;
   return 0;
 }

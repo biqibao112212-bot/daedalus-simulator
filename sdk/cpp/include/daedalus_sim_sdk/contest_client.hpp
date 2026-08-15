@@ -14,7 +14,7 @@
 namespace daedalus::sim::sdk::v1 {
 
 // The only maps deliberately exposed by the 1.3.1-contest package.
-enum class ContestScene { ShootingRange, LargeEnergy };
+enum class ContestScene { ShootingRange, Energy, LargeEnergy = Energy };
 
 struct ContestClientOptions {
   std::string ipc_directory;
@@ -47,6 +47,8 @@ class ContestClient {
   [[nodiscard]] ClientResult<RuntimeCapabilities> health() const;
   [[nodiscard]] ClientResult<SceneControlResponse> selectScene(
       ContestScene scene);
+  [[nodiscard]] ClientResult<SceneControlResponse> setRuneScenario(
+      const RuneScenario& scenario);
   [[nodiscard]] ClientResult<ContestFrame> nextFrame(
       std::uint64_t after_source_sequence = 0) const;
   [[nodiscard]] ClientResult<std::uint64_t> sendAim(

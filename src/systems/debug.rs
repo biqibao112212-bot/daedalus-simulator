@@ -32,7 +32,7 @@ fn help_text_content(
 ) -> String {
     let controls = if distribution::is_contest_release() {
         if scene == AutoAimSceneMode::Energy {
-            "Controls: WASD Move | Left Shift Boost | Q/E Rune CW/CCW | Arrow Keys / Right Mouse Gimbal | Space Fire"
+            "Controls: WASD Move | Left Shift Boost | Q Small Rune | E Large Rune | Arrow Keys / Right Mouse Gimbal | Space Fire"
         } else {
             "Controls: WASD Move | Left Shift Boost | Q/E Chassis Turn | Arrow Keys / Right Mouse Gimbal | Space Fire"
         }
@@ -323,7 +323,8 @@ mod tests {
         );
 
         assert!(text.contains("Left Shift Boost"));
-        assert!(text.contains("Q/E Rune CW/CCW"));
+        assert!(text.contains("Q Small Rune"));
+        assert!(text.contains("E Large Rune"));
         assert!(!text.contains("Q/E Chassis Turn"));
     }
 }

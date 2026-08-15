@@ -320,6 +320,43 @@ ClientResult<std::string> encodeRuneStateArgs(const RuneState& state) {
   return ClientResult<std::string>::success(json.str());
 }
 
+ClientResult<std::string> encodeRuneScenarioArgs(const RuneScenario& scenario) {
+  if (scenario.mode == RuneMode::Off) {
+    return ClientResult<std::string>::failure(
+        ClientError::InvalidArgument, "rune scenario mode must be small or large");
+  }
+  if (scenario.motion == RuneMotion::RuleDriven && !scenario.leaf_states.empty()) {
+    return ClientResult<std::string>::failure(
+        ClientError::InvalidArgument, "rule-driven rune scenario cannot set leaf states");
+  }
+  if (scenario.motion == RuneMotion::Static && scenario.leaf_states.size() != 5) {
+    return ClientResult<std::string>::failure(
+        ClientError::InvalidArgument, "static rune scenario requires exactly five leaf states");
+  }
+  const char* mode = scenario.mode == RuneMode::Small ? "small" : "large";
+  const char* motion = scenario.motion == RuneMotion::RuleDriven ? "rule" : "static";
+  const char* direction = scenario.red_face_direction == RuneDirection::Clockwise
+                              ? "clockwise" : "counter_clockwise";
+  auto leaf = [](RuneLeafState state) -> const char* {
+    switch (state) {
+      case RuneLeafState::Deactivated: return "deactivated";
+      case RuneLeafState::Activating: return "activating";
+      case RuneLeafState::Activated: return "activated";
+      case RuneLeafState::Completed: return "completed";
+    }
+    return "deactivated";
+  };
+  std::ostringstream json;
+  json << "{\"mode\":\"" << mode << "\",\"motion\":\"" << motion
+       << "\",\"direction\":\"" << direction << "\",\"leaf_states\":[";
+  for (std::size_t i = 0; i < scenario.leaf_states.size(); ++i) {
+    if (i != 0) json << ',';
+    json << '"' << leaf(scenario.leaf_states[i]) << '"';
+  }
+  json << "]}";
+  return ClientResult<std::string>::success(json.str());
+}
+
 ClientResult<SceneControlResponse> parseSceneControlResponse(
     const std::string& json, std::uint64_t expected_command_id,
     const std::string& expected_session_id) {
@@ -470,6 +507,14 @@ ClientResult<SceneControlResponse> SceneControlClient::setRangeTargetGeometry(
 ClientResult<SceneControlResponse> SceneControlClient::setRuneState(
     const std::string& args_json) {
   return request("set_rune_state", args_json);
+}
+
+ClientResult<SceneControlResponse> SceneControlClient::setRuneScenario(
+    const RuneScenario& scenario) {
+  const auto args = encodeRuneScenarioArgs(scenario);
+  if (!args) return ClientResult<SceneControlResponse>::failure(
+      args.status.error, args.status.message);
+  return request("set_rune_scenario", *args.value);
 }
 ClientResult<SceneControlResponse> SceneControlClient::setRuneState(
     const RuneState& state) {

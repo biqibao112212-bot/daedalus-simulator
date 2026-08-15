@@ -11,16 +11,16 @@ usage() {
 Usage: daedalus-contest [--runtime-dir PATH] <command> [options]
 
 Commands:
-  start [--performance] [--scene shooting-range|large-energy]
+  start [--performance] [--scene shooting-range|energy|large-energy]
   stop | status | doctor
-  scene shooting-range|large-energy
+  scene shooting-range|energy|large-energy
   frame
   aim YAW_DEG PITCH_DEG [--fire]
 
 `start` launches a visible local contest simulator by default. Use
 `--performance` only for the headless high-performance mode. All other
 commands talk to the same instance through its runtime directory. The only
-selectable maps are Shooting Range and the large Energy Mechanism.
+selectable maps are Shooting Range and the Energy Mechanism (small/large via Q/E).
 EOF
 }
 
@@ -66,8 +66,8 @@ case "$COMMAND" in
         *) die "unknown start option: $1" ;;
       esac
     done
-    [[ "$SCENE" == "shooting-range" || "$SCENE" == "large-energy" ]] || \
-      die "--scene must be shooting-range or large-energy"
+    [[ "$SCENE" == "shooting-range" || "$SCENE" == "energy" || "$SCENE" == "large-energy" ]] || \
+      die "--scene must be shooting-range, energy, or large-energy"
     mkdir -p -- "$RUNTIME_DIR"
     if owned_process_running; then
       die "contest simulator is already running (pid $(<"$PID_FILE")); use status or stop"

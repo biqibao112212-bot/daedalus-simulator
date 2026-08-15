@@ -71,6 +71,15 @@ ClientResult<SceneControlResponse> ContestClient::selectScene(
   return selected;
 }
 
+ClientResult<SceneControlResponse> ContestClient::setRuneScenario(
+    const RuneScenario& scenario) {
+  if (!connected_) {
+    return ClientResult<SceneControlResponse>::failure(
+        ClientError::NotReady, "connect() must succeed before setRuneScenario()");
+  }
+  return scene_client_.setRuneScenario(scenario);
+}
+
 ClientResult<ContestFrame> ContestClient::nextFrame(
     std::uint64_t after_source_sequence) const {
   if (!connected_) {

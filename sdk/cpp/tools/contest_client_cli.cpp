@@ -14,7 +14,7 @@ void usage() {
       << "Usage: daedalus-contest-client --ipc-dir PATH <command> [args]\n"
       << "Commands:\n"
       << "  health\n"
-      << "  scene shooting-range|large-energy\n"
+      << "  scene shooting-range|energy|large-energy\n"
       << "  frame\n"
       << "  aim YAW_DEG PITCH_DEG [--fire]\n";
 }
@@ -70,9 +70,9 @@ int main(int argc, char** argv) {
     const std::string value = argv[cursor++];
     const auto scene = value == "shooting-range"
                            ? ContestScene::ShootingRange
-                           : value == "large-energy" ? ContestScene::LargeEnergy
+                           : (value == "energy" || value == "large-energy") ? ContestScene::Energy
                                                        : ContestScene::ShootingRange;
-    if (value != "shooting-range" && value != "large-energy") {
+    if (value != "shooting-range" && value != "energy" && value != "large-energy") {
       usage();
       return 2;
     }

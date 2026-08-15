@@ -33,6 +33,62 @@ new positions. The command response's `applied_frame_seq` identifies the
 command-processing frame; collectors should wait for the next complete frame
 and verify `armor_count == 4` plus the four relative positions and radii.
 
+## Energy-mechanism annotation scenarios
+
+The set_rune_scenario operation provides a deliberately bounded configuration
+surface for annotation and algorithm evaluation. It supports the real small and
+large energy mechanisms, but does not permit arbitrary material, colour, mesh,
+or truth-data changes.
+
+Rule-driven mode retains the simulator's official mechanism model. Small
+mechanism and inactive large mechanism use pi/3 rad/s; an activated large
+mechanism uses its per-round a*sin(omega*t)+b model. Red and blue faces are
+oppositely directed. The caller can select one of the two official initial
+directions, while normal contest keyboard use preserves the game-selected
+direction for the whole round.
+
+~~~json
+{
+  "protocol": "daedalus.scene-control/2",
+  "command_id": 43,
+  "session_id": "rune-labels-01",
+  "op": "set_rune_scenario",
+  "args": {
+    "mode": "large",
+    "motion": "rule",
+    "direction": "clockwise",
+    "leaf_states": []
+  }
+}
+~~~
+
+Static mode stops rotation and accepts exactly five pre-defined visual states,
+one per leaf: deactivated, activating, activated, or completed. It is intended
+for a reproducible labelled frame, not for overriding the rules-driven
+hit/lifecycle state machine.
+
+~~~json
+{
+  "protocol": "daedalus.scene-control/2",
+  "command_id": 44,
+  "session_id": "rune-labels-01",
+  "op": "set_rune_scenario",
+  "args": {
+    "mode": "small",
+    "motion": "static",
+    "direction": "counter_clockwise",
+    "leaf_states": [
+      "activating", "activated", "completed", "deactivated", "deactivated"
+    ]
+  }
+}
+~~~
+
+The C++17 SDK exposes this as RuneScenario and
+SceneControlClient::setRuneScenario; ContestClient forwards the same bounded
+method. The legacy set_rune_state remains available for compatible non-contest
+tooling, but new annotation tooling should use RuneScenario.
+
 ## Compatibility
 
 The frozen 1.1.1 package and Scene Control v1 remain unchanged. Consumers must
