@@ -72,9 +72,14 @@ impl ShootingRangeTargetKind {
 const LOCAL_TEST_SPAWN: Vec3 = Vec3::new(-4.0, 1.0, -3.8);
 const LOCAL_TEST_GIMBAL_PITCH_RAD: f32 = -0.16;
 // The centre approach at x=0 intersects the energy-field ramp. Keep the
-// participant vehicle on the flat west apron instead, with the body collider
-// resting just above the measured GROUND_DENSE surface (-0.246 m).
+// participant vehicle on the flat west apron instead.  GROUND_DENSE is an
+// asynchronously imported triangle mesh, so the release scene also creates an
+// immediate, invisible collider below this exact patch of apron.
 const ENERGY_TEST_SPAWN: Vec3 = Vec3::new(-4.0, 0.0, -5.6);
+const ENERGY_TEST_GROUND_SURFACE_Y: f32 = -0.245_722_3;
+const ENERGY_TEST_SPAWN_SUPPORT_THICKNESS: f32 = 0.12;
+const ENERGY_TEST_SPAWN_SUPPORT_WIDTH: f32 = 2.4;
+const ENERGY_TEST_SPAWN_SUPPORT_DEPTH: f32 = 2.0;
 const ENERGY_TEST_YAW_RAD: f32 = PI;
 const ENERGY_TEST_GIMBAL_YAW_RAD: f32 = 0.0;
 // Match the known-good range view. The former -0.16 rad pose left the energy
@@ -346,6 +351,29 @@ fn energy_test_spawn() -> Vec3 {
     )
 }
 
+fn spawn_energy_player_support(commands: &mut Commands) {
+    let spawn = energy_test_spawn();
+    let center = Vec3::new(
+        spawn.x,
+        ENERGY_TEST_GROUND_SURFACE_Y - ENERGY_TEST_SPAWN_SUPPORT_THICKNESS * 0.5,
+        spawn.z,
+    );
+    commands.spawn((
+        SceneScoped,
+        Name::new("energy_player_spawn_support"),
+        RigidBody::Static,
+        Collider::cuboid(
+            ENERGY_TEST_SPAWN_SUPPORT_WIDTH,
+            ENERGY_TEST_SPAWN_SUPPORT_THICKNESS,
+            ENERGY_TEST_SPAWN_SUPPORT_DEPTH,
+        ),
+        GameLayer::environment_collision_layers(),
+        Friction::new(0.5),
+        Restitution::ZERO,
+        Transform::from_translation(center),
+    ));
+}
+
 fn energy_test_yaw_rad() -> f32 {
     env_angle_rad(
         "DAEDALUS_ENERGY_PLAYER_YAW_RAD",
@@ -607,6 +635,11 @@ fn spawn_auto_aim_scene(
     if scene_mode == AutoAimSceneMode::ShootingRange {
         spawn_shooting_range_floor(commands, meshes, materials, config);
     } else {
+        if scene_mode == AutoAimSceneMode::Energy {
+            // Do not let the dynamic participant vehicle advance a physics tick
+            // before the imported GROUND_DENSE collider has finished loading.
+            spawn_energy_player_support(commands);
+        }
         if capture_scene_profile.is_aim() {
             commands.spawn((
                 SceneScoped,
@@ -1590,6 +1623,9 @@ mod tests {
             local_gimbal_pitch_for_mode(mode),
             SHOOTING_RANGE_GIMBAL_PITCH_RAD
         );
+        assert_eq!(ENERGY_TEST_GROUND_SURFACE_Y, -0.245_722_3);
+        assert!(ENERGY_TEST_SPAWN_SUPPORT_WIDTH >= VEHICLE_BODY_COLLIDER_HEIGHT * 4.0);
+        assert!(ENERGY_TEST_SPAWN_SUPPORT_DEPTH >= VEHICLE_BODY_COLLIDER_HEIGHT * 4.0);
     }
 
     #[test]
