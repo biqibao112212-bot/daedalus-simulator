@@ -230,3 +230,10 @@
     Q/E chassis yaw, arrows/right-mouse gimbal and Space firing. Auto aim is
     disabled at contest startup so it cannot silently take gimbal ownership;
     ordinary distribution releases keep their SDK-command-driven lock.
+43. The contest energy scene has a dedicated, deterministic participant spawn:
+    the flat west apron at `(-4.0, 0.0, -5.6)`, yaw `PI`, and the proven range
+    camera pitch of `-27°`. Its local root rotation is locked so terrain contact
+    cannot overturn the vehicle; Q/E continues to rotate the chassis child.
+    The visible HUD is ASCII rather than Chinese because the shipped default
+    font lacks CJK glyphs, and a missing-glyph prompt is worse than an English
+    prompt in this internal competition client.
