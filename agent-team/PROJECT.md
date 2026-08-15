@@ -23,6 +23,22 @@ The formal `1.2.1` Release under
 `D:\仿真\releases\daedalus-simulator\1.2.1` is immutable. Models, labels,
 raw captures, datasets, and every formal Release are protected assets.
 
+## Repository-local build retention
+
+- The canonical checkout may retain exactly one usable build: Linux x86_64,
+  target `x86_64-unknown-linux-gnu`, profile `release`, with the matching Linux
+  SDK build/install under `build/release/linux-x86_64`.
+- Never retain repository-local Windows, debug, incremental, alternate-target,
+  or multiple-revision build products. Git owns source history; an old binary
+  is rebuilt from its commit when genuinely needed, not kept beside the active
+  build.
+- `scripts/build-release.sh` is the only persistent-build entry point. It
+  reuses a complete build when HEAD, toolchains, target, profile and features
+  match its stamp. A changed key replaces the old Linux build before compiling.
+  Do not bypass the reuse check or repeat a successful matching build.
+- Formal packages under `/home/potato/Projects/仿真/releases` and protected
+  runtime evidence are not repository-local build caches and remain immutable.
+
 ## Approved offline-label capability
 
 The offline exact-corner JSONL exporter is explicit opt-in and disabled by
@@ -53,8 +69,8 @@ predictor input.
 
 ```text
 cargo fmt --all -- --check
-cargo test --locked --features talos,distribution-release
-cargo clippy --locked --features talos,distribution-release --all-targets -- -D warnings
+cargo test --locked --release --target x86_64-unknown-linux-gnu --features talos,distribution-release
+cargo clippy --locked --release --target x86_64-unknown-linux-gnu --features talos,distribution-release --all-targets -- -D warnings
 scripts/check-compatibility.ps1
 scripts/build-release.ps1 -Platform windows -Arch x86_64
 scripts/measure-performance.ps1 -DurationSeconds 20
@@ -64,6 +80,13 @@ bash scripts/measure-performance.sh --mode performance --duration-seconds 20
 bash scripts/measure-performance.sh --mode visible --duration-seconds 20
 bash scripts/package-release.sh
 ```
+
+Persistent repository builds use `bash scripts/build-release.sh`; direct Cargo
+commands above are validation primitives and must not be rerun when the stamped
+Linux Release build already proves the same command/input boundary.
+PowerShell/Windows build commands remain source-controlled for on-demand native
+release reconstruction, but their repository-local outputs are disposable and
+must be removed before task completion; they are never a retained second build.
 
 Compatibility, performance, and formal Release claims require the exact clean
 committed revision. Development builds and dirty-tree runs are implementation

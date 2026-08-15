@@ -209,3 +209,12 @@
     online target truth remain unchanged; raw payloads remain protected runtime
     assets and are never packed. This is the sole supported full-frame path for
     consumers; a consumer TCP parser is outside its module boundary.
+40. Repository-local build products follow a single-Linux-version rule. The
+    only retained build is `x86_64-unknown-linux-gnu` Release plus its matching
+    Linux SDK build/install. A build stamp binds HEAD, toolchains, target,
+    profile and features; an exact match is reused without compilation, while
+    a changed key replaces the old build first. Windows, debug, incremental,
+    alternate-target and prior-revision products are reproducible caches and
+    must not remain in the canonical checkout. Git provides historical source;
+    formal Release packages and protected runtime evidence remain immutable and
+    are explicitly outside this cache rule.

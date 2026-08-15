@@ -22,6 +22,9 @@
 ## Freeze and blockers
 
 - Never overwrite or mutate any existing formal Release, especially `1.2.1`.
+- Retain only one repository-local build: the currently usable Linux x86_64
+  Release binary plus its matching Linux SDK build/install. Reuse an exact
+  stamped build; never accumulate Windows, debug or prior-revision products.
 - The accepted Windows package is immutable. Labels, TCP identity ledgers, raw
   RGBA, successful/failed experiment sessions, and prior failed packages are
   protected assets and remain retained.
@@ -55,3 +58,6 @@
   native Rust/SDK/format/clippy validation did pass.
 - Strict workspace clippy remains pre-existing frozen-baseline debt and is not
   a Release gate: `crates/exact` range-loop and `talos-ipc` derivable-Default.
+- Build-retention validation must show no repository-local build directory
+  outside `target/x86_64-unknown-linux-gnu/release` and
+  `build/release/linux-x86_64`; the build script must reuse a matching stamp.
