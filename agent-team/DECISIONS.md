@@ -224,3 +224,9 @@
     Map/Outpost/small energy runtime requests, defaults to an allowed map and
     exposes C++17 `ContestClient` plus a participant launcher. The stable
     transport ABI remains TCP v1, SHM v7, ABI r2 and Scene Control v2.
+42. The contest client is a participant-facing visible simulator rather than a
+    command-only production distribution. It therefore enables local controlled
+    vehicle input while preserving SDK transport: WASD/left Shift movement,
+    Q/E chassis yaw, arrows/right-mouse gimbal and Space firing. Auto aim is
+    disabled at contest startup so it cannot silently take gimbal ownership;
+    ordinary distribution releases keep their SDK-command-driven lock.

@@ -25,6 +25,26 @@ pub const fn is_contest_release() -> bool {
     cfg!(feature = "contest-release")
 }
 
+/// Whether the release profile permits a participant to control the local
+/// vehicle with the keyboard and mouse.
+///
+/// Ordinary distribution builds remain SDK-command driven. The internal
+/// contest client is intentionally different: it is a visible teaching and
+/// evaluation environment, so participants must be able to drive the local
+/// vehicle without first writing an SDK program.
+pub const fn allows_local_manual_controls() -> bool {
+    !is_locked() || is_contest_release()
+}
+
+/// Whether the distribution profile claims the controlled gimbal at startup.
+///
+/// Contest builds start with manual ownership so arrow-key and mouse input is
+/// immediately useful. SDK commands can still be used through the existing
+/// command path.
+pub const fn auto_aim_enabled_on_start() -> bool {
+    !is_contest_release()
+}
+
 pub fn prepare_environment() {
     if !is_locked() {
         return;
@@ -58,7 +78,14 @@ pub fn prepare_environment() {
     set_env("DAEDALUS_TALOS_CAPTURE_MAX_HZ", "200");
     set_env("DAEDALUS_TALOS_IMAGE_TRANSPORT", "tcp");
     set_env("DAEDALUS_TALOS_TCP_BIND", "127.0.0.1:5602");
-    set_env("DAEDALUS_AUTO_AIM_ON_START", "1");
+    set_env(
+        "DAEDALUS_AUTO_AIM_ON_START",
+        if auto_aim_enabled_on_start() {
+            "1"
+        } else {
+            "0"
+        },
+    );
     if let Some(path) = corner_labels_path {
         set_env_os(CORNER_LABELS_ENV, path);
     }
@@ -88,7 +115,7 @@ pub fn apply_locked_config(config: &mut SimulationConfig) {
     config.debug.diagnostics = false;
     config.network_bridge.enabled = true;
     config.network_bridge.bind = "127.0.0.1:5601".to_string();
-    config.auto_aim.enabled_on_start = true;
+    config.auto_aim.enabled_on_start = auto_aim_enabled_on_start();
     config.auto_aim.managed_bridge_enabled = false;
     config.auto_aim.command_transport = "udp".to_string();
     match mode() {
@@ -138,5 +165,21 @@ mod tests {
     fn distribution_build_is_locked_even_with_offline_export_compiled() {
         assert!(is_locked());
         assert_eq!(CORNER_LABELS_ENV, "DAEDALUS_CORNER_LABELS_JSONL");
+    }
+
+    #[cfg(feature = "contest-release")]
+    #[test]
+    fn contest_build_starts_with_local_vehicle_controls() {
+        assert!(is_contest_release());
+        assert!(allows_local_manual_controls());
+        assert!(!auto_aim_enabled_on_start());
+    }
+
+    #[cfg(all(feature = "distribution-release", not(feature = "contest-release")))]
+    #[test]
+    fn ordinary_distribution_build_remains_sdk_command_driven() {
+        assert!(is_locked());
+        assert!(!allows_local_manual_controls());
+        assert!(auto_aim_enabled_on_start());
     }
 }

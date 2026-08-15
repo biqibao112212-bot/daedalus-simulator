@@ -5,6 +5,7 @@ use std::path::PathBuf;
 
 use crate::components::{SlapperInfantry, SubscribeAutoAim};
 use crate::config::SimulationConfig;
+use crate::distribution;
 use crate::integrated_auto_aim::IntegratedAutoAimBridge;
 use crate::robomaster::prelude::{Armor, ArmorStickerSelection};
 use crate::statistic::ProjectileStatistics;
@@ -14,15 +15,23 @@ use crate::systems::FrequencyMetrics;
 pub(crate) struct HelpText;
 
 fn create_help_text(auto_aim: bool, bridge_status: &str, stats: &ProjectileStatistics) -> Text {
+    help_text_content(auto_aim, bridge_status, stats).into()
+}
+
+fn help_text_content(auto_aim: bool, bridge_status: &str, stats: &ProjectileStatistics) -> String {
+    let controls = if distribution::is_contest_release() {
+        "车辆控制：W/A/S/D 移动 | Q/E 底盘旋转 | 方向键或按住鼠标右键 云台 | Space 发射"
+    } else {
+        "Controls: F2-Screenshot F3-Camera F5-Auto Aim F6-Range Panel F7-Normal F8-Range F9-Energy F10-Small Rune F11-Large Rune F12-Close Rune | Space-Fire | WASD-Move Arrows/RMB-Gimbal"
+    };
     format!(
-        "auto-aim={} bridge={} total={} accurate={} pct={:.2}\nControls: F2-Screenshot F3-Camera F5-Auto Aim F6-Range Panel F7-Normal F8-Range F9-Energy F10-Small Rune F11-Large Rune F12-Close Rune | Space-Fire | WASD-Move Arrows/RMB-Gimbal",
+        "auto-aim={} bridge={} total={} accurate={} pct={:.2}\n{controls}",
         if auto_aim { "ON " } else { "OFF" },
         bridge_status,
         stats.launch_count,
         stats.accurate_count,
         stats.accurate_pct()
     )
-        .into()
 }
 
 pub fn spawn_text(commands: &mut Commands) {
@@ -258,5 +267,24 @@ pub fn screenshot_saving(
                 .insert(CursorIcon::from(SystemCursorIcon::Progress));
         }
         _ => {}
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[cfg(feature = "contest-release")]
+    #[test]
+    fn contest_help_shows_only_participant_vehicle_controls() {
+        let text = help_text_content(false, "N/A", &ProjectileStatistics::default());
+
+        assert!(text.contains("W/A/S/D 移动"));
+        assert!(text.contains("Q/E 底盘旋转"));
+        assert!(text.contains("鼠标右键 云台"));
+        assert!(text.contains("Space 发射"));
+        assert!(!text.contains("F2-Screenshot"));
+        assert!(!text.contains("F10-Small Rune"));
+        assert!(!text.contains("F12-Close Rune"));
     }
 }

@@ -18,6 +18,9 @@
 - The supported participant API is C++17 `ContestClient`, an SDK facade over
   the existing image, exposure-synchronised gimbal, UDP command and Scene
   Control contracts. It does not add target truth or algorithm interfaces.
+- The visible contest client starts with automatic aim disabled and supports
+  direct local vehicle control: WASD/Shift movement, Q/E chassis yaw, arrows
+  or right-mouse gimbal motion, and Space firing.
 
 ## Ownership and boundaries
 

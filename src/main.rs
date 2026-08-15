@@ -570,15 +570,18 @@ fn main() {
                         auto_aim_switch,
                         following_controls,
                         switch_slapper_control,
-                        vehicle_controls
-                            .run_if(|mode: Res<CameraMode>| mode.0 != FollowingType::Free),
-                        gimbal_controls,
-                        mouse_gimbal_controls,
                         scene_mode_keyboard_shortcuts,
                         handle_scene_mode_button_interactions,
                         toggle_shooting_range_control_window,
                     )
                         .run_if(|| !distribution::is_locked()),
+                    (
+                        vehicle_controls
+                            .run_if(|mode: Res<CameraMode>| mode.0 != FollowingType::Free),
+                        gimbal_controls,
+                        mouse_gimbal_controls,
+                    )
+                        .run_if(distribution::allows_local_manual_controls),
                     remote_vehicle_controls,
                     remote_gimbal_controls,
                     receive_scene_control_commands,
@@ -646,7 +649,7 @@ fn main() {
             PostUpdate,
             projectile_launch.after(TransformSystems::Propagate).run_if(
                 |keyboard: Res<ButtonInput<KeyCode>>, auto_aim: Res<SubscribeAutoAim>| {
-                    !distribution::is_locked()
+                    distribution::allows_local_manual_controls()
                         && keyboard.pressed(KeyCode::Space)
                         && !auto_aim.load(Ordering::Acquire)
                 },
