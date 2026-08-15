@@ -71,10 +71,15 @@ impl ShootingRangeTargetKind {
 
 const LOCAL_TEST_SPAWN: Vec3 = Vec3::new(-4.0, 1.0, -3.8);
 const LOCAL_TEST_GIMBAL_PITCH_RAD: f32 = -0.16;
-const ENERGY_TEST_SPAWN: Vec3 = Vec3::new(0.0, 1.0, -5.6);
+// The centre approach at x=0 intersects the energy-field ramp. Keep the
+// participant vehicle on the flat west apron instead, with the body collider
+// resting just above the measured GROUND_DENSE surface (-0.246 m).
+const ENERGY_TEST_SPAWN: Vec3 = Vec3::new(-4.0, 0.0, -5.6);
 const ENERGY_TEST_YAW_RAD: f32 = PI;
 const ENERGY_TEST_GIMBAL_YAW_RAD: f32 = 0.0;
-const ENERGY_TEST_GIMBAL_PITCH_RAD: f32 = -0.16;
+// Match the known-good range view. The former -0.16 rad pose left the energy
+// camera near the horizon and could present an apparent rolled-over view.
+const ENERGY_TEST_GIMBAL_PITCH_RAD: f32 = -27.0 * PI / 180.0;
 const OUTPOST_TEST_SPAWN: Vec3 = Vec3::new(-3.06, 1.0, -1.2);
 const OUTPOST_TEST_GIMBAL_PITCH_RAD: f32 = -0.26;
 const SHOOTING_RANGE_PLAYER_SPAWN: Vec3 = Vec3::new(-5.8, 1.0, -5.4);
@@ -1364,7 +1369,8 @@ pub fn setup_vehicle(
             AngularDamping(50.0),
         ));
     } else {
-        commands.entity(root).insert((
+        let mut root_entity = commands.entity(root);
+        root_entity.insert((
             RigidBody::Dynamic,
             VehicleDynamic::new(
                 sim_config.vehicle.max_speed,
@@ -1378,6 +1384,13 @@ pub fn setup_vehicle(
             Restitution::new(0.01),
             AngularDamping(50.0),
         ));
+        if is_local && scene_state.current == AutoAimSceneMode::Energy {
+            // The participant vehicle is spawned beside the energy mechanism,
+            // not as a physics obstacle. Lock root roll/pitch/yaw so a small
+            // terrain contact cannot overturn it; Q/E operates the chassis
+            // child and the gimbal remains fully controllable.
+            root_entity.insert(LockedAxes::ROTATION_LOCKED);
+        }
     }
 
     query.children.iter_descendants(root).for_each(|e| {
@@ -1565,6 +1578,18 @@ mod tests {
             assert_eq!(local_gimbal_yaw_for_mode(mode), ENERGY_TEST_GIMBAL_YAW_RAD);
             assert_eq!(local_test_yaw_for_mode(mode), ENERGY_TEST_YAW_RAD);
         }
+    }
+
+    #[test]
+    fn energy_player_starts_on_flat_apron_with_range_camera_pitch() {
+        let mode = AutoAimSceneMode::Energy;
+
+        assert_eq!(local_test_spawn_for_mode(mode), Vec3::new(-4.0, 0.0, -5.6));
+        assert_eq!(local_test_yaw_for_mode(mode), PI);
+        assert_eq!(
+            local_gimbal_pitch_for_mode(mode),
+            SHOOTING_RANGE_GIMBAL_PITCH_RAD
+        );
     }
 
     #[test]

@@ -20,7 +20,7 @@ fn create_help_text(auto_aim: bool, bridge_status: &str, stats: &ProjectileStati
 
 fn help_text_content(auto_aim: bool, bridge_status: &str, stats: &ProjectileStatistics) -> String {
     let controls = if distribution::is_contest_release() {
-        "车辆控制：W/A/S/D 移动 | Q/E 底盘旋转 | 方向键或按住鼠标右键 云台 | Space 发射"
+        "Controls: WASD Move | Q/E Chassis Turn | Arrow Keys / Right Mouse Gimbal | Space Fire"
     } else {
         "Controls: F2-Screenshot F3-Camera F5-Auto Aim F6-Range Panel F7-Normal F8-Range F9-Energy F10-Small Rune F11-Large Rune F12-Close Rune | Space-Fire | WASD-Move Arrows/RMB-Gimbal"
     };
@@ -279,10 +279,11 @@ mod tests {
     fn contest_help_shows_only_participant_vehicle_controls() {
         let text = help_text_content(false, "N/A", &ProjectileStatistics::default());
 
-        assert!(text.contains("W/A/S/D 移动"));
-        assert!(text.contains("Q/E 底盘旋转"));
-        assert!(text.contains("鼠标右键 云台"));
-        assert!(text.contains("Space 发射"));
+        assert!(text.contains("WASD Move"));
+        assert!(text.contains("Q/E Chassis Turn"));
+        assert!(text.contains("Right Mouse Gimbal"));
+        assert!(text.contains("Space Fire"));
+        assert!(text.is_ascii());
         assert!(!text.contains("F2-Screenshot"));
         assert!(!text.contains("F10-Small Rune"));
         assert!(!text.contains("F12-Close Rune"));
