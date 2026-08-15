@@ -2,11 +2,14 @@
 
 ## Current status
 
-- In progress: add the contest big-rune score to the existing bottom-left
-  projectile-statistics line, directly after `pct`. It appears only in Energy
-  while the large rune is selected, showing red/blue activated-arm count,
-  average ring and latest ring. The focused HUD test passed; a clean Release
-  rebuild and installed visible smoke are required before replacing the package.
+- The contest big-rune score now appears in the existing bottom-left
+  projectile-statistics line, directly after `pct`. It is shown only in Energy
+  while the large rune is selected, with red/blue activated-arm count, average
+  ring and latest ring. Clean Release validation and SDK CTest passed; the
+  refreshed performance gate reached `341.167/192.530 Hz` main/capture and the
+  replacement package source is `67620bf` with manifest rehash `43/43`.
+  Installed visible Vulkan smoke recorded an actual red valid hit as
+  `arms=1 avg=5.0 last=5` while blue remained zero.
 
 - Contest `1.3.1-contest` now provides a read-only big-rune ring score through
   C++ `ContestClient`, Scene Control v2 and `daedalus-contest score red|blue`.
