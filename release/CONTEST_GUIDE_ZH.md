@@ -106,6 +106,11 @@ if (red_score && red_score.value->has_hit) {
 `daedalus-contest score blue` 显示同一数据。该接口为只读；要控制大/小符、停止或
 按规则转动，仍使用上面的 `RuneScenario`。
 
+窗口内也会显示这些数据：在能量机关选择大符时，底部既有命中统计的 `pct` 右侧追加
+`big-rune R arms=… avg=… last=… B arms=… avg=… last=…`。其中 `arms` 是本轮有效亮
+扇叶命中数，`avg` 为本轮平均环数，`last` 为最近命中的 1–10 环。大符周期超时或完成后
+数值会按规则重置；切换小符或离开能量机关时该行自动隐藏。
+
 用 CMake 接入安装包中的 SDK：
 
 ```cmake

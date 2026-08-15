@@ -5,7 +5,7 @@
 
 该比赛版本运行时只支持靶场与能量机关（小符与大符）。首选入口是 C++17
 `ContestClient`；它将图像、按帧同步云台姿态、云台控制和受限场景切换组合成一个对象。
-普通场、前哨场及小能量机关由发行二进制拒绝。
+普通场和前哨场由发行二进制拒绝；能量机关同时支持小符和大符。
 
 ## 受支持的公开能力
 
@@ -43,6 +43,35 @@
 
 标定文件和 `readCameraInfo()` 均为只读。最终实机标定完成后，必须更新
 `calibration_id/revision` 和发布版本，不得在运行时修改。
+
+## 大符环数读取
+
+`ContestClient::getBigRuneScore(RuneTeam)` 返回指定红/蓝能量机关面的当前（或刚结束）
+大符规则周期统计。该接口只在**大符规则驱动**状态下累计有效命中：命中当前亮起的
+扇叶时，模拟器使用物理碰撞接触点在靶面局部坐标中的径向距离计算环数。有效检测直径为
+300 mm；比赛版采用可复现的十个等宽 15 mm 径向环带，中心为 `10` 环、外缘为 `1` 环。
+
+```cpp
+#include <daedalus_sim_sdk/contest_client.hpp>
+
+using namespace daedalus::sim::sdk::v1;
+
+auto red = simulator.getBigRuneScore(RuneTeam::Red);
+if (red) {
+    const BigRuneScore& score = *red.value;
+    // score.activated_arms: 本轮有效击中的亮扇叶数
+    // score.average_ring:   本轮平均环数；尚未命中时为 0
+    // score.last_ring:      最近一次命中的 1–10 环；尚未命中时为 0
+    // score.last_radius_mm: 最近一次命中点距靶心的径向距离
+    // score.last_target:    最近命中的 0–4 扇叶编号；尚未命中时为 -1
+}
+```
+
+`run_id` 在新的大符激活周期开始时递增，`run_active` 表示当前是否仍在该激活周期。
+规则超时或完成后的零值是正常重置，而不是 SDK 读取失败。竞赛客户端在能量机关选择
+大符时，也会把同一份数据直接显示在底部命中统计行 `pct` 的右侧：
+`big-rune R arms=… avg=… last=… B arms=… avg=… last=…`。切换到小符或离开能量机关
+时该 HUD 片段隐藏；SDK 查询接口仍可用于只读诊断。
 
 ## 云台坐标
 
