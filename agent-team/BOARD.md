@@ -5,8 +5,8 @@
 - Contest branch `release/contest-linux-1.3.1` is implementing the Linux-only
   `1.3.1-contest` package. Its C++ client, constrained scene control and
   participant launcher passed clean Release Rust `197/197` and SDK CTest
-  `8/8`. Its high-performance Vulkan gate measured `381.505 Hz` main update
-  and `198.742 Hz` capture submit against the 171.190/163.228 Hz acceptance
+  `8/8`. Its high-performance Vulkan gate measured `365.428 Hz` main update
+  and `198.689 Hz` capture submit against the 171.190/163.228 Hz acceptance
   minima. The final Linux package is at
   `/home/potato/Projects/仿真/releases/daedalus-simulator/1.3.1-contest/linux-x86_64`;
   its manifest rehash passed `43/43` and source is `2c5df16`.
@@ -17,6 +17,8 @@
   large Energy Mechanism and applied its large-rune state. The desktop lacks
   the screenshot tools required for a PNG capture, so the saved proof is the
   command/runtime evidence rather than a screenshot asset.
+- `daedalus-contest start` defaults to visible Vulkan rendering for the
+  competition. `--performance` is the explicit opt-in headless mode.
 
 - Linux x86_64 Release `1.3.1` is packaged at
   `/home/potato/Projects/仿真/releases/daedalus-simulator/1.3.1/linux-x86_64`.
