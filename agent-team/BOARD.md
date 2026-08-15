@@ -9,11 +9,16 @@
   and `197.885 Hz` capture submit against the 171.190/163.228 Hz acceptance
   minima. The final Linux package is at
   `/home/potato/Projects/仿真/releases/daedalus-simulator/1.3.1-contest/linux-x86_64`;
-  its manifest must be regenerated from source `579dc34` before handoff.
+  its manifest rehash passed `43/43`, and its package source is `97f9f5f`.
 - Contest runtime now defaults to direct participant vehicle control and no
   longer displays unsupported F-key controls: WASD/Shift movement, Q/E chassis
   yaw, arrows/right mouse gimbal, and Space firing are live; automatic aim is
   off at startup so manual gimbal input owns the controlled vehicle.
+- Package-runtime acceptance passed on Ubuntu/RTX 4060: the default visible
+  launcher opened an actual 2560x1440 X11 Vulkan window; the installed C++ SDK
+  read a 1440x1080 TCP frame, sent aim/fire, and switched both allowed scenes.
+  A focused X11 Right-arrow injection changed the observed gimbal yaw from
+  `0.0000°` to `-85.6756°`, proving the released keyboard input path is live.
 - Package-runtime acceptance on Ubuntu/RTX 4060 passed: `daedalus-contest`
   started visible Shooting Range, created an actual 2560x1440 `daedalus` X11
   window, reported `1.3.1-contest` / Vulkan / RTX 4060, returned RGBA32
