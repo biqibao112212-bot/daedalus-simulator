@@ -1,9 +1,7 @@
 use crate::query;
 use crate::robomaster::prelude::{ArmorLabel, ArmorSpec, MarkerData, Team, extract_markers};
 use crate::util::entity_query::HierarchyQuery;
-use avian3d::prelude::{
-    Collider, ColliderConstructor, ColliderConstructorHierarchy, CollisionLayers, TrimeshFlags,
-};
+use avian3d::prelude::{Collider, CollisionLayers, TrimeshFlags};
 use bevy::app::App;
 use bevy::asset::RenderAssetUsages;
 use bevy::ecs::system::SystemParam;
@@ -218,35 +216,25 @@ impl ArmorConstructor<'_, '_> {
         let query = HierarchyQuery::new(self.child_of, self.children, self.name);
         let root_query = query.of(root).flatten();
         {
-            let armor_entity = query!(root_query, .."ARMOR")?;
+            // The hidden marker is the asset's authoritative four-corner
+            // armor plane: it is also what the exact-corner exporter uses.
+            // Bind the physical scoring zone here rather than to the broader
+            // `ARMOR` shell mesh, whose visual extents are not the legal
+            // armor-plate extents.
+            let marker = query!(root_query, .."MARKER", ...)?;
             let collision_layers = self
                 .collision_layers
-                .get(armor_entity)
+                .get(marker)
                 .copied()
                 .unwrap_or_default();
             let hit_collider = self
-                .get_mesh(armor_entity)
-                .and_then(build_scaled_armor_hit_collider);
-            if let Some(hit_collider) = hit_collider {
-                self.commands.entity(armor_entity).insert((
-                    ArmorHitZone { root },
-                    hit_collider,
-                    collision_layers,
-                ));
-            } else {
-                // Keep an unscaled collider only as a physical fallback.  It
-                // must never score: the contest hit rule requires the
-                // half-scale armor-face zone, which cannot be proven without
-                // the source mesh.
-                self.commands
-                    .entity(armor_entity)
-                    .insert((ColliderConstructorHierarchy::new(
-                        ColliderConstructor::TrimeshFromMeshWithConfig(
-                            TrimeshFlags::MERGE_DUPLICATE_VERTICES,
-                        ),
-                    )
-                    .with_default_layers(collision_layers),));
-            }
+                .get_mesh(marker)
+                .and_then(build_scaled_armor_hit_collider)?;
+            self.commands.entity(marker).insert((
+                ArmorHitZone { root },
+                hit_collider,
+                collision_layers,
+            ));
         }
         //let _base = query!(root_query, .."BASE")?;
         let lights = [
