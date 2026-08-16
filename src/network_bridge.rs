@@ -8,9 +8,7 @@ use std::str;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::thread;
 
-use crate::components::{
-    Controlled, InfantryChassis, InfantryGimbal, InfantryLaunchOffset, SubscribeAutoAim,
-};
+use crate::components::{Controlled, InfantryChassis, InfantryGimbal, InfantryLaunchOffset};
 use crate::config::SimulationConfig;
 use crate::systems::{FrequencyMetricKind, FrequencyMetrics, projectile_launch};
 use crate::telemetry::PendingAutoAimShotContext;
@@ -98,14 +96,17 @@ impl Plugin for NetworkBridgePlugin {
             .add_systems(
                 FixedUpdate,
                 // Drain immediately before applying in the same fixed tick.
+                // Contest releases start in keyboard/mouse mode and do not
+                // install the development-only F5 switch, so SDK commands
+                // must remain available without SubscribeAutoAim. With no
+                // command this chain is inert, leaving manual controls intact.
                 // Draining in Update made a command wait one frame and expire
                 // on machines running below the 250 ms safety timeout.
                 (
                     drain_network_gimbal_commands,
                     apply_latest_network_gimbal_command,
                 )
-                    .chain()
-                    .run_if(|enabled: Res<SubscribeAutoAim>| enabled.load(Ordering::Acquire)),
+                    .chain(),
             );
     }
 }
