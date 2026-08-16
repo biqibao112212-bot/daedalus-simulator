@@ -13,7 +13,7 @@ use bevy::prelude::{
 };
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-const ARMOR_HIT_COLLIDER_LINEAR_SCALE: f32 = 0.5;
+const ARMOR_HIT_COLLIDER_FACE_SCALE: f32 = 1.0;
 
 #[derive(Component, Debug)]
 pub struct ScanArmor {
@@ -360,14 +360,14 @@ fn build_scaled_armor_hit_collider(mesh: &Mesh) -> Option<Collider> {
 
 fn scale_armor_hit_offset(mut offset: Vec3, extents: Vec3) -> Vec3 {
     if extents.x <= extents.y && extents.x <= extents.z {
-        offset.y *= ARMOR_HIT_COLLIDER_LINEAR_SCALE;
-        offset.z *= ARMOR_HIT_COLLIDER_LINEAR_SCALE;
+        offset.y *= ARMOR_HIT_COLLIDER_FACE_SCALE;
+        offset.z *= ARMOR_HIT_COLLIDER_FACE_SCALE;
     } else if extents.y <= extents.x && extents.y <= extents.z {
-        offset.x *= ARMOR_HIT_COLLIDER_LINEAR_SCALE;
-        offset.z *= ARMOR_HIT_COLLIDER_LINEAR_SCALE;
+        offset.x *= ARMOR_HIT_COLLIDER_FACE_SCALE;
+        offset.z *= ARMOR_HIT_COLLIDER_FACE_SCALE;
     } else {
-        offset.x *= ARMOR_HIT_COLLIDER_LINEAR_SCALE;
-        offset.y *= ARMOR_HIT_COLLIDER_LINEAR_SCALE;
+        offset.x *= ARMOR_HIT_COLLIDER_FACE_SCALE;
+        offset.y *= ARMOR_HIT_COLLIDER_FACE_SCALE;
     }
     offset
 }
@@ -377,7 +377,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn armor_hit_zone_halves_both_face_dimensions_but_not_thickness() {
+    fn armor_hit_zone_preserves_full_face_dimensions_and_thickness() {
         let x_thin =
             scale_armor_hit_offset(Vec3::new(0.01, 0.20, -0.30), Vec3::new(0.02, 0.40, 0.60));
         let y_thin =
@@ -385,9 +385,9 @@ mod tests {
         let z_thin =
             scale_armor_hit_offset(Vec3::new(0.20, 0.30, -0.01), Vec3::new(0.40, 0.60, 0.02));
 
-        assert_eq!(x_thin, Vec3::new(0.01, 0.10, -0.15));
-        assert_eq!(y_thin, Vec3::new(0.10, 0.01, -0.15));
-        assert_eq!(z_thin, Vec3::new(0.10, 0.15, -0.01));
+        assert_eq!(x_thin, Vec3::new(0.01, 0.20, -0.30));
+        assert_eq!(y_thin, Vec3::new(0.20, 0.01, -0.30));
+        assert_eq!(z_thin, Vec3::new(0.20, 0.30, -0.01));
     }
 }
 

@@ -86,7 +86,7 @@ fn handle_vehicle_projectile_collision(
 
     if let Some(target) = target {
         info!(
-            "Projectile {:?} scored on half-scale armor collider {:?}",
+            "Projectile {:?} scored on full-size armor collider {:?}",
             projectile_entity, other_collider
         );
         stats.increase_accurate();
