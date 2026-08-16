@@ -31,7 +31,12 @@ impl GameLayer {
         if is_self {
             CollisionLayers::new(
                 Self::VehicleSelf,
-                [Self::Default, Self::VehicleOther, Self::Environment],
+                [
+                    Self::Default,
+                    Self::VehicleOther,
+                    Self::ProjectileOther,
+                    Self::Environment,
+                ],
             )
         } else {
             CollisionLayers::new(
@@ -40,6 +45,7 @@ impl GameLayer {
                     Self::Default,
                     Self::VehicleSelf,
                     Self::VehicleOther,
+                    Self::ProjectileSelf,
                     Self::Environment,
                 ],
             )
@@ -87,6 +93,13 @@ impl GameLayer {
 
 #[derive(Component, Deref, DerefMut)]
 pub struct ProjectileLifetime(pub Timer);
+
+/// Marks the rigid-body collider that blocks projectiles without awarding an
+/// armor hit. An opposing projectile is consumed as a miss when it reaches
+/// this collider, so it cannot pass through the chassis and score on a rear
+/// armor plate.
+#[derive(Component)]
+pub struct VehicleBodyCollider;
 
 #[derive(Resource, Deref, DerefMut)]
 pub struct ProjectileCooldown(pub Timer);
@@ -147,11 +160,13 @@ mod tests {
     }
 
     #[test]
-    fn projectiles_do_not_hit_vehicle_body_colliders() {
+    fn projectiles_hit_only_opposing_vehicle_body_colliders() {
         let self_projectile = GameLayer::projectile_collision_layers(true);
         let other_projectile = GameLayer::projectile_collision_layers(false);
 
-        assert!(!self_projectile.interacts_with(GameLayer::vehicle_body_collision_layers(false)));
-        assert!(!other_projectile.interacts_with(GameLayer::vehicle_body_collision_layers(true)));
+        assert!(self_projectile.interacts_with(GameLayer::vehicle_body_collision_layers(false)));
+        assert!(other_projectile.interacts_with(GameLayer::vehicle_body_collision_layers(true)));
+        assert!(!self_projectile.interacts_with(GameLayer::vehicle_body_collision_layers(true)));
+        assert!(!other_projectile.interacts_with(GameLayer::vehicle_body_collision_layers(false)));
     }
 }

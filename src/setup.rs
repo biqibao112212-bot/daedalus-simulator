@@ -15,7 +15,7 @@ use crate::capture::{
 use crate::components::{
     ActiveSlapper, Controlled, DartLaunch, GameLayer, GroundRoot, Infantry, InfantryChassis,
     InfantryGimbal, InfantryLaunchOffset, InfantryViewOffset, MainCamera, PreciousCollision,
-    SlapperInfantry,
+    SlapperInfantry, VehicleBodyCollider,
 };
 use crate::config::ArenaBoundaryConfig;
 use crate::config::SimulationConfig;
@@ -1389,6 +1389,7 @@ pub fn setup_vehicle(
             AngularDamping(0.0),
             LinearVelocity::ZERO,
             AngularVelocity::ZERO,
+            VehicleBodyCollider,
         ));
     } else if is_upright_debug_target {
         commands.entity(root).insert((
@@ -1400,6 +1401,7 @@ pub fn setup_vehicle(
             Mass(15.0),
             Restitution::new(0.01),
             AngularDamping(50.0),
+            VehicleBodyCollider,
         ));
     } else {
         let mut root_entity = commands.entity(root);
@@ -1416,6 +1418,7 @@ pub fn setup_vehicle(
             Mass(15.0),
             Restitution::new(0.01),
             AngularDamping(50.0),
+            VehicleBodyCollider,
         ));
         if is_local && scene_state.current == AutoAimSceneMode::Energy {
             // The participant vehicle is spawned beside the energy mechanism,
