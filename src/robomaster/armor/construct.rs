@@ -108,10 +108,22 @@ pub struct ArmorRoot {
     pub id: ArmorId,
 }
 
+/// Marks the only collider that is allowed to score a projectile hit for an
+/// armor module.  Vehicle-body colliders and visual children deliberately do
+/// not carry this marker.
+#[derive(Component, Clone, Copy, Debug)]
+pub struct ArmorHitZone {
+    pub root: Entity,
+}
+
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct ArmorId(usize);
 
 impl ArmorId {
+    pub const fn new(id: usize) -> Self {
+        Self(id)
+    }
+
     pub const fn as_usize(self) -> usize {
         self.0
     }
@@ -216,35 +228,25 @@ impl ArmorConstructor<'_, '_> {
                 .get_mesh(armor_entity)
                 .and_then(build_scaled_armor_hit_collider);
             if let Some(hit_collider) = hit_collider {
+                self.commands.entity(armor_entity).insert((
+                    ArmorHitZone { root },
+                    hit_collider,
+                    collision_layers,
+                ));
+            } else {
+                // Keep an unscaled collider only as a physical fallback.  It
+                // must never score: the contest hit rule requires the
+                // half-scale armor-face zone, which cannot be proven without
+                // the source mesh.
                 self.commands
                     .entity(armor_entity)
-                    .insert((hit_collider, collision_layers));
-            } else {
-                self.commands.entity(armor_entity).insert(
-                    ColliderConstructorHierarchy::new(
+                    .insert((ColliderConstructorHierarchy::new(
                         ColliderConstructor::TrimeshFromMeshWithConfig(
                             TrimeshFlags::MERGE_DUPLICATE_VERTICES,
                         ),
                     )
-                    .with_default_layers(collision_layers),
-                );
+                    .with_default_layers(collision_layers),));
             }
-        }
-        {
-            let children = self.children;
-
-            let name = self.name;
-            children
-                .iter_descendants(root)
-                .filter_map(|v| name.get(v).ok().map(|name| (name, v)))
-                .for_each(|(elem_name, armor_elem)| {
-                    self.commands.entity(armor_elem).insert(Armor {
-                        name: elem_name.to_string(),
-                        team: armor_data.team,
-                        spec: armor_data.spec,
-                        label: armor_data.spec.label(),
-                    });
-                });
         }
         //let _base = query!(root_query, .."BASE")?;
         let lights = [
@@ -380,6 +382,25 @@ fn scale_armor_hit_offset(mut offset: Vec3, extents: Vec3) -> Vec3 {
         offset.y *= ARMOR_HIT_COLLIDER_LINEAR_SCALE;
     }
     offset
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn armor_hit_zone_halves_both_face_dimensions_but_not_thickness() {
+        let x_thin =
+            scale_armor_hit_offset(Vec3::new(0.01, 0.20, -0.30), Vec3::new(0.02, 0.40, 0.60));
+        let y_thin =
+            scale_armor_hit_offset(Vec3::new(0.20, 0.01, -0.30), Vec3::new(0.40, 0.02, 0.60));
+        let z_thin =
+            scale_armor_hit_offset(Vec3::new(0.20, 0.30, -0.01), Vec3::new(0.40, 0.60, 0.02));
+
+        assert_eq!(x_thin, Vec3::new(0.01, 0.10, -0.15));
+        assert_eq!(y_thin, Vec3::new(0.10, 0.01, -0.15));
+        assert_eq!(z_thin, Vec3::new(0.10, 0.15, -0.01));
+    }
 }
 
 /// 从Mesh中提取所有顶点
