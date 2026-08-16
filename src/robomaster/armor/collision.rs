@@ -21,11 +21,14 @@ struct ConsumedVehicleProjectiles(HashSet<Entity>);
 // The stock vehicle's broad chassis collider encloses the visual armor planes
 // by roughly 25-50 mm. A body collision can therefore arrive before the
 // dedicated armor collider even for a shot aimed at the plate centre. Allow a
-// short forward ray segment to reach that same vehicle's first armor plane,
-// but keep the segment far shorter than the chassis diameter so a rear plate
-// can never turn a body shot into a score.
+// short ray segment to reach that same vehicle's first armor plane. At the
+// locked 25 m/s and 250 Hz physics rate, the projectile advances 100 mm in one
+// fixed tick, so CollisionStart can be reported after it has already crossed
+// the embedded plate plane. The backward allowance covers one such tick plus
+// the projectile radius, while remaining far shorter than the chassis
+// diameter so a rear plate can never turn a body shot into a score.
 const BODY_TO_FRONT_ARMOR_MAX_DEPTH_M: f32 = 0.10;
-const BODY_TO_FRONT_ARMOR_BACKTRACK_M: f32 = 0.025;
+const BODY_TO_FRONT_ARMOR_BACKTRACK_M: f32 = 0.125;
 
 fn handle_vehicle_projectile_collision(
     event: On<CollisionStart>,
@@ -518,6 +521,37 @@ mod tests {
                 .resource::<ProjectileStatistics>()
                 .accurate_count,
             0
+        );
+    }
+
+    #[test]
+    fn delayed_body_event_after_crossing_front_plate_still_scores() {
+        let mut app = collision_test_app();
+        let vehicle_body = app.world_mut().spawn(VehicleBodyCollider).id();
+        spawn_test_armor(&mut app, vehicle_body, 0.22, "front armor");
+        let projectile = app
+            .world_mut()
+            .spawn((
+                Projectile,
+                CollisionEventsEnabled,
+                Transform::from_xyz(0.0, 0.0, 0.12),
+                LinearVelocity(Vec3::new(0.0, 0.0, -25.0)),
+            ))
+            .id();
+
+        app.world_mut().trigger(CollisionStart {
+            collider1: projectile,
+            collider2: vehicle_body,
+            body1: Some(projectile),
+            body2: Some(vehicle_body),
+        });
+        app.world_mut().flush();
+
+        assert_eq!(
+            app.world()
+                .resource::<ProjectileStatistics>()
+                .accurate_count,
+            1
         );
     }
 
