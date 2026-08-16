@@ -5,7 +5,7 @@ use core::f32::consts::PI;
 use crate::components::{
     Controlled, DartLaunch, DartProjectile, DartSetting, GameLayer, Infantry, InfantryChassis,
     InfantryGimbal, InfantryLaunchOffset, ProjectileCooldown, ProjectileLifetime,
-    ProjectileSetting,
+    ProjectilePreImpactVelocity, ProjectileSetting,
 };
 use crate::config::SimulationConfig;
 use crate::robomaster::prelude::{Armor, ArmorRoot, Projectile};
@@ -109,7 +109,7 @@ pub fn projectile_launch(
         GameLayer::projectile_collision_layers(true),
         Mesh3d(setting.0.clone()),
         MeshMaterial3d(setting.1.clone()),
-        LinearVelocity(vel),
+        (LinearVelocity(vel), ProjectilePreImpactVelocity(vel)),
         AngularVelocity(infantry.2.0),
         Transform::IDENTITY.with_translation(position),
         ProjectileLifetime(Timer::from_seconds(

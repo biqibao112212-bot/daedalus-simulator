@@ -94,6 +94,12 @@ impl GameLayer {
 #[derive(Component, Deref, DerefMut)]
 pub struct ProjectileLifetime(pub Timer);
 
+/// Velocity captured immediately before the current physics step. Collision
+/// observers run after the solver, when `LinearVelocity` may already contain
+/// the rebound impulse.
+#[derive(Component, Deref, DerefMut)]
+pub struct ProjectilePreImpactVelocity(pub Vec3);
+
 /// Marks the rigid-body collider that blocks projectiles without awarding an
 /// armor hit. An opposing projectile is consumed as a miss when it reaches
 /// this collider, so it cannot pass through the chassis and score on a rear

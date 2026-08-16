@@ -1,13 +1,16 @@
-use avian3d::prelude::{CollisionEventsEnabled, CollisionStart, LinearVelocity};
+use avian3d::prelude::{
+    CollisionEventsEnabled, CollisionStart, LinearVelocity, PhysicsSchedule, PhysicsStepSystems,
+    Position,
+};
 use bevy::prelude::{
-    ChildOf, Commands, Entity, GlobalTransform, On, Plugin, Query, Res, ResMut, Transform, Update,
-    Vec3, With, info,
+    ChildOf, Commands, Entity, GlobalTransform, IntoScheduleConfigs, On, Plugin, Query, Res,
+    ResMut, Transform, Update, Vec3, With, info,
 };
 use std::collections::HashSet;
 
 use super::construct::{Armor, ArmorHitZone, ArmorRoot};
 use super::marker::MarkerData;
-use crate::components::VehicleBodyCollider;
+use crate::components::{ProjectilePreImpactVelocity, VehicleBodyCollider};
 use crate::robomaster::power_rune::prelude::Projectile;
 use crate::statistic::ProjectileStatistics;
 use crate::telemetry::{
@@ -23,12 +26,10 @@ struct ConsumedVehicleProjectiles(HashSet<Entity>);
 // dedicated armor collider even for a shot aimed at the plate centre. Allow a
 // short ray segment to reach that same vehicle's first armor plane. At the
 // locked 25 m/s and 250 Hz physics rate, the projectile advances 100 mm in one
-// fixed tick, so CollisionStart can be reported after it has already crossed
-// the embedded plate plane. The backward allowance covers one such tick plus
-// the projectile radius, while remaining far shorter than the chassis
-// diameter so a rear plate can never turn a body shot into a score.
-const BODY_TO_FRONT_ARMOR_MAX_DEPTH_M: f32 = 0.10;
-const BODY_TO_FRONT_ARMOR_BACKTRACK_M: f32 = 0.125;
+// fixed tick; another roughly 60 mm covers the hull-to-plate gap and projectile
+// radius. This remains far shorter than the roughly 400 mm front-to-rear plate
+// separation, so a rear plate can never turn a body shot into a score.
+const BODY_IMPACT_ARMOR_PROJECTION_WINDOW_M: f32 = 0.16;
 
 fn handle_vehicle_projectile_collision(
     event: On<CollisionStart>,
@@ -40,6 +41,8 @@ fn handle_vehicle_projectile_collision(
         (
             Option<&Transform>,
             Option<&LinearVelocity>,
+            Option<&ProjectilePreImpactVelocity>,
+            Option<&Position>,
             Option<&ProjectileTrace>,
         ),
         With<Projectile>,
@@ -77,28 +80,44 @@ fn handle_vehicle_projectile_collision(
 
     let direct_target =
         find_armor_target(other_collider, &armor_hit_zones, &armor_roots, &child_of);
+    let direct_contact = direct_target.is_some();
     let vehicle_body = direct_target
-        .is_none()
-        .then(|| find_vehicle_body(other_collider, &vehicle_bodies, &child_of))
-        .flatten();
+        .as_ref()
+        .and_then(|target| find_vehicle_body(target.entity, &vehicle_bodies, &child_of))
+        .or_else(|| find_vehicle_body(other_collider, &vehicle_bodies, &child_of));
     if direct_target.is_none() && vehicle_body.is_none() {
         return;
     }
 
     let projected_target = vehicle_body.and_then(|vehicle_body| {
         let transform = projectile_data.0?;
-        let velocity = projectile_data.1?.0;
+        let position = projectile_data
+            .3
+            .map_or(transform.translation, |position| position.0);
+        let velocity = projectile_data.2.map_or_else(
+            || projectile_data.1.map_or(Vec3::ZERO, |velocity| velocity.0),
+            |velocity| velocity.0,
+        );
         find_front_armor_along_body_impact(
             vehicle_body,
-            transform.translation,
+            position,
             velocity,
             &armor_markers,
             &armor_roots,
             &child_of,
         )
     });
-    let projected_hit = projected_target.is_some();
-    let target = direct_target.or_else(|| projected_target.map(|(target, _, _)| target));
+    let geometry_validated = projected_target.is_some();
+    // Vehicle armor and vehicle-body contacts must use the same authoritative
+    // centre-line/four-corner test. Otherwise an edge-grazing projectile can
+    // score or miss solely according to which simultaneous collision event is
+    // delivered first. Standalone armor targets without a vehicle body retain
+    // their direct-collider behavior.
+    let target = if vehicle_body.is_some() {
+        projected_target.map(|(target, _, _)| target)
+    } else {
+        direct_target
+    };
 
     // Resolve both scoring armor and non-scoring vehicle-body contacts in one
     // observer. The set is updated immediately, unlike deferred component
@@ -114,26 +133,38 @@ fn handle_vehicle_projectile_collision(
         .insert(ProjectileImpactRecorded);
 
     if let Some(target) = target {
-        if projected_hit {
+        if geometry_validated && direct_contact {
             info!(
-                "Projectile {:?} scored on full-size front armor projected through enclosing body collider {:?}",
-                projectile_entity, other_collider
+                "Projectile {:?} scored on full-size armor {:?} at {:?}; direct collider {:?} validated against the authoritative four-corner plane",
+                projectile_entity, target.entity, target.position_m, other_collider
+            );
+        } else if geometry_validated {
+            info!(
+                "Projectile {:?} scored on full-size front armor {:?} at {:?} projected through enclosing body collider {:?}",
+                projectile_entity, target.entity, target.position_m, other_collider
             );
         } else {
             info!(
-                "Projectile {:?} scored on full-size armor collider {:?}",
-                projectile_entity, other_collider
+                "Projectile {:?} scored on full-size armor {:?} at {:?} via collider {:?}",
+                projectile_entity, target.entity, target.position_m, other_collider
             );
         }
         stats.increase_accurate();
         let projectile =
             ProjectileKinematics::from_components(projectile_data.0, projectile_data.1);
-        telemetry.write_armor_hit(projectile_data.2, projectile, target);
+        telemetry.write_armor_hit(projectile_data.4, projectile, target);
     } else {
-        info!(
-            "Projectile {:?} hit vehicle body collider {:?}; recorded as miss",
-            projectile_entity, other_collider
-        );
+        if direct_contact {
+            info!(
+                "Projectile {:?} contacted armor collider {:?} outside the authoritative full-size four-corner plane; recorded as miss",
+                projectile_entity, other_collider
+            );
+        } else {
+            info!(
+                "Projectile {:?} hit vehicle body collider {:?}; recorded as miss",
+                projectile_entity, other_collider
+            );
+        }
     }
 }
 
@@ -176,7 +207,7 @@ fn find_front_armor_along_body_impact(
                 .0
                 .map(|point| marker_transform.transform_point(point));
             let distance = ray_quad_distance(projectile_position, direction, corners)?;
-            if !(-BODY_TO_FRONT_ARMOR_BACKTRACK_M..=BODY_TO_FRONT_ARMOR_MAX_DEPTH_M)
+            if !(-BODY_IMPACT_ARMOR_PROJECTION_WINDOW_M..=BODY_IMPACT_ARMOR_PROJECTION_WINDOW_M)
                 .contains(&distance)
             {
                 return None;
@@ -243,6 +274,14 @@ fn cleanup_consumed_vehicle_projectiles(
     consumed.0.retain(|entity| projectiles.contains(*entity));
 }
 
+fn capture_projectile_pre_impact_velocity(
+    mut projectiles: Query<(&LinearVelocity, &mut ProjectilePreImpactVelocity), With<Projectile>>,
+) {
+    for (velocity, mut pre_impact) in &mut projectiles {
+        pre_impact.0 = velocity.0;
+    }
+}
+
 fn find_armor_target(
     entity: Entity,
     armor_hit_zones: &Query<&ArmorHitZone>,
@@ -269,6 +308,10 @@ pub(super) struct ArmorCollisionPlugin;
 impl Plugin for ArmorCollisionPlugin {
     fn build(&self, app: &mut bevy::app::App) {
         app.init_resource::<ConsumedVehicleProjectiles>()
+            .add_systems(
+                PhysicsSchedule,
+                capture_projectile_pre_impact_velocity.before(PhysicsStepSystems::First),
+            )
             .add_systems(Update, cleanup_consumed_vehicle_projectiles)
             .add_observer(handle_vehicle_projectile_collision);
     }
@@ -509,12 +552,75 @@ mod tests {
     }
 
     #[test]
+    fn pre_step_position_can_project_forward_to_front_plate() {
+        let mut app = collision_test_app();
+        let vehicle_body = app.world_mut().spawn(VehicleBodyCollider).id();
+        spawn_test_armor(&mut app, vehicle_body, 0.22, "front armor");
+        let projectile = app
+            .world_mut()
+            .spawn((
+                Projectile,
+                CollisionEventsEnabled,
+                Transform::from_xyz(0.0, 0.0, 0.37),
+                LinearVelocity(Vec3::new(0.0, 0.0, -25.0)),
+            ))
+            .id();
+
+        app.world_mut().trigger(CollisionStart {
+            collider1: projectile,
+            collider2: vehicle_body,
+            body1: Some(projectile),
+            body2: Some(vehicle_body),
+        });
+        app.world_mut().flush();
+
+        assert_eq!(
+            app.world()
+                .resource::<ProjectileStatistics>()
+                .accurate_count,
+            1
+        );
+    }
+
+    #[test]
     fn body_contact_just_outside_full_front_plate_is_a_miss() {
         let mut app = collision_test_app();
         let vehicle_body = app.world_mut().spawn(VehicleBodyCollider).id();
         spawn_test_armor(&mut app, vehicle_body, 0.22, "front armor");
 
         trigger_body_hit(&mut app, vehicle_body, TEST_PLATE_HALF_WIDTH_M + 0.002);
+
+        assert_eq!(
+            app.world()
+                .resource::<ProjectileStatistics>()
+                .accurate_count,
+            0
+        );
+    }
+
+    #[test]
+    fn direct_collider_contact_outside_full_plate_is_still_a_miss() {
+        let mut app = collision_test_app();
+        let vehicle_body = app.world_mut().spawn(VehicleBodyCollider).id();
+        let armor_marker = spawn_test_armor(&mut app, vehicle_body, 0.22, "front armor");
+        let projectile = app
+            .world_mut()
+            .spawn((
+                Projectile,
+                CollisionEventsEnabled,
+                Transform::from_xyz(TEST_PLATE_HALF_WIDTH_M + 0.002, 0.0, 0.2675),
+                LinearVelocity(Vec3::new(0.0, 0.0, -25.0)),
+                ProjectilePreImpactVelocity(Vec3::new(0.0, 0.0, -25.0)),
+            ))
+            .id();
+
+        app.world_mut().trigger(CollisionStart {
+            collider1: projectile,
+            collider2: armor_marker,
+            body1: Some(projectile),
+            body2: Some(vehicle_body),
+        });
+        app.world_mut().flush();
 
         assert_eq!(
             app.world()
@@ -536,6 +642,40 @@ mod tests {
                 CollisionEventsEnabled,
                 Transform::from_xyz(0.0, 0.0, 0.12),
                 LinearVelocity(Vec3::new(0.0, 0.0, -25.0)),
+            ))
+            .id();
+
+        app.world_mut().trigger(CollisionStart {
+            collider1: projectile,
+            collider2: vehicle_body,
+            body1: Some(projectile),
+            body2: Some(vehicle_body),
+        });
+        app.world_mut().flush();
+
+        assert_eq!(
+            app.world()
+                .resource::<ProjectileStatistics>()
+                .accurate_count,
+            1
+        );
+    }
+
+    #[test]
+    fn body_projection_uses_pre_impact_velocity_instead_of_rebound() {
+        let mut app = collision_test_app();
+        let vehicle_body = app.world_mut().spawn(VehicleBodyCollider).id();
+        spawn_test_armor(&mut app, vehicle_body, 0.22, "front armor");
+        let projectile = app
+            .world_mut()
+            .spawn((
+                Projectile,
+                CollisionEventsEnabled,
+                Transform::from_xyz(0.0, 0.0, 0.2675),
+                // This is the solver-modified rebound and no longer points at
+                // the plate.
+                LinearVelocity(Vec3::new(25.0, 0.0, 0.0)),
+                ProjectilePreImpactVelocity(Vec3::new(0.0, 0.0, -25.0)),
             ))
             .id();
 
