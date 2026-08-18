@@ -2,6 +2,26 @@
 
 ## Current status
 
+- `1.4.0-learning-r1` is a Linux x86_64-only learning distribution on
+  `release/learning-linux-1.4.0`, derived from the final contest-r2 source
+  lineage (`8bdb184`) and packaged from `2983e553`.  It is local-only at
+  `/home/potato/Projects/仿真/releases/daedalus-simulator/1.4.0-learning-r1/linux-x86_64`;
+  no public Release or contest-release repository was modified.  The package
+  declares `distribution_profile=learning`, `competition_eligible=false`, and
+  `future_truth_included=false`, exposes truth by default only through the
+  existing frame-synchronised SDK reader, and keeps the contest input/scenes.
+  Its Rust learning and contest-lock regression suites, Release build, and
+  installed C++ SDK CTest `8/8` passed; the package ZIP/TAR integrity checks
+  passed.  Runtime smoke on Ubuntu/RTX 4060 received Shooting Range truth
+  (`3` targets), switched to Energy (`1` target, `2` runes), and verified the
+  opt-out (`DAEDALUS_LEARNING_TRUTH=0`) returns zero target/rune truth.  The
+  old local `1.4.0-learning` draft is retained unmodified and superseded;
+  `r1` is the candidate for any later independent publication.
+
+- Formal performance evidence was explicitly skipped for `1.4.0-learning-r1`;
+  the package contains `docs/PERFORMANCE_NOT_MEASURED.md` and must not be used
+  for a performance-baseline claim.
+
 - `1.3.1-contest-r2` is published as a separate Linux x86_64-only revision at
   `https://github.com/biqibao112212-bot/daedalus-simulator-contest-releases/releases/tag/1.3.1-contest-r2-linux`.
   It is built from source commit `8fd0558`; its archive manifest contains 43
