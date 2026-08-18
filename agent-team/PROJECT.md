@@ -10,7 +10,7 @@
 
 ## Learning release target
 
-- `1.4.0-learning` is a separately maintained Linux x86_64-only internal
+- `1.4.0-learning-r1` is a separately maintained Linux x86_64-only internal
   learning line derived directly from the latest contest-r2 source commit
   (`release/contest-linux-1.3.1` / `8bdb184`), not from main or an older
   generic release. It is not competition eligible and must never overwrite,
@@ -169,7 +169,7 @@ evidence only.
 - `1.3.1-contest` adds `get_big_rune_score` to Scene Control v2 and maps it to
   `SceneControlClient::getBigRuneScore(RuneTeam)` and
   `ContestClient::getBigRuneScore(RuneTeam)`. It is read-only and is available
-  through the participant launcher as `daedalus-contest score red|blue`.
+  through the learning launcher as `daedalus-learning score red|blue`.
 - The mechanism records only a valid collision with a currently lit large-rune
   leaf during a rules-driven activation. The result carries the per-face run
   identity, whether it is active, valid activated-arm count, average ring and

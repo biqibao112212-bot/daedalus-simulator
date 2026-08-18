@@ -268,7 +268,7 @@
     ring. To preserve the concise client control surface, the HUD segment is
     present only on the Energy map while the large rune is selected; SDK and
     launcher queries remain available for all read-only score inspection.
-48. `1.4.0-learning` is an independent Linux-only branch derived from the
+48. `1.4.0-learning-r1` is an independent Linux-only branch derived from the
     latest contest-r2 source, not a contest package and not a revision of any
     published contest Release. It keeps the contest maps, manual/SDK controls,
     armor hit rules, energy mechanism and C++ ABI, but compiles the distinct

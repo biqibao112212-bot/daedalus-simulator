@@ -59,7 +59,7 @@ TARGET_DIR="$PACKAGE_ROOT/$PACKAGE_ID"
 ZIP_PATH="$PACKAGE_ROOT/$PACKAGE_ID.zip"
 TAR_GZ_PATH="$PACKAGE_ROOT/$PACKAGE_ID.tar.gz"
 LEARNING_RELEASE=0
-if [[ "$VERSION" == *-learning ]]; then
+if [[ "$VERSION" == *-learning* ]]; then
   LEARNING_RELEASE=1
 fi
 

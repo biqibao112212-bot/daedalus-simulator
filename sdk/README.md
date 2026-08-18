@@ -1,4 +1,4 @@
-# Daedalus Learning SDK 1.4.0-learning（Linux x86_64）
+# Daedalus Learning SDK 1.4.0-learning-r1（Linux x86_64）
 
 实验室发行版仅交付模拟器二进制；SDK 是消费者使用模拟器的受支持接口。SDK 不包含、
 管理或加载任何自瞄推理模型。
@@ -54,7 +54,7 @@ if (!truth ||
 
 ## 固定契约
 
-- SDK：`1.4.0-learning`（CMake ABI 兼容版本 `1.3.1`）
+- SDK：`1.4.0-learning-r1`（CMake ABI 兼容版本 `1.3.1`）
 - Talos SHM：`v7`，ABI revision `2`
 - 默认 TCP 图像：RGBA32 `1440×1080`；旧 SHM 图像槽：RGB24
 - TCP 图像：`127.0.0.1:5602`

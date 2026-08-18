@@ -1,7 +1,7 @@
 {
   "product": "daedalus-simulator",
-  "version": "1.4.0-learning",
-  "sdk_version": "1.4.0-learning",
+  "version": "1.4.0-learning-r1",
+  "sdk_version": "1.4.0-learning-r1",
   "shm_version": 7,
   "sdk_abi_revision": 2,
   "image": {
@@ -53,7 +53,7 @@
     },
     "big_rune_score": {
       "sdk_method": "ContestClient::getBigRuneScore",
-      "cli_command": "daedalus-contest score red|blue",
+      "cli_command": "daedalus-learning score red|blue",
       "effective_detection_diameter_mm": 300,
       "rings": "1-10, centre to outer edge"
     }

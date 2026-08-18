@@ -1,4 +1,4 @@
-# Daedalus 1.4.0-learning（Linux x86_64）
+# Daedalus 1.4.0-learning-r1（Linux x86_64）
 
 这是从最新比赛版 `1.3.1-contest-r2` 派生的实验室学习版本。它保留靶场、能量机关、
 键盘/鼠标车辆控制、SDK 云台/开火控制、装甲板命中判定和大小能量机关；但它**绝不用于
