@@ -2,36 +2,23 @@
 
 ## Current status
 
-- Final `1.3.1-contest` Linux publish package is ready from source
-  `f08fc2a` (runtime implementation `e1ca56f`). It accepts a projectile hit
-  only when its collider is the actual `ARMOR` mesh's dedicated hit zone; the
-  two face dimensions of that zone are each scaled to one half, while vehicle
-  body or fallback colliders do not score. Targeted Rust tests prove both a
-  valid scaled-armor hit and a non-scoring vehicle-body hit. The regenerated
-  clean Release build and SDK CTest passed; final Vulkan performance evidence
-  is `426.371/199.706 Hz` main/capture against `171.190/163.228 Hz` minima,
-  and the manifest rehash passed `43/43`. Installed-package visible Vulkan
-  smoke started Shooting Range and returned a `1440x1080` TCP frame on RTX
-  4060 with the package binary hash matching the validated build.
+- `1.3.1-contest-r2` is published as a separate Linux x86_64-only revision at
+  `https://github.com/biqibao112212-bot/daedalus-simulator-contest-releases/releases/tag/1.3.1-contest-r2-linux`.
+  It is built from source commit `8fd0558`; its archive manifest contains 43
+  files, both archive formats passed local integrity reads, and a tarball
+  downloaded back from the public Release has SHA-256
+  `b3574cfb537142aaea8b2c5594bc46f767f299f1ce5322cf48742007f2823377`.
+  Simulator contest tests and all 8 installed C++ SDK tests passed. It fixes
+  SDK commands in manual mode, removes the legacy auto-aim/bridge HUD fields,
+  and classifies target hits against full-size armor plates only. The prior
+  `1.3.1-contest-linux` Release is preserved unchanged but superseded.
 
-- The contest big-rune score now appears in the existing bottom-left
-  projectile-statistics line, directly after `pct`. It is shown only in Energy
-  while the large rune is selected, with red/blue activated-arm count, average
-  ring and latest ring. Clean Release validation and SDK CTest passed; the
-  refreshed performance gate reached `341.167/192.530 Hz` main/capture and the
-  replacement package source is `67620bf` with manifest rehash `43/43`.
-  Installed visible Vulkan smoke recorded an actual red valid hit as
-  `arms=1 avg=5.0 last=5` while blue remained zero.
-
-- Contest `1.3.1-contest` now provides a read-only big-rune ring score through
-  C++ `ContestClient`, Scene Control v2 and `daedalus-contest score red|blue`.
-  It records a valid active-leaf collision point in the target-local plane and
-  reports per-side current-run data. Clean Release Rust validation and SDK
-  CTest `8/8` passed; the fresh high-performance Vulkan evidence reached
-  `357.758 Hz` main update and `198.311 Hz` capture submit. The replacement
-  package source is `2f759ec`, its manifest rehash passed `43/43`, and its
-  installed visible Vulkan runtime returned red/blue active-run score records
-  plus a `1440x1080` TCP frame on the RTX 4060.
+- The publisher explicitly waived **formal r2 performance verification** for
+  this release. The package has no performance-evidence JSON and instead
+  contains `docs/PERFORMANCE_NOT_MEASURED.md`; do not make a performance
+  comparison or baseline-acceptance claim from r2. `package-release.sh`
+  requires the named `--skip-performance-validation` override for this state,
+  so a normal package still requires clean benchmark evidence.
 
 - Contest branch `release/contest-linux-1.3.1` is implementing the Linux-only
   `1.3.1-contest` package. Its C++ client, constrained scene control and
