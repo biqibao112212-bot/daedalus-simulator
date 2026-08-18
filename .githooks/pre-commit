@@ -35,13 +35,19 @@ if grep -Eq "$PERFORMANCE_PATHS" <<<"$UNSTAGED"; then
   exit 1
 fi
 
-if command -v powershell.exe >/dev/null 2>&1; then
-  PS=powershell.exe
-elif command -v pwsh >/dev/null 2>&1; then
-  PS=pwsh
-else
-  echo 'pre-commit: PowerShell is required for the Release performance gate.' >&2
+if [[ "$(uname -s)" != "Linux" ]]; then
+  echo 'pre-commit: performance-relevant changes must be committed from the supported Linux release environment.' >&2
   exit 1
 fi
 
-"$PS" -NoProfile -ExecutionPolicy Bypass -File "$ROOT/scripts/measure-performance.ps1" -Build -DurationSeconds 20
+# Contest releases are Linux-only. Keep the performance gate native so it
+# measures the same binary, renderer, and runtime contract that we publish.
+# The script records raw evidence under the workspace runtime directory; that
+# evidence is intentionally not part of the commit because the tree is still
+# staged while this hook runs.
+"$ROOT/scripts/measure-performance.sh" \
+  --build \
+  --mode performance \
+  --duration-seconds 20 \
+  --minimum-main-update-hz 171.190 \
+  --minimum-capture-submit-hz 163.228
