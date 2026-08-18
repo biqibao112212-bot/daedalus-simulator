@@ -1,4 +1,4 @@
-# Daedalus Contest SDK 1.3.1-contest（Linux x86_64）
+# Daedalus Contest SDK 1.3.1-contest-r2（Linux x86_64）
 
 实验室发行版仅交付模拟器二进制；SDK 是消费者使用模拟器的受支持接口。SDK 不包含、
 管理或加载任何自瞄推理模型。
@@ -25,7 +25,7 @@
 
 ## 固定契约
 
-- SDK：`1.3.1-contest`（CMake ABI 兼容版本 `1.3.1`）
+- SDK：`1.3.1-contest-r2`（CMake ABI 兼容版本 `1.3.1`）
 - Talos SHM：`v7`，ABI revision `2`
 - 默认 TCP 图像：RGBA32 `1440×1080`；旧 SHM 图像槽：RGB24
 - TCP 图像：`127.0.0.1:5602`

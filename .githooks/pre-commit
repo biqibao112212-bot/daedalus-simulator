@@ -45,7 +45,7 @@ fi
 # The script records raw evidence under the workspace runtime directory; that
 # evidence is intentionally not part of the commit because the tree is still
 # staged while this hook runs.
-"$ROOT/scripts/measure-performance.sh" \
+bash "$ROOT/scripts/measure-performance.sh" \
   --build \
   --mode performance \
   --duration-seconds 20 \
