@@ -18,27 +18,15 @@ use crate::systems::FrequencyMetrics;
 pub(crate) struct HelpText;
 
 fn create_help_text(
-    auto_aim: bool,
-    bridge_status: &str,
     stats: &ProjectileStatistics,
     scene: AutoAimSceneMode,
     big_rune_scores: &BigRuneScores,
     large_rune_active: bool,
 ) -> Text {
-    help_text_content(
-        auto_aim,
-        bridge_status,
-        stats,
-        scene,
-        big_rune_scores,
-        large_rune_active,
-    )
-    .into()
+    help_text_content(stats, scene, big_rune_scores, large_rune_active).into()
 }
 
 fn help_text_content(
-    auto_aim: bool,
-    bridge_status: &str,
     stats: &ProjectileStatistics,
     scene: AutoAimSceneMode,
     big_rune_scores: &BigRuneScores,
@@ -70,9 +58,7 @@ fn help_text_content(
         String::new()
     };
     format!(
-        "auto-aim={} bridge={} total={} accurate={} pct={:.2}{big_rune_score}\n{controls}",
-        if auto_aim { "ON " } else { "OFF" },
-        bridge_status,
+        "total={} accurate={} pct={:.2}{big_rune_score}\n{controls}",
         stats.launch_count,
         stats.accurate_count,
         stats.accurate_pct()
@@ -94,21 +80,13 @@ pub fn spawn_text(commands: &mut Commands) {
 
 pub fn update_help_text(
     mut text: Query<&mut Text, With<HelpText>>,
-    auto_aim: Res<SubscribeAutoAim>,
-    bridge: Option<Res<IntegratedAutoAimBridge>>,
     stats: Res<ProjectileStatistics>,
     scene_state: Res<AutoAimSceneState>,
     big_rune_scores: Res<BigRuneScores>,
     runes: Query<&PowerRune>,
 ) {
-    let bridge_status = bridge
-        .as_deref()
-        .map(IntegratedAutoAimBridge::status_label)
-        .unwrap_or("N/A");
     for mut text in text.iter_mut() {
         *text = create_help_text(
-            auto_aim.load(std::sync::atomic::Ordering::Acquire),
-            bridge_status,
             &stats,
             scene_state.current,
             &big_rune_scores,
@@ -330,8 +308,6 @@ mod tests {
     #[test]
     fn contest_help_shows_only_participant_vehicle_controls() {
         let text = help_text_content(
-            false,
-            "N/A",
             &ProjectileStatistics::default(),
             AutoAimSceneMode::ShootingRange,
             &BigRuneScores::default(),
@@ -347,14 +323,14 @@ mod tests {
         assert!(!text.contains("F2-Screenshot"));
         assert!(!text.contains("F10-Small Rune"));
         assert!(!text.contains("F12-Close Rune"));
+        assert!(!text.contains("auto-aim="));
+        assert!(!text.contains("bridge="));
     }
 
     #[cfg(feature = "contest-release")]
     #[test]
     fn contest_energy_help_exposes_rune_direction_controls() {
         let text = help_text_content(
-            false,
-            "N/A",
             &ProjectileStatistics::default(),
             AutoAimSceneMode::Energy,
             &BigRuneScores::default(),
@@ -366,5 +342,7 @@ mod tests {
         assert!(text.contains("E Large Rune"));
         assert!(text.contains("big-rune R arms=0 avg=0.0 last=0"));
         assert!(!text.contains("Q/E Chassis Turn"));
+        assert!(!text.contains("auto-aim="));
+        assert!(!text.contains("bridge="));
     }
 }
