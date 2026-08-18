@@ -58,6 +58,10 @@ PACKAGE_ROOT="$OUTPUT_ROOT/$VERSION"
 TARGET_DIR="$PACKAGE_ROOT/$PACKAGE_ID"
 ZIP_PATH="$PACKAGE_ROOT/$PACKAGE_ID.zip"
 TAR_GZ_PATH="$PACKAGE_ROOT/$PACKAGE_ID.tar.gz"
+LEARNING_RELEASE=0
+if [[ "$VERSION" == *-learning ]]; then
+  LEARNING_RELEASE=1
+fi
 
 if [[ "$SKIP_BUILD" == 0 ]]; then
   "$ROOT/scripts/build-release.sh"
@@ -104,7 +108,17 @@ cp -- "$BINARY" "$TARGET_DIR/bin/daedalus"
 cp -a -- "$ROOT/assets" "$TARGET_DIR/assets"
 cp -- "$ROOT/release/release.json" "$ROOT/release/platform-matrix.json" \
   "$ROOT/release/camera-calibration.json" "$TARGET_DIR/"
-cp -- "$ROOT/release/start-simulator.sh" "$ROOT/release/daedalus-contest.sh" "$TARGET_DIR/"
+cp -- "$ROOT/release/start-simulator.sh" "$TARGET_DIR/"
+if [[ "$LEARNING_RELEASE" == 1 ]]; then
+  sed \
+    -e 's/daedalus-contest/daedalus-learning/g' \
+    -e 's/Daedalus Contest/Daedalus Learning/g' \
+    -e 's/contest simulator/learning simulator/g' \
+    "$ROOT/release/daedalus-contest.sh" > "$TARGET_DIR/daedalus-learning.sh"
+  chmod +x "$TARGET_DIR/daedalus-learning.sh"
+else
+  cp -- "$ROOT/release/daedalus-contest.sh" "$TARGET_DIR/"
+fi
 if [[ "$SKIP_PERFORMANCE_VALIDATION" == 0 ]]; then
   cp -- "$PERFORMANCE_EVIDENCE" "$TARGET_DIR/docs/performance-release.json"
 else
@@ -116,18 +130,27 @@ This package was intentionally created with
 not contain a formal performance baseline result for version \`$VERSION\`.
 EOF
 fi
-cp -- "$ROOT/release/CONTEST_GUIDE_ZH.md" "$TARGET_DIR/README_ZH.md"
+if [[ "$LEARNING_RELEASE" == 1 ]]; then
+  cp -- "$ROOT/release/LEARNING_GUIDE_ZH.md" "$TARGET_DIR/README_ZH.md"
+else
+  cp -- "$ROOT/release/CONTEST_GUIDE_ZH.md" "$TARGET_DIR/README_ZH.md"
+fi
 cp -- "$ROOT/release/install-linux.sh" "$TARGET_DIR/install-linux.sh"
-chmod +x "$TARGET_DIR/start-simulator.sh" "$TARGET_DIR/daedalus-contest.sh" "$TARGET_DIR/install-linux.sh"
+chmod +x "$TARGET_DIR/start-simulator.sh" "$TARGET_DIR/install-linux.sh"
 cp -- "$ROOT/LICENSE" "$TARGET_DIR/LICENSE.txt"
 cp -- "$ROOT/release/INTERNAL_LAB_USE_NOTICE.md" "$TARGET_DIR/INTERNAL_LAB_USE_NOTICE.md"
-cp -- "$ROOT/release/CONTEST_GUIDE_ZH.md" "$ROOT/sdk/README.md" \
+cp -- "$TARGET_DIR/README_ZH.md" "$ROOT/sdk/README.md" \
   "$ROOT/SIMULATOR_TROUBLESHOOTING.md" "$TARGET_DIR/docs/"
 cp -- "$ROOT/sdk/contract.json" "$TARGET_DIR/docs/sdk-contract.json"
 cp -a -- "$SDK_INSTALL/." "$TARGET_DIR/sdk/"
-chmod +x "$TARGET_DIR/start-simulator.sh" "$TARGET_DIR/daedalus-contest.sh" \
-  "$TARGET_DIR/install-linux.sh" "$TARGET_DIR/bin/daedalus" \
+chmod +x "$TARGET_DIR/start-simulator.sh" "$TARGET_DIR/install-linux.sh" \
+  "$TARGET_DIR/bin/daedalus" \
   "$TARGET_DIR/sdk/bin/daedalus_contest_client"
+if [[ "$LEARNING_RELEASE" == 1 ]]; then
+  chmod +x "$TARGET_DIR/daedalus-learning.sh"
+else
+  chmod +x "$TARGET_DIR/daedalus-contest.sh"
+fi
 
 if find "$TARGET_DIR" -type f -printf '%f\n' | grep -Eiq '(cuda|cudnn|tensorrt|onnx|\.engine$|\.plan$|\.trt$|\.pt$|\.pth$|\.safetensors$|\.ckpt$|\.tflite$|\.pb$|\.mlmodel$|checkpoint)'; then
   die "simulator package contains forbidden inference payloads"
@@ -181,6 +204,7 @@ executables = {
     pathlib.PurePosixPath("install-linux.sh"),
     pathlib.PurePosixPath("start-simulator.sh"),
     pathlib.PurePosixPath("daedalus-contest.sh"),
+    pathlib.PurePosixPath("daedalus-learning.sh"),
     pathlib.PurePosixPath("sdk/bin/daedalus_contest_client"),
 }
 

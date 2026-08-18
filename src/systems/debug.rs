@@ -32,7 +32,11 @@ fn help_text_content(
     big_rune_scores: &BigRuneScores,
     large_rune_active: bool,
 ) -> String {
-    let controls = if distribution::is_contest_release() {
+    // The learning build keeps the contest interaction surface intentionally: it
+    // is a teaching distribution, not the legacy developer debug UI.
+    let contest_style_controls =
+        distribution::is_contest_release() || distribution::is_learning_release();
+    let controls = if contest_style_controls {
         if scene == AutoAimSceneMode::Energy {
             "Controls: WASD Move | Left Shift Boost | Q Small Rune | E Large Rune | Arrow Keys / Right Mouse Gimbal | Space Fire"
         } else {
@@ -41,24 +45,27 @@ fn help_text_content(
     } else {
         "Controls: F2-Screenshot F3-Camera F5-Auto Aim F6-Range Panel F7-Normal F8-Range F9-Energy F10-Small Rune F11-Large Rune F12-Close Rune | Space-Fire | WASD-Move Arrows/RMB-Gimbal"
     };
-    let big_rune_score = if distribution::is_contest_release()
-        && scene == AutoAimSceneMode::Energy
-        && large_rune_active
-    {
-        format!(
-            " | big-rune R arms={} avg={:.1} last={} B arms={} avg={:.1} last={}",
-            big_rune_scores.for_team(Team::Red).activated_arms(),
-            big_rune_scores.for_team(Team::Red).average_ring(),
-            big_rune_scores.for_team(Team::Red).last_ring(),
-            big_rune_scores.for_team(Team::Blue).activated_arms(),
-            big_rune_scores.for_team(Team::Blue).average_ring(),
-            big_rune_scores.for_team(Team::Blue).last_ring(),
-        )
+    let big_rune_score =
+        if contest_style_controls && scene == AutoAimSceneMode::Energy && large_rune_active {
+            format!(
+                " | big-rune R arms={} avg={:.1} last={} B arms={} avg={:.1} last={}",
+                big_rune_scores.for_team(Team::Red).activated_arms(),
+                big_rune_scores.for_team(Team::Red).average_ring(),
+                big_rune_scores.for_team(Team::Red).last_ring(),
+                big_rune_scores.for_team(Team::Blue).activated_arms(),
+                big_rune_scores.for_team(Team::Blue).average_ring(),
+                big_rune_scores.for_team(Team::Blue).last_ring(),
+            )
+        } else {
+            String::new()
+        };
+    let learning_watermark = if distribution::is_learning_release() {
+        "LEARNING BUILD — NOT COMPETITION ELIGIBLE — EXPOSURE TRUTH MAY BE ENABLED\n"
     } else {
-        String::new()
+        ""
     };
     format!(
-        "total={} accurate={} pct={:.2}{big_rune_score}\n{controls}",
+        "{learning_watermark}total={} accurate={} pct={:.2}{big_rune_score}\n{controls}",
         stats.launch_count,
         stats.accurate_count,
         stats.accurate_pct()
@@ -344,5 +351,20 @@ mod tests {
         assert!(!text.contains("Q/E Chassis Turn"));
         assert!(!text.contains("auto-aim="));
         assert!(!text.contains("bridge="));
+    }
+
+    #[cfg(feature = "learning-release")]
+    #[test]
+    fn learning_help_carries_non_competition_watermark() {
+        let text = help_text_content(
+            &ProjectileStatistics::default(),
+            AutoAimSceneMode::ShootingRange,
+            &BigRuneScores::default(),
+            false,
+        );
+
+        assert!(text.contains("LEARNING BUILD"));
+        assert!(text.contains("NOT COMPETITION ELIGIBLE"));
+        assert!(text.contains("WASD Move"));
     }
 }

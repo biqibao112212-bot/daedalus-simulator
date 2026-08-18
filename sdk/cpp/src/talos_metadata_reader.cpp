@@ -324,6 +324,12 @@ TalosMetadataReader::readGroundTruthForFrame(std::uint64_t frame_seq) const {
     return ClientResult<GroundTruthExposureSnapshot>::failure(
         ClientError::InvalidArgument, "frame_seq must be non-zero");
   }
+  const auto header = readHeader();
+  if (!header || header.value->created_ns == 0) {
+    return ClientResult<GroundTruthExposureSnapshot>::failure(
+        header ? ClientError::ProtocolError : header.status.error,
+        header ? "Talos producer epoch is not initialized" : header.status.message);
+  }
 
   GroundTruthExposureSnapshot best{};
   bool found = false;
@@ -344,8 +350,11 @@ TalosMetadataReader::readGroundTruthForFrame(std::uint64_t frame_seq) const {
         continue;
       }
       candidate.publication = commit_after / 2U;
+      candidate.producer_epoch = header.value->created_ns;
       if (candidate.ground_truth.frame_seq == frame_seq &&
           candidate.exposure_state.frame_seq == frame_seq &&
+          candidate.ground_truth.timestamp_ns != 0 &&
+          candidate.ground_truth.timestamp_ns == candidate.exposure_state.timestamp_ns &&
           (!found || candidate.publication > best.publication)) {
         best = candidate;
         found = true;

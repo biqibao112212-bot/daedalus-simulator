@@ -16,6 +16,7 @@ Commands:
   scene shooting-range|energy|large-energy
   score red|blue
   frame
+  truth
   aim YAW_DEG PITCH_DEG [--fire]
 
 `start` launches a visible local contest simulator by default. Use
@@ -127,7 +128,7 @@ case "$COMMAND" in
     ldd "$ROOT/bin/daedalus" >/dev/null
     if owned_process_running; then client health; else echo "simulator not running"; fi
     ;;
-  scene|score|frame|aim)
+  scene|score|frame|truth|aim)
     client "$COMMAND" "$@"
     ;;
   --help|-h|help)

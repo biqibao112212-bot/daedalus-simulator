@@ -271,10 +271,11 @@ pub fn publish_ground_truth_system(
         exposure_state.state_flags |= EXPOSURE_STATE_HAS_CAMERA_WORLD_POSE;
     }
 
-    // Distribution consumers need exact image/exposure pose and gimbal state,
-    // but not simulator target truth. Publish an empty batch with the frame
-    // identity so the 16-slot history remains a synchronization channel.
-    if crate::distribution::is_locked() {
+    // Contest and ordinary distribution consumers need exact image/exposure
+    // pose and gimbal state, but not simulator target truth. The separate
+    // learning profile is the sole locked distribution that can opt into the
+    // same current/retained exposure truth via the existing GroundTruth ABI.
+    if crate::distribution::is_locked() && !crate::distribution::allows_online_ground_truth() {
         debug_assert_eq!(batch.target_count, 0);
         debug_assert_eq!(batch.rune_count, 0);
         if let Ok(mut publisher) = ctx.publisher.try_lock() {
@@ -498,12 +499,19 @@ mod tests {
         assert!(armor_geometry_is_truth_eligible(4));
     }
 
-    #[cfg(feature = "distribution-release")]
+    #[cfg(all(feature = "distribution-release", not(feature = "learning-release")))]
     #[test]
     fn distribution_build_keeps_the_public_target_truth_batch_empty() {
         assert!(crate::distribution::is_locked());
         let batch = GroundTruthBatch::default();
         assert_eq!(batch.target_count, 0);
         assert_eq!(batch.rune_count, 0);
+    }
+
+    #[cfg(feature = "learning-release")]
+    #[test]
+    fn learning_build_explicitly_permits_exposure_truth() {
+        assert!(crate::distribution::is_learning_release());
+        assert!(crate::distribution::allows_online_ground_truth());
     }
 }

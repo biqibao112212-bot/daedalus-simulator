@@ -25,6 +25,24 @@ pub const fn is_contest_release() -> bool {
     cfg!(feature = "contest-release")
 }
 
+/// Learning builds are deliberately separate from contest builds. They retain
+/// the locked distribution launcher and fixed network endpoints, but publish
+/// current and retained exposure-matched simulator truth for training.
+pub const fn is_learning_release() -> bool {
+    cfg!(feature = "learning-release")
+}
+
+/// Online target/rune truth is a learning-only capability. Contest and every
+/// other distribution profile fail closed while retaining the empty exposure
+/// history needed for image/gimbal synchronization.
+pub fn allows_online_ground_truth() -> bool {
+    !is_locked()
+        || (is_learning_release()
+            && std::env::var("DAEDALUS_LEARNING_TRUTH")
+                .map(|value| value != "0")
+                .unwrap_or(true))
+}
+
 /// Whether the release profile permits a participant to control the local
 /// vehicle with the keyboard and mouse.
 ///
@@ -33,7 +51,7 @@ pub const fn is_contest_release() -> bool {
 /// evaluation environment, so participants must be able to drive the local
 /// vehicle without first writing an SDK program.
 pub const fn allows_local_manual_controls() -> bool {
-    !is_locked() || is_contest_release()
+    !is_locked() || is_contest_release() || is_learning_release()
 }
 
 /// Whether the distribution profile claims the controlled gimbal at startup.
@@ -42,7 +60,7 @@ pub const fn allows_local_manual_controls() -> bool {
 /// immediately useful. SDK commands can still be used through the existing
 /// command path.
 pub const fn auto_aim_enabled_on_start() -> bool {
-    !is_contest_release()
+    !is_contest_release() && !is_learning_release()
 }
 
 pub fn prepare_environment() {
@@ -54,7 +72,11 @@ pub fn prepare_environment() {
         .ok()
         .filter(|value| value.eq_ignore_ascii_case("visible"))
         .map(|_| ReleaseMode::Visible)
-        .unwrap_or(ReleaseMode::Performance);
+        .unwrap_or(if is_learning_release() {
+            ReleaseMode::Visible
+        } else {
+            ReleaseMode::Performance
+        });
     let _ = RELEASE_MODE.set(mode);
 
     // This is the only caller-provided DAEDALUS_* value retained by a
@@ -62,6 +84,10 @@ pub fn prepare_environment() {
     // rows are committed only after the matching TCP image is fully sent; it
     // does not relax the online ground-truth lock.
     let corner_labels_path = std::env::var_os(CORNER_LABELS_ENV).filter(|value| !value.is_empty());
+    let learning_truth = is_learning_release()
+        && std::env::var("DAEDALUS_LEARNING_TRUTH")
+            .map(|value| value != "0")
+            .unwrap_or(true);
 
     // DAEDALUS_* variables are development controls. A distribution build
     // removes all caller-provided values before setting the small, fixed set
@@ -88,6 +114,12 @@ pub fn prepare_environment() {
     );
     if let Some(path) = corner_labels_path {
         set_env_os(CORNER_LABELS_ENV, path);
+    }
+    if is_learning_release() {
+        set_env(
+            "DAEDALUS_LEARNING_TRUTH",
+            if learning_truth { "1" } else { "0" },
+        );
     }
     set_env("WGPU_POWER_PREF", "high");
     // Distribution builds always let wgpu select the adapter. The launcher may
@@ -175,7 +207,21 @@ mod tests {
         assert!(!auto_aim_enabled_on_start());
     }
 
-    #[cfg(all(feature = "distribution-release", not(feature = "contest-release")))]
+    #[cfg(feature = "learning-release")]
+    #[test]
+    fn learning_build_is_locked_but_exposes_teaching_controls_and_truth() {
+        assert!(is_locked());
+        assert!(is_learning_release());
+        assert!(allows_local_manual_controls());
+        assert!(!auto_aim_enabled_on_start());
+        assert!(allows_online_ground_truth());
+    }
+
+    #[cfg(all(
+        feature = "distribution-release",
+        not(feature = "contest-release"),
+        not(feature = "learning-release")
+    ))]
     #[test]
     fn ordinary_distribution_build_remains_sdk_command_driven() {
         assert!(is_locked());

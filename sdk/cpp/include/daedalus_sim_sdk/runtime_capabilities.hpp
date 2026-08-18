@@ -12,6 +12,10 @@ struct RuntimeCapabilities {
   std::uint32_t schema_version = 0;
   std::string product_version;
   bool distribution_locked = false;
+  std::string distribution_profile;
+  bool competition_eligible = false;
+  bool online_ground_truth_enabled = false;
+  bool future_truth_included = false;
   std::string adapter_selection;
   std::string render_backend;
   std::string adapter_name;

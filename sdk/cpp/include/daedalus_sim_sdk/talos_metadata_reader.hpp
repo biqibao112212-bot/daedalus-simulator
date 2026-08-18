@@ -22,6 +22,9 @@ enum class TalosCompatibility {
 };
 
 struct GroundTruthExposureSnapshot {
+  // Exact producer identity from ShmHeader::created_ns. Compare this and the
+  // frame/timestamp below with TcpImageFrame::header before consuming truth.
+  std::uint64_t producer_epoch = 0;
   GroundTruthBatch ground_truth{};
   ExposureState exposure_state{};
   std::uint64_t publication = 0;

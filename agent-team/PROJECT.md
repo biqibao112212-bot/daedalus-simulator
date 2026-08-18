@@ -2,28 +2,37 @@
 
 - Protocol: `agent-team-fixed/v2`
 - Repository: `D:\仿真\repos\daedalus-simulator`
-- Active branch: `release/contest-linux-1.3.1`
+- Active branch: `release/learning-linux-1.4.0`
 - Frozen implementation baseline at task start: `48b9437c389c2911e0a135cf1d727e36a68317ab`
 - Frozen formal release: simulator `1.2.1`, SDK `1.2.0`, SHM v7 / ABI revision 2
 - Active Linux release target: simulator/SDK `1.3.1`, adding collector-owned
   offline full-frame export without changing the real-time SDK ABI
 
-## Contest release target
+## Learning release target
 
-- `1.3.1-contest` is a separately maintained Linux x86_64-only internal
-  laboratory competition line derived from the accepted Linux `1.3.1` source.
+- `1.4.0-learning` is a separately maintained Linux x86_64-only internal
+  learning line derived directly from the latest contest-r2 source commit
+  (`release/contest-linux-1.3.1` / `8bdb184`), not from main or an older
+  generic release. It is not competition eligible and must never overwrite,
+  upload to, or be represented as a contest Release.
 - Its runtime exposes only Shooting Range and Energy Mechanism. Energy supports
   both small and large rune modes; Normal Map and Outpost are rejected by the
   release binary rather than merely hidden by its launcher.
-- The supported participant API is C++17 `ContestClient`, an SDK facade over
-  the existing image, exposure-synchronised gimbal, UDP command and Scene
-  Control contracts. It does not add target truth or algorithm interfaces.
-- The visible contest client starts with automatic aim disabled and supports
+- The supported public API remains C++17 `ContestClient`, `TalosMetadataReader`
+  and the existing TCP v1/SHM v7 ABI. Learning truth uses the existing
+  `readGroundTruthForFrame` history rather than a side-channel protocol. Each
+  consumer must match producer epoch, frame sequence and timestamp, and may
+  receive only current or retained exposures (16 slots), never future state,
+  command or trajectory.
+- The visible learning client starts with automatic aim disabled and supports
   direct local vehicle control: WASD/left Shift movement, arrows or
   right-mouse gimbal motion, and Space firing. Q/E controls chassis yaw in
   Shooting Range and selects small/large rune mode in the Energy Mechanism.
   The C++ RuneScenario surface supports only rules-driven rotation or a
   stopped, five-leaf selection from existing visual states for annotation.
+  Runtime capabilities, `release.json`, launcher and HUD must state
+  `distribution_profile=learning`, `competition_eligible=false` and
+  `future_truth_included=false`.
 
 ## Ownership and boundaries
 
@@ -86,7 +95,7 @@ predictor input.
 
 ```text
 cargo fmt --all -- --check
-cargo test --locked --release --target x86_64-unknown-linux-gnu --features talos,distribution-release,contest-release
+cargo test --locked --release --target x86_64-unknown-linux-gnu --features talos,distribution-release,learning-release
 cargo clippy --locked --release --target x86_64-unknown-linux-gnu --features talos,distribution-release --all-targets -- -D warnings
 scripts/check-compatibility.ps1
 scripts/build-release.ps1 -Platform windows -Arch x86_64
@@ -95,7 +104,7 @@ scripts/package-release.ps1 -Platform windows -Arch x86_64
 bash scripts/build-release.sh
 bash scripts/measure-performance.sh --mode performance --duration-seconds 20
 bash scripts/measure-performance.sh --mode visible --duration-seconds 20
-bash scripts/package-release.sh
+bash scripts/package-release.sh --skip-performance-validation
 ```
 
 Persistent repository builds use `bash scripts/build-release.sh`; direct Cargo

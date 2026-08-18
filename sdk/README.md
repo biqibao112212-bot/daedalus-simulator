@@ -1,19 +1,20 @@
-# Daedalus Contest SDK 1.3.1-contest-r2（Linux x86_64）
+# Daedalus Learning SDK 1.4.0-learning（Linux x86_64）
 
 实验室发行版仅交付模拟器二进制；SDK 是消费者使用模拟器的受支持接口。SDK 不包含、
 管理或加载任何自瞄推理模型。
 
-该比赛版本运行时只支持靶场与能量机关（小符与大符）。首选入口是 C++17
+该学习版本运行时只支持靶场与能量机关（小符与大符）。首选入口是 C++17
 `ContestClient`；它将图像、按帧同步云台姿态、云台控制和受限场景切换组合成一个对象。
-普通场和前哨场由发行二进制拒绝；能量机关同时支持小符和大符。
+普通场和前哨场由发行二进制拒绝；能量机关同时支持小符和大符。**本包是学习版，
+不具备比赛资格。**
 
 ## 受支持的公开能力
 
-- `ContestClient`：比赛首选单入口；切换靶场/能量机关、读取曝光同步图像并发送云台命令。
-- `SceneControlClient`：底层受限场景控制；竞赛构建只接受靶场、能量机关及其受限场景状态。
+- `ContestClient`：学习版首选单入口；切换靶场/能量机关、读取曝光同步图像并发送云台命令。
+- `SceneControlClient`：底层受限场景控制；学习构建只接受靶场、能量机关及其受限场景状态。
 - `getBigRuneScore(RuneTeam)`：读取红/蓝大符当前或最近一次激活的有效灯臂数、平均环数和最近命中环数；这是只读数据，不提供任意状态或真值修改。
 - `TcpImageClient`：读取默认 RGBA32、1440×1080、latest-only 相机图像；以帧头格式为准。
-- `TalosMetadataMapping` / `TalosMetadataReader`：只读固定相机内参和实际云台状态。
+- `TalosMetadataMapping` / `TalosMetadataReader`：只读固定相机内参、实际云台状态与同曝光真值。
 - `UdpGimbalClient`：发送云台绝对角命令；每条命令自动分配 `command_id`。
 - `readGimbalState()`：读取最新实际角度、角速度、状态位和最后已应用命令号。
 - `readGimbalStateForFrame()`：按图像 `source_sequence` 读取曝光时的实际云台角。
@@ -21,11 +22,39 @@
 - `readRuntimeCapabilities()`：读取 wgpu 实际选择的 GPU、后端和驱动。
 
 不提供相机标定 setter，也不提供检测框、PnP、轨迹预测或识别结果上传接口。这些结果
-属于自瞄消费者自身。发布版不发布 ground truth。
+属于自瞄消费者自身。学习版开放的是模拟器当前/历史曝光真值，不包含未来状态、未来命令
+或未来轨迹。
+
+## 学习版同曝光真值
+
+学习版默认开启在线真值；如需仅保留图像和控制，可在启动前设置
+`DAEDALUS_LEARNING_TRUTH=0`。读取必须以 TCP 图像头的三元身份为准：
+`producer_epoch`、`source_sequence`、`capture_timestamp_ns`。同一 SDK ABI 的
+`readGroundTruthForFrame()` 仅从最近 16 个已曝光历史槽读取，并拒绝真值和曝光时间戳
+不一致的槽；它返回的 `producer_epoch` 必须等于图像头的 `producer_epoch`。
+
+```cpp
+auto frame = simulator.nextFrame();
+auto reader = mapping.reader();
+auto truth = reader.value->readGroundTruthForFrame(
+    frame.value->image.header.source_sequence);
+if (!truth ||
+    truth.value->producer_epoch != frame.value->image.header.producer_epoch ||
+    truth.value->ground_truth.timestamp_ns !=
+        frame.value->image.header.capture_timestamp_ns ||
+    truth.value->exposure_state.timestamp_ns !=
+        frame.value->image.header.capture_timestamp_ns) {
+  return 2;  // Reject a frame/truth identity mismatch.
+}
+```
+
+可读取的字段是当前/历史曝光时的目标中心和完整姿态、线速度/角速度、四个装甲板槽位与
+目标 ID、场景可见性、装甲板精确几何/投影所需姿态，以及能量机关当前模式、角度、转向和
+扇叶状态。它们是标注/教学数据，不得用于比赛成绩。
 
 ## 固定契约
 
-- SDK：`1.3.1-contest-r2`（CMake ABI 兼容版本 `1.3.1`）
+- SDK：`1.4.0-learning`（CMake ABI 兼容版本 `1.3.1`）
 - Talos SHM：`v7`，ABI revision `2`
 - 默认 TCP 图像：RGBA32 `1440×1080`；旧 SHM 图像槽：RGB24
 - TCP 图像：`127.0.0.1:5602`

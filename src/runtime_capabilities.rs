@@ -11,6 +11,10 @@ struct RuntimeCapabilities<'a> {
     schema_version: u32,
     product_version: &'a str,
     distribution_locked: bool,
+    distribution_profile: &'a str,
+    competition_eligible: bool,
+    online_ground_truth_enabled: bool,
+    future_truth_included: bool,
     adapter_selection: &'a str,
     render_backend: String,
     adapter_name: &'a str,
@@ -38,6 +42,16 @@ fn publish_runtime_capabilities(adapter: Res<RenderAdapterInfo>) {
         schema_version: 1,
         product_version: env!("CARGO_PKG_VERSION"),
         distribution_locked: crate::distribution::is_locked(),
+        distribution_profile: if crate::distribution::is_learning_release() {
+            "learning"
+        } else if crate::distribution::is_contest_release() {
+            "contest"
+        } else {
+            "internal-lab"
+        },
+        competition_eligible: crate::distribution::is_contest_release(),
+        online_ground_truth_enabled: crate::distribution::allows_online_ground_truth(),
+        future_truth_included: false,
         adapter_selection: "wgpu-high-performance",
         render_backend: format!("{:?}", adapter.backend),
         adapter_name: &adapter.name,

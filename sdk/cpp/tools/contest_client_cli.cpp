@@ -1,6 +1,7 @@
 #include <daedalus_sim_sdk/contest_client.hpp>
 
 #include <cstdlib>
+#include <filesystem>
 #include <iostream>
 #include <optional>
 #include <string>
@@ -17,6 +18,7 @@ void usage() {
       << "  scene shooting-range|energy|large-energy\n"
       << "  score red|blue\n"
       << "  frame\n"
+      << "  truth\n"
       << "  aim YAW_DEG PITCH_DEG [--fire]\n";
 }
 
@@ -111,6 +113,32 @@ int main(int argc, char** argv) {
               << " bytes=" << frame.value->image.payload.size()
               << " yaw_deg=" << frame.value->gimbal.yaw_deg
               << " pitch_deg=" << frame.value->gimbal.pitch_deg << '\n';
+    return 0;
+  }
+  if (command == "truth" && cursor == argc) {
+    const auto frame = client.nextFrame();
+    if (!frame) return failure(frame.status);
+    TalosMetadataMapping mapping;
+    const auto mapped = mapping.open(
+        (std::filesystem::path(options.ipc_directory) / kMetaFileName).string());
+    if (!mapped) return failure(mapped);
+    const auto reader = mapping.reader();
+    if (!reader) return failure(reader.status);
+    const auto truth = reader.value->readGroundTruthForFrame(
+        frame.value->image.header.source_sequence);
+    if (!truth) return failure(truth.status);
+    const auto& image = frame.value->image.header;
+    if (truth.value->producer_epoch != image.producer_epoch ||
+        truth.value->ground_truth.timestamp_ns != image.capture_timestamp_ns ||
+        truth.value->exposure_state.timestamp_ns != image.capture_timestamp_ns) {
+      return failure(ClientStatus::failure(
+          ClientError::ProtocolError, "image and truth exposure identities differ"));
+    }
+    std::cout << "producer_epoch=" << truth.value->producer_epoch
+              << " source_sequence=" << image.source_sequence
+              << " timestamp_ns=" << image.capture_timestamp_ns
+              << " target_count=" << truth.value->ground_truth.target_count
+              << " rune_count=" << truth.value->ground_truth.rune_count << '\n';
     return 0;
   }
   if (command == "aim" && cursor + 1 < argc) {

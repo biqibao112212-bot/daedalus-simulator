@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-VERSION=1.3.1-contest-r2
+VERSION=1.4.0-learning
 SOURCE_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 PREFIX="${HOME:?HOME is required}/.local/opt/daedalus-simulator/$VERSION"
 BIN_DIR="$HOME/.local/bin"
@@ -56,14 +56,14 @@ fi
 mkdir -p -- "$PREFIX"
 cp -a -- "$SOURCE_ROOT/." "$PREFIX/"
 chmod +x -- "$PREFIX/bin/daedalus" "$PREFIX/start-simulator.sh" \
-  "$PREFIX/daedalus-contest.sh" "$PREFIX/install-linux.sh" \
+  "$PREFIX/daedalus-learning.sh" "$PREFIX/install-linux.sh" \
   "$PREFIX/sdk/bin/daedalus_contest_client"
 
 if [[ "$NO_LINKS" == 0 ]]; then
   mkdir -p -- "$BIN_DIR"
-  printf '#!/usr/bin/env bash\nexec "%s/daedalus-contest.sh" "$@"\n' "$PREFIX" \
-    > "$BIN_DIR/daedalus-contest"
-  chmod +x -- "$BIN_DIR/daedalus-contest"
+  printf '#!/usr/bin/env bash\nexec "%s/daedalus-learning.sh" "$@"\n' "$PREFIX" \
+    > "$BIN_DIR/daedalus-learning"
+  chmod +x -- "$BIN_DIR/daedalus-learning"
 fi
 
 missing="$(ldd "$PREFIX/bin/daedalus" 2>/dev/null | awk '/not found/{print $1}' | paste -sd, -)"
@@ -74,7 +74,7 @@ if ! ldconfig -p 2>/dev/null | awk '/libvulkan\.so\.1/{found=1} END{exit !found}
   echo 'WARNING: Vulkan loader libvulkan.so.1 was not found.' >&2
 fi
 
-echo "Installed Daedalus Contest $VERSION (Linux x86_64 only)"
+echo "Installed Daedalus Learning $VERSION (Linux x86_64 only; not competition eligible)"
 echo "Location: $PREFIX"
-[[ "$NO_LINKS" == 1 ]] || echo "Command: $BIN_DIR/daedalus-contest"
+[[ "$NO_LINKS" == 1 ]] || echo "Command: $BIN_DIR/daedalus-learning"
 echo "Read first: $PREFIX/README_ZH.md"

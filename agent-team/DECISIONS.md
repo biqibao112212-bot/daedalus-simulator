@@ -268,3 +268,15 @@
     ring. To preserve the concise client control surface, the HUD segment is
     present only on the Energy map while the large rune is selected; SDK and
     launcher queries remain available for all read-only score inspection.
+48. `1.4.0-learning` is an independent Linux-only branch derived from the
+    latest contest-r2 source, not a contest package and not a revision of any
+    published contest Release. It keeps the contest maps, manual/SDK controls,
+    armor hit rules, energy mechanism and C++ ABI, but compiles the distinct
+    `learning-release` profile. That profile is distribution-locked for
+    endpoint/config safety while explicitly permitting the existing GroundTruth
+    batch and 16-slot exposure history. Truth consumers must join TCP image and
+    history by `(producer_epoch, frame_seq, timestamp_ns)`; snapshots with a
+    ground-truth/exposure timestamp mismatch are rejected. The profile exposes
+    current or retained exposure state only and hard-codes
+    `future_truth_included=false`. Contest builds continue to publish zero
+    target/rune counts and must fail closed for learning/truth parameters.

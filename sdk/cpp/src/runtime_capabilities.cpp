@@ -116,6 +116,10 @@ ClientResult<RuntimeCapabilities> readRuntimeCapabilities(
       parseU32(json, "schema_version", &value.schema_version) &&
       parseString(json, "product_version", &value.product_version) &&
       parseBool(json, "distribution_locked", &value.distribution_locked) &&
+      parseString(json, "distribution_profile", &value.distribution_profile) &&
+      parseBool(json, "competition_eligible", &value.competition_eligible) &&
+      parseBool(json, "online_ground_truth_enabled", &value.online_ground_truth_enabled) &&
+      parseBool(json, "future_truth_included", &value.future_truth_included) &&
       parseString(json, "adapter_selection", &value.adapter_selection) &&
       parseString(json, "render_backend", &value.render_backend) &&
       parseString(json, "adapter_name", &value.adapter_name) &&
