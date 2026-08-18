@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 OUTPUT_ROOT=""
 SKIP_BUILD=0
+SKIP_PERFORMANCE_VALIDATION=0
 FORCE=0
 PERFORMANCE_EVIDENCE=""
 PACKAGE_ID="linux-x86_64"
@@ -12,7 +13,11 @@ TARGET="x86_64-unknown-linux-gnu"
 die() { echo "package-release.sh: $*" >&2; exit 1; }
 usage() {
   cat <<'EOF'
-Usage: ./scripts/package-release.sh [--output-root PATH] [--performance-evidence PATH] [--skip-build] [--force]
+Usage: ./scripts/package-release.sh [--output-root PATH] [--performance-evidence PATH] [--skip-build] [--skip-performance-validation] [--force]
+
+--skip-performance-validation is an explicit release-authority override.  It
+does not claim that a performance baseline was met and adds a notice to the
+package instead of a performance evidence file.
 EOF
 }
 
@@ -21,6 +26,7 @@ while [[ $# -gt 0 ]]; do
     --output-root) [[ $# -ge 2 ]] || die "--output-root requires a value"; OUTPUT_ROOT="$2"; shift 2 ;;
     --performance-evidence) [[ $# -ge 2 ]] || die "--performance-evidence requires a value"; PERFORMANCE_EVIDENCE="$2"; shift 2 ;;
     --skip-build) SKIP_BUILD=1; shift ;;
+    --skip-performance-validation) SKIP_PERFORMANCE_VALIDATION=1; shift ;;
     --force) FORCE=1; shift ;;
     --help|-h) usage; exit 0 ;;
     *) die "unknown argument: $1" ;;
@@ -59,16 +65,20 @@ fi
 
 SOURCE_COMMIT="$("$GIT_BIN" -C "$GIT_ROOT" rev-parse HEAD)"
 [[ -z "$("$GIT_BIN" -C "$GIT_ROOT" status --porcelain -- .)" ]] || die "Release packaging requires a clean committed worktree."
-[[ -n "$PERFORMANCE_EVIDENCE" ]] || PERFORMANCE_EVIDENCE="$ROOT/benchmarks/$VERSION/performance-release-linux.json"
-MINIMUM_MAIN_UPDATE_HZ=100
-MINIMUM_CAPTURE_SUBMIT_HZ=100
-if [[ "$VERSION" == 1.3.* ]]; then
-  # The 1.3.x Linux line is accepted only if the same host can meet the
-  # published Windows 1.3.0 high-performance baseline.
-  MINIMUM_MAIN_UPDATE_HZ=171.190
-  MINIMUM_CAPTURE_SUBMIT_HZ=163.228
+if [[ "$SKIP_PERFORMANCE_VALIDATION" == 0 ]]; then
+  [[ -n "$PERFORMANCE_EVIDENCE" ]] || PERFORMANCE_EVIDENCE="$ROOT/benchmarks/$VERSION/performance-release-linux.json"
+  MINIMUM_MAIN_UPDATE_HZ=100
+  MINIMUM_CAPTURE_SUBMIT_HZ=100
+  if [[ "$VERSION" == 1.3.* ]]; then
+    # The 1.3.x Linux line is accepted only if the same host can meet the
+    # published Windows 1.3.0 high-performance baseline.
+    MINIMUM_MAIN_UPDATE_HZ=171.190
+    MINIMUM_CAPTURE_SUBMIT_HZ=163.228
+  fi
+  python3 "$ROOT/scripts/check-performance-evidence.py" --root "$ROOT" --evidence "$PERFORMANCE_EVIDENCE" --version "$VERSION" --rust-target "$TARGET" --binary "$ROOT/target/$TARGET/release/daedalus" --minimum-main-update-hz "$MINIMUM_MAIN_UPDATE_HZ" --minimum-capture-submit-hz "$MINIMUM_CAPTURE_SUBMIT_HZ"
+else
+  [[ -z "$PERFORMANCE_EVIDENCE" ]] || die "--performance-evidence cannot be combined with --skip-performance-validation"
 fi
-python3 "$ROOT/scripts/check-performance-evidence.py" --root "$ROOT" --evidence "$PERFORMANCE_EVIDENCE" --version "$VERSION" --rust-target "$TARGET" --binary "$ROOT/target/$TARGET/release/daedalus" --minimum-main-update-hz "$MINIMUM_MAIN_UPDATE_HZ" --minimum-capture-submit-hz "$MINIMUM_CAPTURE_SUBMIT_HZ"
 [[ -f "$ROOT/LICENSE" ]] || die "repository LICENSE is missing"
 [[ -f "$ROOT/release/INTERNAL_LAB_USE_NOTICE.md" ]] || die "internal-use notice is missing"
 
@@ -95,7 +105,17 @@ cp -a -- "$ROOT/assets" "$TARGET_DIR/assets"
 cp -- "$ROOT/release/release.json" "$ROOT/release/platform-matrix.json" \
   "$ROOT/release/camera-calibration.json" "$TARGET_DIR/"
 cp -- "$ROOT/release/start-simulator.sh" "$ROOT/release/daedalus-contest.sh" "$TARGET_DIR/"
-cp -- "$PERFORMANCE_EVIDENCE" "$TARGET_DIR/docs/performance-release.json"
+if [[ "$SKIP_PERFORMANCE_VALIDATION" == 0 ]]; then
+  cp -- "$PERFORMANCE_EVIDENCE" "$TARGET_DIR/docs/performance-release.json"
+else
+  cat > "$TARGET_DIR/docs/PERFORMANCE_NOT_MEASURED.md" <<EOF
+# Performance verification not run
+
+This package was intentionally created with
+\`--skip-performance-validation\` under explicit release authority. It does
+not contain a formal performance baseline result for version \`$VERSION\`.
+EOF
+fi
 cp -- "$ROOT/release/CONTEST_GUIDE_ZH.md" "$TARGET_DIR/README_ZH.md"
 cp -- "$ROOT/release/install-linux.sh" "$TARGET_DIR/install-linux.sh"
 chmod +x "$TARGET_DIR/start-simulator.sh" "$TARGET_DIR/daedalus-contest.sh" "$TARGET_DIR/install-linux.sh"
