@@ -4,9 +4,14 @@
 
 - `1.4.0-learning-r1` is a Linux x86_64-only learning distribution on
   `release/learning-linux-1.4.0`, derived from the final contest-r2 source
-  lineage (`8bdb184`) and packaged from `2983e553`.  It is local-only at
-  `/home/potato/Projects/仿真/releases/daedalus-simulator/1.4.0-learning-r1/linux-x86_64`;
-  no public Release or contest-release repository was modified.  The package
+  lineage (`8bdb184`) and packaged from `2983e553`.  Its protected local
+  package is at
+  `/home/potato/Projects/仿真/releases/daedalus-simulator/1.4.0-learning-r1/linux-x86_64`,
+  and its public download page is
+  `https://github.com/biqibao112212-bot/daedalus-simulator-contest-releases/releases/tag/1.4.0-learning-r1-linux`.
+  It shares the release repository under dedicated branch
+  `learning/1.4.0-learning-r1`; competition assets/tags remain unchanged and
+  `1.3.1-contest-r2-linux` remains that repository's Latest release.  The package
   declares `distribution_profile=learning`, `competition_eligible=false`, and
   `future_truth_included=false`, exposes truth by default only through the
   existing frame-synchronised SDK reader, and keeps the contest input/scenes.
@@ -15,8 +20,7 @@
   passed.  Runtime smoke on Ubuntu/RTX 4060 received Shooting Range truth
   (`3` targets), switched to Energy (`1` target, `2` runes), and verified the
   opt-out (`DAEDALUS_LEARNING_TRUTH=0`) returns zero target/rune truth.  The
-  old local `1.4.0-learning` draft is retained unmodified and superseded;
-  `r1` is the candidate for any later independent publication.
+  old local `1.4.0-learning` draft is retained unmodified and superseded.
 
 - Formal performance evidence was explicitly skipped for `1.4.0-learning-r1`;
   the package contains `docs/PERFORMANCE_NOT_MEASURED.md` and must not be used
