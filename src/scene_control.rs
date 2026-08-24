@@ -8,6 +8,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
+use crate::armor_hit_api::ArmorHitLedger;
 use crate::robomaster::prelude::{
     Activation, BigRuneScores, ManualPowerRuneControlState, PowerRune, PowerRuneMechanism,
     PowerRuneRotation, RUNE_TARGET_COUNT, RuneMode, RuneTargetStates, Team,
@@ -201,6 +202,7 @@ pub fn receive_scene_control_commands(
     mut range_state: ResMut<ShootingRangeControlState>,
     mut rune_control: ResMut<ManualPowerRuneControlState>,
     rune_scores: Res<BigRuneScores>,
+    armor_hits: Res<ArmorHitLedger>,
     mut runes: Query<(
         &mut PowerRune,
         &mut PowerRuneMechanism,
@@ -342,6 +344,14 @@ pub fn receive_scene_control_commands(
                     message,
                 ),
             },
+            "get_latest_armor_hit" => send_ok_data(
+                &transport,
+                datagram.peer,
+                &request,
+                runtime.frame_seq,
+                "latest armor hit read",
+                armor_hit_data(&armor_hits),
+            ),
             "set_scene" => {
                 if runtime.pending_scene.is_some() {
                     send_status(
@@ -805,6 +815,28 @@ fn parse_rune_team(args: &Map<String, Value>) -> Result<Team, String> {
     }
 }
 
+fn armor_hit_data(armor_hits: &ArmorHitLedger) -> Value {
+    let Some(hit) = armor_hits.latest() else {
+        return serde_json::json!({
+            "has_hit": false,
+            "latest_event_id": armor_hits.latest_event_id(),
+        });
+    };
+    serde_json::json!({
+        "has_hit": true,
+        "latest_event_id": armor_hits.latest_event_id(),
+        "event_id": hit.event_id,
+        "has_projectile_id": hit.projectile_id.is_some(),
+        "projectile_id": hit.projectile_id,
+        "target_name": hit.target.name,
+        "target_team": hit.target.team,
+        "target_spec": hit.target.spec,
+        "target_label": hit.target.label,
+        "target_class": hit.target.class,
+        "accurate_count": hit.accurate_count,
+    })
+}
+
 fn now_ns() -> u64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -998,5 +1030,13 @@ mod tests {
         assert!(is_idle_udp_receive_error(&std::io::Error::from(
             std::io::ErrorKind::TimedOut
         )));
+    }
+
+    #[test]
+    fn armor_hit_response_is_empty_until_a_valid_hit_is_recorded() {
+        let ledger = ArmorHitLedger::default();
+        let data = armor_hit_data(&ledger);
+        assert_eq!(data["has_hit"], false);
+        assert_eq!(data["latest_event_id"], 0);
     }
 }

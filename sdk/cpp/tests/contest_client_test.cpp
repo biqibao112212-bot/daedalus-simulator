@@ -11,5 +11,6 @@ int main() {
   if (client.health().status.error != ClientError::NotReady) return 3;
   if (client.selectScene(ContestScene::ShootingRange).status.error !=
       ClientError::NotReady) return 4;
+  if (client.getLatestArmorHit().status.error != ClientError::NotReady) return 5;
   return 0;
 }

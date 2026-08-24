@@ -1,4 +1,4 @@
-# Daedalus Contest SDK 1.3.1-contest-r2（Linux x86_64）
+# Daedalus Contest SDK 1.3.1-contest-r3（Linux x86_64）
 
 实验室发行版仅交付模拟器二进制；SDK 是消费者使用模拟器的受支持接口。SDK 不包含、
 管理或加载任何自瞄推理模型。
@@ -12,6 +12,7 @@
 - `ContestClient`：比赛首选单入口；切换靶场/能量机关、读取曝光同步图像并发送云台命令。
 - `SceneControlClient`：底层受限场景控制；竞赛构建只接受靶场、能量机关及其受限场景状态。
 - `getBigRuneScore(RuneTeam)`：读取红/蓝大符当前或最近一次激活的有效灯臂数、平均环数和最近命中环数；这是只读数据，不提供任意状态或真值修改。
+- `getLatestArmorHit()`：读取最近一次**有效车体装甲板命中**；使用单调递增的 `event_id` 轮询新事件，不提供未命中、漏弹位置或未命中装甲信息。
 - `TcpImageClient`：读取默认 RGBA32、1440×1080、latest-only 相机图像；以帧头格式为准。
 - `TalosMetadataMapping` / `TalosMetadataReader`：只读固定相机内参和实际云台状态。
 - `UdpGimbalClient`：发送云台绝对角命令；每条命令自动分配 `command_id`。
@@ -25,7 +26,7 @@
 
 ## 固定契约
 
-- SDK：`1.3.1-contest-r2`（CMake ABI 兼容版本 `1.3.1`）
+- SDK：`1.3.1-contest-r3`（CMake ABI 兼容版本 `1.3.1`）
 - Talos SHM：`v7`，ABI revision `2`
 - 默认 TCP 图像：RGBA32 `1440×1080`；旧 SHM 图像槽：RGB24
 - TCP 图像：`127.0.0.1:5602`
@@ -72,6 +73,28 @@ if (red) {
 大符时，也会把同一份数据直接显示在底部命中统计行 `pct` 的右侧：
 `big-rune R arms=… avg=… last=… B arms=… avg=… last=…`。切换到小符或离开能量机关
 时该 HUD 片段隐藏；SDK 查询接口仍可用于只读诊断。
+
+## 装甲板命中读取
+
+`ContestClient::getLatestArmorHit()` 是比赛版的只读命中反馈。只有物理系统已经把弹丸
+判定为完整尺寸车体装甲板有效命中后，才会产生新的 `event_id`；弹丸碰到车体、擦过
+装甲板外沿或未命中时不会生成事件。使用者应保存上一次 `event_id`，仅在其增加时处理
+新的命中。
+
+```cpp
+auto hit = simulator.getLatestArmorHit();
+if (hit && hit.value->has_hit && hit.value->event_id > last_event_id) {
+    last_event_id = hit.value->event_id;
+    // 已确认命中的装甲板标识与累计有效命中数。
+    std::cout << hit.value->target_name << ' '
+              << hit.value->target_label << ' '
+              << hit.value->accurate_count;
+}
+```
+
+结果包含目标名称、队伍、装甲规格/标签、分类、可选弹丸追踪 ID 和累计有效命中数。它不
+提供目标位姿、可见性、未命中信息或任何可用于构建目标真值的旁路数据。命令行等价入口：
+`daedalus-contest armor-hit`。
 
 ## 云台坐标
 

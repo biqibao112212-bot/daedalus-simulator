@@ -94,6 +94,23 @@ struct BigRuneScore {
   std::int8_t last_target = -1;
 };
 
+// Read-only result for the latest projectile that the simulator accepted as a
+// valid vehicle-armor hit.  Poll `event_id` after firing; the API never
+// exposes unhit armor, miss locations, or target truth.
+struct ArmorHitInfo {
+  bool has_hit = false;
+  std::uint64_t latest_event_id = 0;
+  std::uint64_t event_id = 0;
+  bool has_projectile_id = false;
+  std::uint64_t projectile_id = 0;
+  std::string target_name;
+  std::string target_team;
+  std::string target_spec;
+  std::string target_label;
+  std::string target_class;
+  std::uint32_t accurate_count = 0;
+};
+
 [[nodiscard]] ClientResult<std::string> encodeSetSceneArgs(SceneMode mode);
 [[nodiscard]] ClientResult<std::string> encodeRangeTargetMotionArgs(
     const RangeTargetMotion& motion);
@@ -144,6 +161,7 @@ class SceneControlClient {
   [[nodiscard]] ClientResult<SceneControlResponse> setRuneScenario(
       const RuneScenario& scenario);
   [[nodiscard]] ClientResult<BigRuneScore> getBigRuneScore(RuneTeam team);
+  [[nodiscard]] ClientResult<ArmorHitInfo> getLatestArmorHit();
 
   [[nodiscard]] const SceneControlOptions& options() const noexcept {
     return options_;

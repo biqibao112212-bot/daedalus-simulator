@@ -10,6 +10,7 @@ use std::collections::HashSet;
 
 use super::construct::{Armor, ArmorHitZone, ArmorRoot};
 use super::marker::MarkerData;
+use crate::armor_hit_api::ArmorHitLedger;
 use crate::components::{ProjectilePreImpactVelocity, VehicleBodyCollider};
 use crate::robomaster::power_rune::prelude::Projectile;
 use crate::statistic::ProjectileStatistics;
@@ -36,6 +37,7 @@ fn handle_vehicle_projectile_collision(
     mut commands: Commands,
     mut consumed: ResMut<ConsumedVehicleProjectiles>,
     mut stats: ResMut<ProjectileStatistics>,
+    armor_hits: Option<ResMut<ArmorHitLedger>>,
     telemetry: Res<ProjectileTelemetry>,
     projectiles: Query<
         (
@@ -150,6 +152,13 @@ fn handle_vehicle_projectile_collision(
             );
         }
         stats.increase_accurate();
+        if let Some(mut armor_hits) = armor_hits {
+            armor_hits.record(
+                projectile_data.4.map(|trace| trace.id),
+                target.clone(),
+                stats.accurate_count,
+            );
+        }
         let projectile =
             ProjectileKinematics::from_components(projectile_data.0, projectile_data.1);
         telemetry.write_armor_hit(projectile_data.4, projectile, target);
@@ -330,6 +339,7 @@ mod tests {
 
     fn collision_test_app() -> App {
         let mut app = App::new();
+        app.init_resource::<ArmorHitLedger>();
         app.insert_resource(ProjectileStatistics::default());
         app.insert_resource(ProjectileTelemetry::from_env());
         app.init_resource::<ConsumedVehicleProjectiles>();
@@ -398,6 +408,7 @@ mod tests {
     #[test]
     fn projectile_hit_on_armor_hit_zone_counts_as_accurate() {
         let mut app = App::new();
+        app.init_resource::<ArmorHitLedger>();
         app.insert_resource(ProjectileStatistics::default());
         app.insert_resource(ProjectileTelemetry::from_env());
         app.init_resource::<ConsumedVehicleProjectiles>();
@@ -437,6 +448,14 @@ mod tests {
 
         let stats = app.world().resource::<ProjectileStatistics>();
         assert_eq!(stats.accurate_count, 1);
+        let hit = app
+            .world()
+            .resource::<ArmorHitLedger>()
+            .latest()
+            .expect("valid armor collision is published to the API");
+        assert_eq!(hit.event_id, 1);
+        assert_eq!(hit.target.name, "outpost");
+        assert_eq!(hit.accurate_count, 1);
         assert!(
             !app.world()
                 .entity(projectile)

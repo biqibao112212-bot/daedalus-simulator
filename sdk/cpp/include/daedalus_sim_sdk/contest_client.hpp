@@ -13,7 +13,7 @@
 
 namespace daedalus::sim::sdk::v1 {
 
-// The only maps deliberately exposed by the 1.3.1-contest-r2 package.
+// The only maps deliberately exposed by the 1.3.1-contest-r3 package.
 enum class ContestScene { ShootingRange, Energy, LargeEnergy = Energy };
 
 struct ContestClientOptions {
@@ -50,6 +50,7 @@ class ContestClient {
   [[nodiscard]] ClientResult<SceneControlResponse> setRuneScenario(
       const RuneScenario& scenario);
   [[nodiscard]] ClientResult<BigRuneScore> getBigRuneScore(RuneTeam team);
+  [[nodiscard]] ClientResult<ArmorHitInfo> getLatestArmorHit();
   [[nodiscard]] ClientResult<ContestFrame> nextFrame(
       std::uint64_t after_source_sequence = 0) const;
   [[nodiscard]] ClientResult<std::uint64_t> sendAim(

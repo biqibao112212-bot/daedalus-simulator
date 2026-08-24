@@ -16,6 +16,7 @@ void usage() {
       << "  health\n"
       << "  scene shooting-range|energy|large-energy\n"
       << "  score red|blue\n"
+      << "  armor-hit\n"
       << "  frame\n"
       << "  aim YAW_DEG PITCH_DEG [--fire]\n";
 }
@@ -101,6 +102,26 @@ int main(int argc, char** argv) {
               << " last_ring=" << static_cast<unsigned>(score.value->last_ring)
               << " last_radius_mm=" << score.value->last_radius_mm
               << " last_target=" << static_cast<int>(score.value->last_target) << '\n';
+    return 0;
+  }
+  if (command == "armor-hit" && cursor == argc) {
+    const auto hit = client.getLatestArmorHit();
+    if (!hit) return failure(hit.status);
+    std::cout << "has_hit=" << hit.value->has_hit
+              << " latest_event_id=" << hit.value->latest_event_id;
+    if (hit.value->has_hit) {
+      std::cout << " event_id=" << hit.value->event_id
+                << " projectile_id=";
+      if (hit.value->has_projectile_id) std::cout << hit.value->projectile_id;
+      else std::cout << "none";
+      std::cout << " target_name=" << hit.value->target_name
+                << " target_team=" << hit.value->target_team
+                << " target_spec=" << hit.value->target_spec
+                << " target_label=" << hit.value->target_label
+                << " target_class=" << hit.value->target_class
+                << " accurate_count=" << hit.value->accurate_count;
+    }
+    std::cout << '\n';
     return 0;
   }
   if (command == "frame" && cursor == argc) {

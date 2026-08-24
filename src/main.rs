@@ -1,4 +1,5 @@
 #![allow(dead_code)]
+mod armor_hit_api;
 mod auto_gen;
 mod capture;
 mod components;
@@ -39,6 +40,7 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
+use crate::armor_hit_api::ArmorHitLedger;
 use crate::auto_gen::AutoGenPlugin;
 use crate::capture::{
     ExposureWallTimestamp, advance_exposure_wall_timestamp, update_preview_cadence,
@@ -513,6 +515,7 @@ fn main() {
         .add_plugins(NetworkBridgePlugin)
         .add_plugins(SceneControlPlugin)
         .init_resource::<CameraMode>()
+        .init_resource::<ArmorHitLedger>()
         .init_resource::<ProjectileStatistics>()
         .init_resource::<ProjectileTelemetry>()
         .init_resource::<FrequencyMetrics>()

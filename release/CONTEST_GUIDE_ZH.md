@@ -1,12 +1,11 @@
-# Daedalus 1.3.1-contest-r2（Linux x86_64）
+# Daedalus 1.3.1-contest-r3（Linux x86_64）
 
 这是实验室内部算法比赛版本，只支持 Linux x86_64。它从 Linux 1.3.1 发行版继承
 渲染、物理、相机和 ABI，但运行时只开放两个地图：**靶场**与**能量机关**。能量机关地图
 支持小符与大符；普通场和前哨场会被发行二进制拒绝。
 
-`r2` 是面向已发布 `1.3.1-contest` 的修订包：SDK 云台/开火命令在手动控制模式下也会
-生效；窗口不再显示未开放的 auto-aim/bridge 状态；靶车命中仅按完整尺寸的装甲板判定，
-车体接触不会计入有效命中。
+`r3` 在 `r2` 的基础上增加只读装甲板命中 API：参赛者可确认自己最近一次被模拟器
+判定为有效的车体装甲板命中，但不能通过它读取未命中装甲、漏弹位置或目标真值。
 
 ## 一分钟开始
 
@@ -25,6 +24,7 @@ daedalus-contest scene energy
 daedalus-contest frame
 daedalus-contest aim 0 90 --fire
 daedalus-contest score red
+daedalus-contest armor-hit
 daedalus-contest stop
 ```
 
@@ -72,7 +72,18 @@ UdpGimbalCommand aim;
 aim.yaw_deg = 0.0F;
 aim.pitch_deg = 90.0F;
 simulator.sendAim(aim);
+
+// 轮询最近一次有效车体装甲板命中；event_id 增加代表新命中。
+auto hit = simulator.getLatestArmorHit();
+if (hit && hit.value->has_hit) {
+    std::cout << hit.value->target_name << " event=" << hit.value->event_id;
+}
 ```
+
+`getLatestArmorHit()` 只在完整尺寸装甲板命中已被物理判定接受后返回目标标识、弹丸
+ID（若该弹丸有追踪 ID）和累计有效命中数。车体接触、装甲板外沿擦碰和任何未命中均
+不会生成事件，也不会暴露目标的未命中信息。轮询 `event_id`，仅在它大于上一次值时
+处理新事件；命令行等价入口是 `daedalus-contest armor-hit`。
 
 制作可控标注数据时，使用受限的能量机关场景接口，而不是修改渲染资产。`RuleDriven`
 严格使用规则转速模型；`Static` 停止转动，并且只接受五个扇叶的四种既有视觉状态。

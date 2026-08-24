@@ -627,6 +627,50 @@ ClientResult<BigRuneScore> SceneControlClient::getBigRuneScore(RuneTeam team) {
   score.last_target = static_cast<std::int8_t>(last_target);
   return ClientResult<BigRuneScore>::success(score);
 }
+
+ClientResult<ArmorHitInfo> SceneControlClient::getLatestArmorHit() {
+  const auto response = request("get_latest_armor_hit");
+  if (!response) {
+    return ClientResult<ArmorHitInfo>::failure(response.status.error,
+                                                response.status.message);
+  }
+  if (response.value->data_json.empty()) {
+    return ClientResult<ArmorHitInfo>::failure(
+        ClientError::ProtocolError, "armor hit response has no data");
+  }
+  ArmorHitInfo hit{};
+  if (!boolField(response.value->data_json, "has_hit", &hit.has_hit) ||
+      !uint64Field(response.value->data_json, "latest_event_id",
+                   &hit.latest_event_id)) {
+    return ClientResult<ArmorHitInfo>::failure(
+        ClientError::ProtocolError, "invalid armor hit response envelope");
+  }
+  if (!hit.has_hit) return ClientResult<ArmorHitInfo>::success(hit);
+
+  std::uint64_t accurate_count = 0;
+  if (!uint64Field(response.value->data_json, "event_id", &hit.event_id) ||
+      !boolField(response.value->data_json, "has_projectile_id",
+                 &hit.has_projectile_id) ||
+      !stringField(response.value->data_json, "target_name", &hit.target_name) ||
+      !stringField(response.value->data_json, "target_team", &hit.target_team) ||
+      !stringField(response.value->data_json, "target_spec", &hit.target_spec) ||
+      !stringField(response.value->data_json, "target_label", &hit.target_label) ||
+      !stringField(response.value->data_json, "target_class", &hit.target_class) ||
+      !uint64Field(response.value->data_json, "accurate_count", &accurate_count) ||
+      hit.event_id == 0 || hit.event_id != hit.latest_event_id ||
+      accurate_count > std::numeric_limits<std::uint32_t>::max() ||
+      hit.target_name.empty() || hit.target_team.empty() || hit.target_class.empty()) {
+    return ClientResult<ArmorHitInfo>::failure(
+        ClientError::ProtocolError, "invalid armor hit response data");
+  }
+  if (hit.has_projectile_id &&
+      !uint64Field(response.value->data_json, "projectile_id", &hit.projectile_id)) {
+    return ClientResult<ArmorHitInfo>::failure(
+        ClientError::ProtocolError, "invalid armor hit projectile id");
+  }
+  hit.accurate_count = static_cast<std::uint32_t>(accurate_count);
+  return ClientResult<ArmorHitInfo>::success(std::move(hit));
+}
 ClientResult<SceneControlResponse> SceneControlClient::setRuneState(
     const RuneState& state) {
   const auto args = encodeRuneStateArgs(state);

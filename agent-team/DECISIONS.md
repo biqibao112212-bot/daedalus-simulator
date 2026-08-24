@@ -268,3 +268,11 @@
     ring. To preserve the concise client control surface, the HUD segment is
     present only on the Energy map while the large rune is selected; SDK and
     launcher queries remain available for all read-only score inspection.
+48. `1.3.1-contest-r3` exposes a read-only latest-valid-armor-hit event through
+    Scene Control v2 and the C++17 `ContestClient`. The event is appended only
+    after the existing full-size authoritative armor-plane collision predicate
+    increments accurate-hit statistics. It carries a monotonic event ID,
+    optional projectile trace ID, scored armor identity and cumulative accurate
+    count. It deliberately excludes misses, unhit armor, target pose and any
+    target enumeration, so it is participant hit feedback rather than an
+    online-truth interface.

@@ -88,6 +88,14 @@ ClientResult<BigRuneScore> ContestClient::getBigRuneScore(RuneTeam team) {
   return scene_client_.getBigRuneScore(team);
 }
 
+ClientResult<ArmorHitInfo> ContestClient::getLatestArmorHit() {
+  if (!connected_) {
+    return ClientResult<ArmorHitInfo>::failure(
+        ClientError::NotReady, "connect() must succeed before getLatestArmorHit()");
+  }
+  return scene_client_.getLatestArmorHit();
+}
+
 ClientResult<ContestFrame> ContestClient::nextFrame(
     std::uint64_t after_source_sequence) const {
   if (!connected_) {
