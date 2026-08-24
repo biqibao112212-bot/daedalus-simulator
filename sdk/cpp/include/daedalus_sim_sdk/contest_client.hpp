@@ -13,7 +13,7 @@
 
 namespace daedalus::sim::sdk::v1 {
 
-// The only maps deliberately exposed by the 1.3.1-contest-r3 package.
+// The only maps deliberately exposed by the 1.3.1-contest-r4 package.
 enum class ContestScene { ShootingRange, Energy, LargeEnergy = Energy };
 
 struct ContestClientOptions {

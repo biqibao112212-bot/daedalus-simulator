@@ -1,4 +1,4 @@
-# Daedalus 1.3.1-contest-r3（Linux x86_64）
+# Daedalus 1.3.1-contest-r4（Linux x86_64）
 
 这是实验室内部算法比赛版本，只支持 Linux x86_64。它从 Linux 1.3.1 发行版继承
 渲染、物理、相机和 ABI，但运行时只开放两个地图：**靶场**与**能量机关**。能量机关地图

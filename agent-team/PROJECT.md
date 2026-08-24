@@ -18,7 +18,7 @@
 - The supported participant API is C++17 `ContestClient`, an SDK facade over
   the existing image, exposure-synchronised gimbal, UDP command and Scene
   Control contracts. It does not add target truth or algorithm interfaces.
-- `1.3.1-contest-r3` adds the read-only `get_latest_armor_hit` Scene Control
+- `1.3.1-contest-r4` adds the read-only `get_latest_armor_hit` Scene Control
   operation, mapped to `ContestClient::getLatestArmorHit()`. It reports only
   the latest valid vehicle-armor score with a monotonic event ID and target
   identity after the existing authoritative collision decision; it never
