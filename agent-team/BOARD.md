@@ -2,6 +2,22 @@
 
 ## Current status
 
+- `1.3.1-contest-r4` is the next Linux x86_64-only competition package,
+  sourced from commit `bb580f3`. It adds the participant-facing read-only
+  `ContestClient::getLatestArmorHit()` API and the matching
+  `daedalus-contest armor-hit` launcher command. A response only contains the
+  latest valid, authoritative full-size vehicle-armor hit and its monotonic
+  event ID; it does not expose misses, unhit armor, target pose or target
+  enumeration. The source Release tests passed `218/218`, installed C++ SDK
+  tests passed `8/8`, and the package launcher started the headless Vulkan
+  Shooting Range then returned `has_hit=0 latest_event_id=0` before any shot.
+  Clean exact-commit Linux performance evidence measured `420.868 Hz` main
+  update and `199.937 Hz` capture submit, exceeding the 171.190/163.228 Hz
+  acceptance minima. The immutable local package is retained at
+  `/home/potato/Projects/仿真/releases/daedalus-simulator/1.3.1-contest-r4/linux-x86_64`;
+  public Release upload remains the next step and must use a new r4 tag/branch
+  without altering r2 or any learning release.
+
 - `1.3.1-contest-r2` is published as a separate Linux x86_64-only revision at
   `https://github.com/biqibao112212-bot/daedalus-simulator-contest-releases/releases/tag/1.3.1-contest-r2-linux`.
   It is built from source commit `8fd0558`; its archive manifest contains 43
