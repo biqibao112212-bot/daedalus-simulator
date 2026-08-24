@@ -14,9 +14,14 @@
   Clean exact-commit Linux performance evidence measured `420.868 Hz` main
   update and `199.937 Hz` capture submit, exceeding the 171.190/163.228 Hz
   acceptance minima. The immutable local package is retained at
-  `/home/potato/Projects/仿真/releases/daedalus-simulator/1.3.1-contest-r4/linux-x86_64`;
-  public Release upload remains the next step and must use a new r4 tag/branch
-  without altering r2 or any learning release.
+  `/home/potato/Projects/仿真/releases/daedalus-simulator/1.3.1-contest-r4/linux-x86_64`.
+  It is publicly published at
+  `https://github.com/biqibao112212-bot/daedalus-simulator-contest-releases/releases/tag/1.3.1-contest-r4-linux`
+  on branch `contest/1.3.1-contest-r4`; downloaded ZIP, tarball and manifest
+  matched local SHA-256 values `4f93687d48e6ebf9aa838b1b749654b6cb2dfb7b9b1838b887fa72e1eb6f94af`,
+  `e0ecea1f989ba3f2d2c70c2df398863e60ce0415e294dde673f8da1f85f9b106`, and
+  `31a9c18da4fb245a619869396d2921a7cfe1a0ee0ddde307dbf390c0c5ce1329`.
+  Prior r2 and every learning Release remain unmodified.
 
 - `1.3.1-contest-r2` is published as a separate Linux x86_64-only revision at
   `https://github.com/biqibao112212-bot/daedalus-simulator-contest-releases/releases/tag/1.3.1-contest-r2-linux`.
