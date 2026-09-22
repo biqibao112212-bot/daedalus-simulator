@@ -12,6 +12,36 @@
 
 </div>
 
+## 来源与维护
+
+本模拟器由 3SE 战队维护，基于 [Blackjack200/bevy_robomaster_simulator](https://github.com/Blackjack200/bevy_robomaster_simulator)
+的开源工作发展而来，保留原作者署名和 AGPL-3.0 许可证。归属说明见 [NOTICE.md](NOTICE.md)。
+
+## 当前 1.4 学习版
+
+源码分支：[`release/learning-linux-1.4.0`](https://github.com/biqibao112212-bot/daedalus-simulator/tree/release/learning-linux-1.4.0)。
+本分支为 Linux x86_64 学习版 `1.4.0-learning-r2`，仅提供靶场和能量机关，开放同曝光真值，不能用于比赛。
+
+默认和 `--performance` 模式均在后台无窗口运行，不需要显示服务；图像继续通过离屏相机和 SDK/TCP 输出。
+只有 `--visible` 打开可视窗口。r2 修复了 r1 将显式高性能模式回退成可视模式的问题。
+
+```bash
+# 在本分支构建 Rust 模拟器与 C++ SDK
+bash scripts/build-release.sh
+
+# 安装发行包后启动（默认在后台运行）
+daedalus-learning start --performance
+daedalus-learning status
+daedalus-learning frame
+daedalus-learning stop
+
+# 人工查看场景
+daedalus-learning start --visible
+```
+
+学习版安装、后台运行和同曝光真值示例见 [学习版指南](release/LEARNING_GUIDE_ZH.md)。
+下方历史通用版本的 Windows、全地图及性能记录不代表本学习版的发布范围。
+
 ## 正式仓库与发布
 
 本仓库是模拟器、公共 SDK 和正式 Release 的唯一源码所有者。自瞄与打符不再复制模拟器源码，只消费带版本的 `DaedalusSimSdk` 和发布包。

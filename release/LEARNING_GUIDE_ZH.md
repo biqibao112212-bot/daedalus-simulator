@@ -1,10 +1,10 @@
-# Daedalus 1.4.0-learning-r1（Linux x86_64）
+# Daedalus 1.4.0-learning-r2（Linux x86_64）
 
 这是从最新比赛版 `1.3.1-contest-r2` 派生的实验室学习版本。它保留靶场、能量机关、
 键盘/鼠标车辆控制、SDK 云台/开火控制、装甲板命中判定和大小能量机关；但它**绝不用于
 比赛**。窗口左下角会显示 `LEARNING BUILD — NOT COMPETITION ELIGIBLE` 水印。
 
-学习版默认可视渲染，并默认开放完整的、同曝光的目标/能量机关真值。运行时能力文件和
+学习版默认在后台无窗口运行，并默认开放完整的、同曝光的目标/能量机关真值。运行时能力文件和
 `release.json` 均声明：`distribution_profile=learning`、
 `competition_eligible=false`、`future_truth_included=false`。
 
@@ -19,9 +19,24 @@ daedalus-learning frame
 daedalus-learning truth
 ```
 
-默认有窗口，`--performance` 才启动无窗口模式。窗口获得焦点后可用 `W/A/S/D` 移动、左
-`Shift` 加速、方向键或右键拖动控制云台、`Space` 发射；靶场的 `Q/E` 转底盘，能量机关
-的 `Q/E` 切换小/大能量机关。
+默认启动和显式 `--performance` 都在后台运行，不创建图形窗口，也不需要 X11、Wayland
+或 Xvfb。终端关闭后进程继续运行，使用 `daedalus-learning stop` 停止。
+高性能模式仍保留离屏相机渲染、SDK/TCP 图像、同曝光真值和远程控制。
+
+```bash
+# 显式高性能模式（等同于默认启动）
+daedalus-learning start --performance
+
+# 需要人工观察时，先停止现有实例再开启窗口
+daedalus-learning stop
+daedalus-learning start --visible
+```
+
+可视模式中，窗口获得焦点后可用 `W/A/S/D` 移动、左 `Shift` 加速、方向键或右键拖动
+控制云台、`Space` 发射；靶场的 `Q/E` 转底盘，能量机关的 `Q/E` 切换小/大能量机关。
+
+`1.4.0-learning-r2` 修复了 r1 将 `performance` 误判为可视模式的问题。
+SDK 保持 `1.4.0-learning-r1`，TCP v1 / SHM v7 / ABI revision 2 不变。
 
 ## 同曝光真值 SDK
 

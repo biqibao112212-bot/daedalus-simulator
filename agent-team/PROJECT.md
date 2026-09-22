@@ -5,8 +5,8 @@
 - Active branch: `release/learning-linux-1.4.0`
 - Frozen implementation baseline at task start: `48b9437c389c2911e0a135cf1d727e36a68317ab`
 - Frozen formal release: simulator `1.2.1`, SDK `1.2.0`, SHM v7 / ABI revision 2
-- Active Linux release target: simulator/SDK `1.3.1`, adding collector-owned
-  offline full-frame export without changing the real-time SDK ABI
+- Active Linux release target: simulator `1.4.0-learning-r2`, SDK
+  `1.4.0-learning-r1`; repair headless mode without changing TCP v1 / SHM v7 / ABI r2
 
 ## Learning release target
 

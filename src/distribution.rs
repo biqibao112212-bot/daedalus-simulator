@@ -14,6 +14,15 @@ pub enum ReleaseMode {
 
 static RELEASE_MODE: OnceLock<ReleaseMode> = OnceLock::new();
 
+fn release_mode_from_value(value: Option<&str>) -> ReleaseMode {
+    match value.map(str::trim) {
+        Some(value) if value.eq_ignore_ascii_case("visible") => ReleaseMode::Visible,
+        // Headless is the default for every distribution, including learning.
+        // An explicit "performance" must never fall back to a visible profile.
+        _ => ReleaseMode::Performance,
+    }
+}
+
 pub const fn is_locked() -> bool {
     cfg!(feature = "distribution-release")
 }
@@ -68,15 +77,7 @@ pub fn prepare_environment() {
         return;
     }
 
-    let mode = std::env::var(RELEASE_MODE_ENV)
-        .ok()
-        .filter(|value| value.eq_ignore_ascii_case("visible"))
-        .map(|_| ReleaseMode::Visible)
-        .unwrap_or(if is_learning_release() {
-            ReleaseMode::Visible
-        } else {
-            ReleaseMode::Performance
-        });
+    let mode = release_mode_from_value(std::env::var(RELEASE_MODE_ENV).ok().as_deref());
     let _ = RELEASE_MODE.set(mode);
 
     // This is the only caller-provided DAEDALUS_* value retained by a
@@ -184,6 +185,26 @@ fn set_env_os(key: &str, value: OsString) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn explicit_performance_and_default_modes_are_headless() {
+        for value in [
+            None,
+            Some(""),
+            Some("performance"),
+            Some(" PERFORMANCE "),
+            Some("invalid"),
+        ] {
+            assert_eq!(release_mode_from_value(value), ReleaseMode::Performance);
+        }
+    }
+
+    #[test]
+    fn only_explicit_visible_mode_enables_the_window() {
+        for value in ["visible", "VISIBLE", " Visible "] {
+            assert_eq!(release_mode_from_value(Some(value)), ReleaseMode::Visible);
+        }
+    }
 
     #[test]
     fn development_build_is_not_distribution_locked() {

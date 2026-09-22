@@ -2,6 +2,18 @@
 
 ## Current status
 
+- Active: validate and publish `1.4.0-learning-r2` on
+  `release/learning-linux-1.4.0`, then make the existing GitHub source repository
+  public under the user's explicit 2026-09-22 instruction. The immutable r1
+  package reproduces Winit startup failure without DISPLAY/WAYLAND_DISPLAY even
+  with `--performance`: the learning mode parser discards that value and falls
+  back to Visible. r2 makes only explicit `visible` create a window and makes
+  the learning launcher default to a persistent background process.
+  Remaining: Rust/SDK checks, no-display TCP/control/truth smoke, explicit
+  visible smoke, native performance evidence, new package and public access.
+  Existing untracked contest TeX/output/tmp files belong to the user and are
+  outside this change.
+
 - `1.4.0-learning-r1` is a Linux x86_64-only learning distribution on
   `release/learning-linux-1.4.0`, derived from the final contest-r2 source
   lineage (`8bdb184`) and packaged from `2983e553`.  Its protected local

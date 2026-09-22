@@ -1,7 +1,14 @@
 {
   "product": "daedalus-simulator",
-  "version": "1.4.0-learning-r1",
+  "version": "1.4.0-learning-r2",
   "sdk_version": "1.4.0-learning-r1",
+  "presentation": {
+    "default_mode": "performance",
+    "performance_creates_window": false,
+    "performance_requires_display_server": false,
+    "visible_option": "--visible",
+    "offscreen_capture_enabled": true
+  },
   "shm_version": 7,
   "sdk_abi_revision": 2,
   "image": {

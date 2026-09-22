@@ -9,13 +9,16 @@ CORNER_LABELS_JSONL=""
 
 usage() {
   cat <<'EOF'
-Usage: ./start-simulator.sh [--visible] [--render-backend vulkan] [--ipc-dir PATH] [--corner-labels-jsonl ABSOLUTE_PATH]
+Usage: ./start-simulator.sh [--performance|--visible] [--render-backend vulkan] [--ipc-dir PATH] [--corner-labels-jsonl ABSOLUTE_PATH]
+
+Defaults to headless performance mode. Use --visible to open a preview window.
 EOF
 }
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --visible) VISIBLE=1; shift ;;
+    --performance) VISIBLE=0; shift ;;
     --render-backend)
       [[ $# -ge 2 ]] || { echo "--render-backend requires a value" >&2; exit 2; }
       RENDER_BACKEND="$2"; shift 2 ;;

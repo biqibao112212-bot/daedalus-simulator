@@ -11,7 +11,7 @@ usage() {
 Usage: daedalus-contest [--runtime-dir PATH] <command> [options]
 
 Commands:
-  start [--performance] [--scene shooting-range|energy|large-energy]
+  start [--performance|--visible] [--scene shooting-range|energy|large-energy]
   stop | status | doctor
   scene shooting-range|energy|large-energy
   score red|blue
@@ -19,8 +19,8 @@ Commands:
   truth
   aim YAW_DEG PITCH_DEG [--fire]
 
-`start` launches a visible local contest simulator by default. Use
-`--performance` only for the headless high-performance mode. All other
+`start` launches the local contest simulator in the background without a window.
+`--performance` selects the same headless mode; use `--visible` for a window. All other
 commands talk to the same instance through its runtime directory. The only
 selectable maps are Shooting Range and the Energy Mechanism (small/large via Q/E).
 EOF
@@ -56,7 +56,7 @@ client() { "$CLIENT" --ipc-dir "$RUNTIME_DIR" "$@"; }
 
 case "$COMMAND" in
   start)
-    VISIBLE=1
+    VISIBLE=0
     SCENE="shooting-range"
     while [[ $# -gt 0 ]]; do
       case "$1" in
@@ -77,7 +77,7 @@ case "$COMMAND" in
     rm -f -- "$PID_FILE"
     START_ARGS=(--ipc-dir "$RUNTIME_DIR")
     [[ "$VISIBLE" == 1 ]] && START_ARGS=(--visible "${START_ARGS[@]}")
-    "$ROOT/start-simulator.sh" "${START_ARGS[@]}" >"$LOG_FILE" 2>&1 &
+    nohup "$ROOT/start-simulator.sh" "${START_ARGS[@]}" </dev/null >"$LOG_FILE" 2>&1 &
     printf '%s\n' "$!" >"$PID_FILE"
     for _ in $(seq 1 100); do
       if client health >/dev/null 2>&1; then
@@ -85,7 +85,8 @@ case "$COMMAND" in
         echo "started pid=$(<"$PID_FILE") runtime_dir=$RUNTIME_DIR visible=$VISIBLE"
         exit 0
       fi
-      if ! owned_process_running; then
+      # The child may still be exec'ing nohup/the launcher on the first poll.
+      if ! kill -0 "$(<"$PID_FILE")" 2>/dev/null; then
         cat "$LOG_FILE" >&2 || true
         rm -f -- "$PID_FILE"
         die "simulator exited before it became ready"

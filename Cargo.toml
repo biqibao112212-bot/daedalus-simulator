@@ -10,7 +10,7 @@ memmap2 = { version = "0" }
 
 [package]
 name = "daedalus"
-version = "1.4.0-learning-r1"
+version = "1.4.0-learning-r2"
 edition = "2024"
 default-run = "daedalus"
 

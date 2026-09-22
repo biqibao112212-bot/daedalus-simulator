@@ -280,3 +280,11 @@
     current or retained exposure state only and hard-codes
     `future_truth_included=false`. Contest builds continue to publish zero
     target/rune counts and must fail closed for learning/truth parameters.
+
+49. Learning release r2 resolves presentation mode independently of profile:
+    only explicit `visible` enables the window; `performance`, an absent value
+    or an unknown value selects the existing headless runner. The learning
+    launcher's default is headless and nohup keeps it running after terminal
+    exit. Off-screen capture, SDK control and frame-matched learning truth
+    remain enabled. r1 packages are immutable; r2 retains SDK 1.4.0-learning-r1
+    and the existing transport ABI.
