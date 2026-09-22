@@ -2,17 +2,40 @@
 
 ## Current status
 
-- Active: validate and publish `1.4.0-learning-r2` on
-  `release/learning-linux-1.4.0`, then make the existing GitHub source repository
-  public under the user's explicit 2026-09-22 instruction. The immutable r1
-  package reproduces Winit startup failure without DISPLAY/WAYLAND_DISPLAY even
-  with `--performance`: the learning mode parser discards that value and falls
-  back to Visible. r2 makes only explicit `visible` create a window and makes
-  the learning launcher default to a persistent background process.
-  Remaining: Rust/SDK checks, no-display TCP/control/truth smoke, explicit
-  visible smoke, native performance evidence, new package and public access.
-  Existing untracked contest TeX/output/tmp files belong to the user and are
-  outside this change.
+- `1.4.0-learning-r2` fixes the learning mode parser that treated an explicit
+  `performance` value as Visible. Source commit `e3a3d5c` is on
+  `release/learning-linux-1.4.0`. Default and explicit performance launches now
+  run persistently in the background without a window; only `--visible` opens
+  a window. The runtime smoke removed DISPLAY/WAYLAND_DISPLAY/WAYLAND_SOCKET,
+  observed zero X11 windows and zero preview presentations, received consecutive
+  1440x1080 RGBA frames, applied SDK aim, switched Shooting Range to large Energy,
+  verified learning truth and its opt-out, and survived SIGHUP. Visible smoke
+  opened a real 2560x1440 window and continued the same SDK flows.
+- Rust Release tests passed `216/216`; C++ SDK CTest passed `8/8`. Native clean
+  source evidence at `benchmarks/1.4.0-learning-r2/performance-release-linux.json`
+  records `448.761 Hz` main update, `199.893 Hz` capture submit and `0 Hz` preview
+  over 20 seconds on Ubuntu/RTX 4060. This is a machine-specific observation.
+  Validation used an exact clean Git archive of `e3a3d5c` and its matching native
+  artifacts, preserving the user's untracked TeX/output/tmp files in place.
+- The new immutable local package is
+  `/home/potato/Projects/仿真/releases/daedalus-simulator/1.4.0-learning-r2/linux-x86_64`.
+  Its source is `e3a3d5c`; all `43/43` manifest hashes and both archive integrity
+  checks passed. The packaged launcher also passed no-display startup, SDK
+  image and truth checks. SDK remains `1.4.0-learning-r1`, TCP v1 / SHM v7 / ABI r2.
+  ZIP SHA-256: `49b27877416c50ba2b5f33563ba1419d1b6b455ef9acd8f8d59806b3741c1f89`.
+  TAR.GZ SHA-256: `bee7c582e226380797e0fa48a6bfd66d25f50ba3f769ff99b376cfdd68107eba`.
+  Prior packages remain unchanged. This r2 package is local, not a GitHub binary Release.
+- The existing source repository
+  `https://github.com/biqibao112212-bot/daedalus-simulator` is PUBLIC under the
+  user's explicit 2026-09-22 instruction. All four origin branch histories were
+  scanned (1,563 text blobs) with no common credential-pattern hits or protected
+  ML/dataset paths found. Source attribution and AGPL-3.0 remain intact; the
+  user's unrelated untracked documents and runtime artifacts are not pushed.
+- Retention: conclusions are in the owning context, code/docs and benchmark
+  summary are public resources, formal r1/r2 releases are protected, and the
+  task's source archive/staging links are reproducible temporary artifacts.
+  Runtime reproduction logs and smoke results remain under
+  `/home/potato/Projects/仿真/runtime/learning-headless-before-xvo98vhb`.
 
 - `1.4.0-learning-r1` is a Linux x86_64-only learning distribution on
   `release/learning-linux-1.4.0`, derived from the final contest-r2 source

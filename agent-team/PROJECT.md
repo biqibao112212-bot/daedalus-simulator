@@ -1,7 +1,7 @@
 # Daedalus Simulator project context
 
 - Protocol: `agent-team-fixed/v2`
-- Repository: `D:\仿真\repos\daedalus-simulator`
+- Repository: `/home/potato/Projects/仿真/repos/daedalus-simulator`
 - Active branch: `release/learning-linux-1.4.0`
 - Frozen implementation baseline at task start: `48b9437c389c2911e0a135cf1d727e36a68317ab`
 - Frozen formal release: simulator `1.2.1`, SDK `1.2.0`, SHM v7 / ABI revision 2
@@ -9,6 +9,11 @@
   `1.4.0-learning-r1`; repair headless mode without changing TCP v1 / SHM v7 / ABI r2
 
 ## Learning release target
+
+- Current package: `1.4.0-learning-r2`, SDK `1.4.0-learning-r1`. Only explicit
+  `--visible` opens a window; default/`--performance` run in the background with
+  off-screen SDK capture. Source repository is public at
+  `https://github.com/biqibao112212-bot/daedalus-simulator`.
 
 - `1.4.0-learning-r1` is a separately maintained Linux x86_64-only internal
   learning line derived directly from the latest contest-r2 source commit
